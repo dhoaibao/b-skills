@@ -270,3 +270,4 @@ Always English, regardless of the user's query language.
 - Split into phases if 10+ steps.
 - Never trigger destructive git commands.
 - **Never self-infer ambiguous requirements** — if a decision requires user input, ask immediately during planning. A plan built on silent assumptions is not a complete plan.
+- **Handoff standard: 90%+** — every step must be detailed enough that a fresh agent with zero prior context can implement it without asking a follow-up question. If an implementor would need to ask anything, the step is not done.

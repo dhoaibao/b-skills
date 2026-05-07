@@ -188,7 +188,7 @@ After every mechanical step, run the relevant tests:
 - Apply edits from the inside out — inner helpers first, then outer callers.
 - If code moves across files, update imports after the symbol-level changes are done.
 - Do not refactor and add new features in the same session — split into two tasks.
-- If the refactor affects >5 files: use `sequentialthinking` to evaluate rollback strategy.
+- If the refactor affects >3 files: use `sequentialthinking` to evaluate rollback strategy.
 - Run compilation check after every mechanical step — do not wait until the end.
 - Run the full test suite after the last step, not just the unit test for the changed function.
 - Never trigger destructive git commands.

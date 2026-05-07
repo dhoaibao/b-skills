@@ -6,7 +6,7 @@ description: >
   "what's the API for", "method signature of X", or "config key for Y". Auto-detects
   quick vs full mode. Unlike b-debug or b-plan, it fetches docs/web info instead of
   tracing code or choosing implementation.
-effort: high
+effort: medium
 ---
 
 # b-research

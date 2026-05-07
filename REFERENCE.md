@@ -46,6 +46,7 @@ how should I approach refactoring the auth module?
 - Full mode must write to `.claude/b-plans/`; quick mode may stay in chat unless the user asks for a saved plan.
 - The feasibility gate only confirms blockers and scope; it does not replace `/b-research` for deep unknowns.
 - All unresolved unknowns must be surfaced in the plan — never deferred silently.
+- **Handoff standard: 90%+** — every step must be detailed enough that a fresh agent with zero prior context can implement it without asking a follow-up question.
 
 ---
 
@@ -192,6 +193,7 @@ Test type → Test structure → Issue/Requirements → Fix/Implementation → V
 - Never modify production code to make a test pass unless the production code is actually buggy.
 - Write behavior tests (assert on output), not implementation tests (assert on internal state).
 - Keep test fixes minimal — one assertion at a time.
+- Browser/UI testing and user-flow verification go to `b-e2e` — `b-test` owns code-level unit and integration tests only.
 
 ---
 
@@ -201,11 +203,12 @@ Browser-based frontend testing and E2E script authoring.
 
 **Core behavior**
 - Uses Playwright MCP to navigate to the target web application.
+- Before navigating to `localhost`, verifies the dev server is reachable via a Bash health check; asks the user to start it if not responding.
 - Creates a temporary directory `.claude/b-e2e/` to store intermediate artifacts (screenshots and snapshots) during testing.
 - Relies on accessibility tree snapshots (`browser_snapshot`) saved to the temp directory to map the UI and get precise target references.
 - Performs sequential user interactions (clicks, typing, form fills).
-- Verifies UI state changes and network requests via updated snapshots.
-- Translates successful manual browser interactions into robust Playwright test code.
+- Verifies UI state changes via updated snapshots; optionally monitors network requests with `browser_network_requests` for API-level assertions.
+- Translates successful manual browser interactions into robust Playwright test code, using Serena symbol tools to insert into existing test files when available.
 - Cleans up the `.claude/b-e2e/` directory entirely when the flow is finished.
 
 **Good triggers**
@@ -223,6 +226,7 @@ Target URL → UI Snapshot → Interactions Performed → Assertions/Results →
 **Key rules**
 - Inherently requires the `playwright` MCP to function.
 - Never guess element selectors; always read the `browser_snapshot` first.
+- For `localhost` targets, run a Bash health check before calling `browser_navigate` — do not attempt to navigate to a non-responding server.
 - All testing artifacts must go into `.claude/b-e2e/` and be removed upon completion.
 - Distinct from `b-test`, which handles code-level unit testing without a live browser.
 

@@ -36,6 +36,7 @@ is empty.
 - Need a plan for a feature → use **b-plan**
 - Review code before PR → use **b-review**
 - Quick library API lookup → use **b-research**
+- Browser/UI testing or user-flow verification → use **b-e2e**
 
 ## Tools required
 

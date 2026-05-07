@@ -22,20 +22,33 @@ Drives a real browser using Playwright to verify frontend user flows, interact w
 - Debugging backend logic or API failures without UI involvement (use `/b-debug`)
 
 ## Tools required
-- `mcp__playwright__browser_navigate` — from `playwright` MCP server (Primary)
-- `mcp__playwright__browser_snapshot` — from `playwright` MCP server (Primary)
-- `mcp__playwright__browser_take_screenshot` — from `playwright` MCP server (Secondary)
-- `mcp__playwright__browser_click` / `browser_fill_form` — from `playwright` MCP server (Primary)
-- `mcp__playwright__browser_evaluate` — from `playwright` MCP server *(optional, for complex assertions)*
-- `Bash` — to manage temporary artifact directories
+
+- `mcp__playwright__browser_navigate` — from `playwright` MCP server *(Primary)*
+- `mcp__playwright__browser_snapshot` — from `playwright` MCP server *(Primary)*
+- `mcp__playwright__browser_click` / `browser_fill_form` — from `playwright` MCP server *(Primary)*
+- `mcp__playwright__browser_take_screenshot` — from `playwright` MCP server *(Secondary)*
+- `mcp__playwright__browser_evaluate` — from `playwright` MCP server *(optional, for complex DOM assertions)*
+- `mcp__playwright__browser_network_requests` — from `playwright` MCP server *(optional, for asserting API calls made during a user flow)*
+- `find_symbol`, `insert_before_symbol`, `insert_after_symbol`, `replace_symbol_body` — from `serena` MCP server *(optional, for writing test code in Step 5 — adding tests to existing describe blocks or fixing broken test bodies)*
+- `Bash` — to manage temporary artifact directories and run dev server health checks
 
 If `playwright` MCP is unavailable: Stop and inform the user that E2E browser interactions require the Playwright MCP server.
+If `serena` is unavailable in Step 5: write test code using Bash write tools or the native `Write`/`Edit` tools instead.
 Graceful degradation: ❌ Not possible — this skill inherently requires browser automation.
 
 ## Steps
 
 ### Step 1 — Setup Environment and Navigate
-Use the `Bash` tool to ensure the temporary artifact directory exists: `mkdir -p .claude/b-e2e`. Determine the target URL (local dev server or staging) and call `browser_navigate` to load the application.
+
+Use the `Bash` tool to ensure the temporary artifact directory exists: `mkdir -p .claude/b-e2e`.
+
+Determine the target URL (local dev server or staging). If the URL is a `localhost` address, verify the dev server is reachable before navigating:
+```bash
+curl -s -o /dev/null -w "%{http_code}" http://localhost:PORT | grep -qE "^[23]" || echo "Server not responding"
+```
+If the server is not reachable, ask the user to start it before proceeding. Do not attempt `browser_navigate` to a non-responding host.
+
+Once confirmed reachable (or for remote URLs), call `browser_navigate` to load the application.
 
 ### Step 2 — Map the UI and Capture Visuals
 Call `browser_snapshot` (saving to `.claude/b-e2e/snapshot.md`) and `browser_take_screenshot` (saving to `.claude/b-e2e/screenshot.png`) to capture the accessibility tree and visual state. Always use the accessibility snapshot to find exact target references before attempting to click or type.
@@ -55,8 +68,32 @@ Once testing, verification, and code generation are complete, use the `Bash` too
 ---
 
 ## Output format
+
 ```
-Target URL → UI Snapshot → Interactions Performed → Assertions/Results → [Optional] Test Code → Cleanup
+### b-e2e: [flow name]
+
+**URL**: [target URL]
+**Scope**: [user flow tested — e.g. "checkout flow", "login → dashboard redirect"]
+
+#### Interactions
+- [Action 1: navigate / click / type / fill]
+- [Action 2: ...]
+
+#### Assertions
+✅ [expected state confirmed — description]
+❌ [unexpected state — description and screenshot reference if captured]
+
+#### Network requests *(optional — only if browser_network_requests was used)*
+- [Method + URL] — [status / payload note]
+
+#### Test code *(optional — only if writing or fixing a test file)*
+```playwright
+// Playwright test code
+```
+Saved to: `[path/to/test.spec.ts]`
+
+#### Cleanup
+✅ `.claude/b-e2e/` removed
 ```
 
 ---
