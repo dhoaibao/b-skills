@@ -87,9 +87,9 @@ merge_settings_json() {
 
   local merged
   if ! merged=$(
-    MERGE_PAYLOAD="$merge_payload" MERGE_KIND="$merge_kind" EXISTING="$existing" \
-    SETTINGS_FILE="$SETTINGS_FILE" TIMESTAMP="$TIMESTAMP" \
-    python3 - <<'PYEOF'
+    env MERGE_PAYLOAD="$merge_payload" MERGE_KIND="$merge_kind" EXISTING="$existing" \
+        SETTINGS_FILE="$SETTINGS_FILE" TIMESTAMP="$TIMESTAMP" \
+        python3 - <<'PYEOF'
 import json, os, sys
 from pathlib import Path
 
