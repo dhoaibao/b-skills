@@ -84,7 +84,7 @@ Systematic, hypothesis-driven debugging with full-loop execution by default.
 
 **Core behavior**
 - Uses supported Serena tools to map execution path, references, suspicious symbols, and file structure (Step 2).
-- If Serena is unavailable, falls back to Bash/Read with reduced cross-file confidence.
+- If Serena is unavailable, falls back to bash/read with reduced cross-file confidence.
 - Initializes Serena project knowledge with onboarding check before tracing when needed.
 - **Step 3a** forms ranked hypotheses with evidence/verification per item.
 - **Step 3b** runs fast-path lookups (library-error shortcut + error-string codebase search) before verifying — these often eliminate wrong hypotheses.
@@ -163,12 +163,12 @@ Logic findings → Requirements coverage table → Edge cases / test adequacy �
 Test-driven development, test debugging, and test coverage evaluation.
 
 **Core behavior**
-- Discovers test files and framework via Bash, then inspects structure with Serena symbol tools.
+- Discovers test files and framework via bash, then inspects structure with Serena symbol tools.
 - Step 2 picks a branch:
   - **Branch A — Failing test**: read test + source, identify assertion/mock/setup/async issue, apply minimal fix.
-  - **Branch B — Write tests**: map source symbol, list edge cases, add tests via Serena symbol tools or `Write` for new files.
+  - **Branch B — Write tests**: map source symbol, list edge cases, add tests via Serena symbol tools or `write` for new files.
   - **Branch C — Evaluate coverage**: run coverage report, rank gaps, optionally write top 1–3 missing tests.
-- Runs tests via Bash after every change to confirm fix or coverage improvement.
+- Runs tests via bash after every change to confirm fix or coverage improvement.
 - Distinguishes test-specific failures from runtime bugs (test failure != production bug).
 - Uses `sequentialthinking` for test strategy only when unit vs integration is ambiguous.
 
@@ -198,12 +198,12 @@ Browser-based frontend testing and E2E script authoring.
 
 **Core behavior**
 - Uses Playwright MCP to navigate to the target web application.
-- Before navigating to `localhost`, verifies the dev server is reachable via a Bash health check; asks the user to start it if not responding.
+- Before navigating to `localhost`, verifies the dev server is reachable via a bash health check; asks the user to start it if not responding.
 - Creates a temporary directory `.opencode/b-e2e/` to store intermediate artifacts (screenshots and snapshots).
 - Relies on accessibility tree snapshots (`browser_snapshot`) to map the UI and get precise target references.
 - Performs sequential user interactions (clicks, typing, form fills).
 - Verifies UI state changes via updated snapshots; optionally monitors network requests with `browser_network_requests` for API-level assertions.
-- Translates successful manual interactions into Playwright test code via Serena symbol tools when an existing spec exists, or `Write` when no spec file exists.
+- Translates successful manual interactions into Playwright test code via Serena symbol tools when an existing spec exists, or `write` when no spec file exists.
 - Closes the browser session and removes `.opencode/b-e2e/` entirely when the flow finishes.
 
 **Good triggers**
@@ -221,7 +221,7 @@ Target URL → UI Snapshot → Interactions → Assertions → [Optional] Test C
 **Key rules**
 - Inherently requires the `playwright` MCP to function.
 - Never guess element selectors; always read the `browser_snapshot` first.
-- For `localhost` targets, run a Bash health check before calling `browser_navigate`.
+- For `localhost` targets, run a bash health check before calling `browser_navigate`.
 - All testing artifacts must go into `.opencode/b-e2e/` and be removed upon completion.
 - Always close the browser at cleanup.
 - Distinct from `b-test`, which handles code-level unit testing without a live browser.
@@ -265,7 +265,7 @@ Target → Impact → Risk → Transformation plan → Changes → Verification
 **Key rules**
 - Never refactor without a green test baseline.
 - Always use `find_referencing_symbols` before renaming or deleting.
-- Prefer `rename_symbol` over manual Edit for renames — it updates all references atomically.
+- Prefer `rename_symbol` over manual edit for renames — it updates all references atomically.
 - Prefer `safe_delete_symbol` over manual deletion — it prevents accidental removal of still-used code.
 - Run compilation check after every mechanical step.
 - One commit per logical transformation.
@@ -286,7 +286,7 @@ Target → Impact → Risk → Transformation plan → Changes → Verification
 
 ### Implementation protocol
 ```
-1. Read the approved chat plan or .opencode/b-plans/[task].md
+1. Use `read` on the approved chat plan or `.opencode/b-plans/[task].md`
 2. Follow confirmed decisions and planned touch points
 3. Execute steps in dependency order
 4. Verify each step with its "Done when" check or the narrowest relevant test/typecheck
@@ -353,23 +353,26 @@ Target → Impact → Risk → Transformation plan → Changes → Verification
 
 ## Repository layout and maintenance
 
-This is an OpenCode-native repository.
+This repository is the install-only source layout for the suite. OpenCode does not load the checked-in `skills/` or `commands/` directories directly from this repo root; use `install.sh` to deploy them into `~/.config/opencode/`.
 
 ### Repository source files
+- `AGENTS.md` — maintainer-only guidance for working on this source repo locally.
 - `global/AGENTS.md` — source for shared runtime instructions installed into OpenCode.
-- `opencode.json` — OpenCode project config.
-- `skills/<name>/SKILL.md` — reusable OpenCode skills.
-- `commands/<name>.md` — explicit slash-command wrappers.
+- `opencode.json` — local repo config; loads `./AGENTS.md` for maintainers.
+- `skills/<name>/SKILL.md` — reusable OpenCode skills distributed by the installer.
+- `commands/<name>.md` — explicit slash-command wrappers distributed by the installer.
 
 ### Runtime artifacts
+- `~/.config/opencode/skills/` — installed skill destination created by `install.sh`.
+- `~/.config/opencode/commands/` — installed command destination created by `install.sh`.
+- `~/.config/opencode/instructions/b-skills.md` — installed runtime instructions file created by `install.sh`.
 - `.opencode/b-plans/` — saved plan files created by `/b-plan`.
 - `.opencode/b-e2e/` — temporary browser artifacts created by `/b-e2e`.
 
 ### Maintenance rules
 - Keep one folder per skill under `skills/`.
 - Keep command wrappers thin; they are entrypoints, not duplicate logic stores.
-- Keep shared runtime rule sources under `global/`.
+- Keep repo-level maintainer guidance in the root `AGENTS.md` and shared runtime rule sources under `global/`.
 - When a skill changes, update `README.md` and `REFERENCE.md` in the same commit.
 - Keep skill descriptions trigger-focused and specific enough for correct routing.
 - Preserve skill behavior; do not silently redesign logic while doing platform migrations.
-

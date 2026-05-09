@@ -53,6 +53,41 @@ sync_directory() {
   cp -R "$source_dir"/. "$target_dir"/
 }
 
+prune_stale_skills() {
+  local source_dir="$1" target_dir="$2" removed=0 skill_name
+  [ -d "$target_dir" ] || { printf '0'; return; }
+
+  # Only prune b-skills-managed entries so unrelated user skills stay intact.
+  for installed_dir in "$target_dir"/b-*; do
+    [ -d "$installed_dir" ] || continue
+    [ -f "$installed_dir/SKILL.md" ] || continue
+    skill_name=$(basename "$installed_dir")
+    if [ ! -d "$source_dir/$skill_name" ] || [ ! -f "$source_dir/$skill_name/SKILL.md" ]; then
+      rm -rf "$installed_dir"
+      removed=$((removed + 1))
+    fi
+  done
+
+  printf '%s' "$removed"
+}
+
+prune_stale_commands() {
+  local source_dir="$1" target_dir="$2" removed=0 command_name
+  [ -d "$target_dir" ] || { printf '0'; return; }
+
+  # Only prune b-skills-managed wrappers so unrelated user commands stay intact.
+  for installed_file in "$target_dir"/b-*.md; do
+    [ -f "$installed_file" ] || continue
+    command_name=$(basename "$installed_file")
+    if [ ! -f "$source_dir/$command_name" ]; then
+      rm -f "$installed_file"
+      removed=$((removed + 1))
+    fi
+  done
+
+  printf '%s' "$removed"
+}
+
 merge_opencode_config() {
   mkdir -p "$(dirname "$CONFIG_FILE")"
   local existing
@@ -116,7 +151,10 @@ for skill_dir in "$SKILLS_SRC"/*/; do
   sync_directory "$skill_dir" "$OPENCODE_DIR/skills/$skill_name"
   synced_skills=$((synced_skills + 1))
 done
-log "✅ Skills synced: $synced_skills → $OPENCODE_DIR/skills"
+pruned_skills=$(prune_stale_skills "$SKILLS_SRC" "$OPENCODE_DIR/skills")
+skills_summary="✅ Skills synced: $synced_skills"
+[ "$pruned_skills" -gt 0 ] && skills_summary="$skills_summary, $pruned_skills stale removed"
+log "$skills_summary → $OPENCODE_DIR/skills"
 
 section "Install OpenCode commands"
 [ -d "$COMMANDS_SRC" ] || die "Missing commands source directory: $COMMANDS_SRC"
@@ -127,7 +165,10 @@ for command_file in "$COMMANDS_SRC"/*.md; do
   cp "$command_file" "$OPENCODE_DIR/commands/"
   synced_commands=$((synced_commands + 1))
 done
-log "✅ Commands synced: $synced_commands → $OPENCODE_DIR/commands"
+pruned_commands=$(prune_stale_commands "$COMMANDS_SRC" "$OPENCODE_DIR/commands")
+commands_summary="✅ Commands synced: $synced_commands"
+[ "$pruned_commands" -gt 0 ] && commands_summary="$commands_summary, $pruned_commands stale removed"
+log "$commands_summary → $OPENCODE_DIR/commands"
 
 section "Install shared instructions"
 mkdir -p "$(dirname "$RULES_DST")"
