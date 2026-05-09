@@ -8,6 +8,9 @@
 #   B_SKILLS_REPO  — git URL to clone (default: https://github.com/dhoaibao/b-skills.git)
 #   B_SKILLS_DIR   — local clone path (default: $HOME/.b-skills)
 #   B_SKILLS_REF   — git ref to check out after clone/pull (default: leave on default branch)
+#   BRAVE_API_KEY  — Brave Search MCP API key
+#   CONTEXT7_API_KEY — Context7 MCP API key
+#   FIRECRAWL_API_KEY — Firecrawl MCP API key
 
 set -euo pipefail
 
@@ -34,6 +37,10 @@ die()     { printf '❌ %s
 
 trap 'rc=$?; [ $rc -ne 0 ] && warn "install.sh failed at line $LINENO (exit $rc)"' EXIT
 
+BRAVE_API_KEY_VALUE="${BRAVE_API_KEY:-}"
+CONTEXT7_API_KEY_VALUE="${CONTEXT7_API_KEY:-}"
+FIRECRAWL_API_KEY_VALUE="${FIRECRAWL_API_KEY:-}"
+
 require_bin() {
   command -v "$1" >/dev/null 2>&1 || die "Required binary not found: $1"
 }
@@ -41,6 +48,112 @@ require_bin() {
 require_bin git
 require_bin python3
 command -v opencode >/dev/null 2>&1 || warn "opencode CLI not found — files will still be installed, but you should install OpenCode before using them."
+
+is_placeholder_value() {
+  local value="${1:-}"
+  [ -z "$value" ] && return 0
+  [[ "$value" == YOUR_* ]]
+}
+
+prompt_available() {
+  [ -r /dev/tty ] && [ -w /dev/tty ]
+}
+
+get_existing_mcp_secret() {
+  local server_name="$1" container_name="$2" secret_name="$3"
+  [ -f "$CONFIG_FILE" ] || return 0
+
+  env CONFIG_FILE="$CONFIG_FILE" SERVER_NAME="$server_name" CONTAINER_NAME="$container_name" SECRET_NAME="$secret_name" python3 - <<'PYEOF'
+import json, os
+from pathlib import Path
+
+config_path = Path(os.environ["CONFIG_FILE"])
+server_name = os.environ["SERVER_NAME"]
+container_name = os.environ["CONTAINER_NAME"]
+secret_name = os.environ["SECRET_NAME"]
+
+try:
+    config = json.loads(config_path.read_text())
+except (FileNotFoundError, json.JSONDecodeError, OSError):
+    raise SystemExit(0)
+
+mcp = config.get("mcp", {})
+if not isinstance(mcp, dict):
+    raise SystemExit(0)
+
+server = mcp.get(server_name, {})
+if not isinstance(server, dict):
+    raise SystemExit(0)
+
+container = server.get(container_name, {})
+if not isinstance(container, dict):
+    raise SystemExit(0)
+
+value = container.get(secret_name, "")
+
+if isinstance(value, str):
+    print(value)
+PYEOF
+}
+
+prompt_api_key_if_needed() {
+  local var_name="$1" prompt_label="$2" existing_value="$3"
+  local current_value="${!var_name:-}"
+  local entered_value
+
+  if ! is_placeholder_value "$current_value"; then
+    return 0
+  fi
+
+  if ! is_placeholder_value "$existing_value"; then
+    printf -v "$var_name" '%s' "$existing_value"
+    return 0
+  fi
+
+  if ! prompt_available; then
+    printf -v "$var_name" '%s' 'YOUR_API_KEY'
+    return 0
+  fi
+
+  printf 'Enter %s (press Enter to skip): ' "$prompt_label" > /dev/tty
+  if IFS= read -r -s entered_value < /dev/tty; then
+    printf '\n' > /dev/tty
+  else
+    entered_value=""
+    printf '\n' > /dev/tty
+  fi
+
+  if is_placeholder_value "$entered_value"; then
+    entered_value=""
+  fi
+
+  if [ -n "$entered_value" ]; then
+    printf -v "$var_name" '%s' "$entered_value"
+  else
+    printf -v "$var_name" '%s' 'YOUR_API_KEY'
+  fi
+}
+
+collect_mcp_api_keys() {
+  local existing_brave existing_context7 existing_firecrawl
+
+  existing_brave=$(get_existing_mcp_secret "brave-search" "environment" "BRAVE_API_KEY")
+  existing_context7=$(get_existing_mcp_secret "context7" "headers" "CONTEXT7_API_KEY")
+  existing_firecrawl=$(get_existing_mcp_secret "firecrawl" "environment" "FIRECRAWL_API_KEY")
+
+  prompt_api_key_if_needed BRAVE_API_KEY_VALUE "Brave Search API key" "$existing_brave"
+  prompt_api_key_if_needed CONTEXT7_API_KEY_VALUE "Context7 API key" "$existing_context7"
+  prompt_api_key_if_needed FIRECRAWL_API_KEY_VALUE "Firecrawl API key" "$existing_firecrawl"
+}
+
+api_key_status() {
+  local value="$1"
+  if is_placeholder_value "$value"; then
+    printf 'placeholder'
+  else
+    printf 'set'
+  fi
+}
 
 sync_directory() {
   local source_dir="$1" target_dir="$2"
@@ -94,11 +207,37 @@ merge_opencode_config() {
   existing=$(cat "$CONFIG_FILE" 2>/dev/null || echo '{}')
 
   local merged
-  merged=$(env EXISTING="$existing" RULES_DST="$RULES_DST" python3 - <<'PYEOF'
+  merged=$(env EXISTING="$existing" RULES_DST="$RULES_DST" BRAVE_API_KEY_VALUE="$BRAVE_API_KEY_VALUE" CONTEXT7_API_KEY_VALUE="$CONTEXT7_API_KEY_VALUE" FIRECRAWL_API_KEY_VALUE="$FIRECRAWL_API_KEY_VALUE" python3 - <<'PYEOF'
 import json, os
 
 existing_raw = os.environ.get("EXISTING", "{}")
 rules_dst = os.environ["RULES_DST"]
+brave_api_key = os.environ.get("BRAVE_API_KEY_VALUE") or "YOUR_API_KEY"
+context7_api_key = os.environ.get("CONTEXT7_API_KEY_VALUE") or "YOUR_API_KEY"
+firecrawl_api_key = os.environ.get("FIRECRAWL_API_KEY_VALUE") or "YOUR_API_KEY"
+
+
+def deep_fill(target, defaults):
+    for key, value in defaults.items():
+        if key not in target:
+            target[key] = value
+        elif isinstance(value, dict):
+            if isinstance(target.get(key), dict):
+                deep_fill(target[key], value)
+            else:
+                target[key] = value
+
+
+def is_placeholder(value):
+    return not isinstance(value, str) or not value.strip() or value.startswith("YOUR_")
+
+
+def ensure_secret(container, key, value):
+    if not isinstance(container, dict):
+        return
+    current = container.get(key)
+    if is_placeholder(current):
+        container[key] = value
 
 try:
     config = json.loads(existing_raw) if existing_raw.strip() else {}
@@ -112,6 +251,78 @@ if rules_dst not in instructions:
 permission = config.setdefault("permission", {})
 skill_permission = permission.setdefault("skill", {})
 skill_permission.setdefault("*", "allow")
+
+mcp_defaults = {
+    "brave-search": {
+        "type": "local",
+        "command": [
+            "npx",
+            "-y",
+            "@brave/brave-search-mcp-server",
+        ],
+        "environment": {
+            "BRAVE_API_KEY": brave_api_key,
+        },
+    },
+    "sequential-thinking": {
+        "type": "local",
+        "command": [
+            "npx",
+            "-y",
+            "@modelcontextprotocol/server-sequential-thinking",
+        ],
+    },
+    "context7": {
+        "type": "remote",
+        "url": "https://mcp.context7.com/mcp",
+        "headers": {
+            "CONTEXT7_API_KEY": context7_api_key,
+        },
+    },
+    "firecrawl": {
+        "type": "local",
+        "command": [
+            "npx",
+            "-y",
+            "firecrawl-mcp",
+        ],
+        "environment": {
+            "FIRECRAWL_API_KEY": firecrawl_api_key,
+        },
+    },
+    "playwright": {
+        "type": "local",
+        "command": [
+            "npx",
+            "@playwright/mcp@latest",
+        ],
+    },
+    "serena": {
+        "type": "local",
+        "command": [
+            "serena",
+            "start-mcp-server",
+            "--context=ide",
+            "--project-from-cwd",
+        ],
+    },
+}
+
+mcp = config.setdefault("mcp", {})
+if not isinstance(mcp, dict):
+    mcp = {}
+    config["mcp"] = mcp
+
+for server_name, defaults in mcp_defaults.items():
+    current = mcp.get(server_name)
+    if isinstance(current, dict):
+        deep_fill(current, defaults)
+    else:
+        mcp[server_name] = defaults
+
+ensure_secret(mcp["brave-search"].get("environment"), "BRAVE_API_KEY", brave_api_key)
+ensure_secret(mcp["context7"].get("headers"), "CONTEXT7_API_KEY", context7_api_key)
+ensure_secret(mcp["firecrawl"].get("environment"), "FIRECRAWL_API_KEY", firecrawl_api_key)
 
 print(json.dumps(config, indent=2))
 PYEOF
@@ -173,18 +384,19 @@ log "$commands_summary → $OPENCODE_DIR/commands"
 section "Install shared instructions"
 mkdir -p "$(dirname "$RULES_DST")"
 cp "$RULES_SRC" "$RULES_DST"
+section "MCP API keys"
+collect_mcp_api_keys
 merge_opencode_config
 log "✅ Rules installed: $RULES_DST"
 log "✅ Config updated: $CONFIG_FILE"
 
-section "MCP prerequisites"
-log "Configure these MCP servers in OpenCode if you want full functionality:"
-log "- serena"
-log "- context7"
-log "- brave-search"
-log "- firecrawl"
-log "- playwright"
-log "- sequential-thinking"
+section "MCP defaults"
+log "✅ MCP defaults merged into: $CONFIG_FILE"
+log "   Servers: serena, context7, brave-search, firecrawl, playwright, sequential-thinking"
+log "   brave-search: $(api_key_status "$BRAVE_API_KEY_VALUE")"
+log "   context7: $(api_key_status "$CONTEXT7_API_KEY_VALUE")"
+log "   firecrawl: $(api_key_status "$FIRECRAWL_API_KEY_VALUE")"
+log "   Replace any remaining YOUR_API_KEY placeholders before using API-backed MCP servers."
 
 section "Done"
 log "✅ b-skills installed successfully for OpenCode."
