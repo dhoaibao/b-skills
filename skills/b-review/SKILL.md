@@ -1,12 +1,11 @@
 ---
 name: b-review
 description: >
-  Pre-PR code review — verify logic correctness, requirements fulfillment, edge case coverage,
-  and test adequacy before opening a pull request. Use when the user says "review before PR",
-  "kiểm tra logic", or after implementation is done.
-  Unlike b-debug (fix broken) or b-research (lookup info), b-review validates what was built
-  against what was intended.
-effort: medium
+  Pre-PR code review — verify logic correctness, requirements fulfillment, edge case coverage, and test adequacy before opening a pull request. Use when the user says "review before PR", "kiểm tra logic", or after implementation is done. Unlike b-debug (fix broken) or b-research (lookup info), b-review validates what was built against what was intended.
+compatibility: opencode
+metadata:
+  suite: b-skills
+  effort: medium
 ---
 
 # b-review
@@ -33,25 +32,25 @@ A diff that is **≤50 lines AND ≤2 files** is treated as a small change. The 
 ## When NOT to use
 
 - Something is broken → use **b-debug**
-- Write or fix tests → use **b-test**
+- write or fix tests → use **b-test**
 - Need library API details before writing code → use **b-research**
 
 ## Tools required
 
-- `Bash` — to read git diff and changed file list.
+- `bash` — to read git diff and changed file list.
 - `sequentialthinking` — from `sequential-thinking` MCP server — structured review reasoning.
-- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols` — from `serena` MCP server *(preferred for symbol-aware review; use native Read/Bash search for unsupported file and exact-string operations)*
+- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols` — from `serena` MCP server *(preferred for symbol-aware review; use native read/bash search for unsupported file and exact-string operations)*
 - `firecrawl_scrape` — from `firecrawl` MCP server *(optional, for fetching issue/ticket URL content when an `**Issue**:` URL is present in the plan file)*
 - `resolve-library-id` + `query-docs` — from `context7` MCP server *(optional, for verifying library API calls in changed code)*
 - `brave_web_search` — from `brave-search` MCP server *(optional, for CVE/known-vulnerability lookup when a risky security pattern is found)*
 
 If sequential-thinking is unavailable: reason through review dimensions inline as `Finding → Severity → Why blocker/not blocker → Suggested action`.
-If Serena is unavailable: use Read tool to inspect changed files directly. Note: "⚠️ Serena unavailable — symbol-aware impact analysis unavailable."
+If Serena is unavailable: use read tool to inspect changed files directly. Note: "⚠️ Serena unavailable — symbol-aware impact analysis unavailable."
 If firecrawl is unavailable: skip Issue URL fetch; display ticket ID or URL as a context reference only.
 If context7 is unavailable: skip API verification step; note any suspicious library calls manually.
 If brave-search is unavailable: skip CVE lookup; flag the pattern as a manual security review item.
 
-Graceful degradation: ✅ Possible — core review works with Bash + Read. Each MCP adds a specific review dimension; none is strictly required.
+Graceful degradation: ✅ Possible — core review works with bash + read. Each MCP adds a specific review dimension; none is strictly required.
 
 ## Steps
 
@@ -79,7 +78,7 @@ Determine fast-path eligibility now and reference it in the rest of the workflow
 
 Determine what the code was *supposed* to do.
 
-1. **Check for plan file** — look for `.claude/b-plans/[task-slug].md`. If found, read the `## Steps` section and the original scope statement. This is the primary requirements source.
+1. **Check for plan file** — look for `.opencode/b-plans/[task-slug].md`. If found, read the `## Steps` section and the original scope statement. This is the primary requirements source.
 
    1b. **Issue enrichment** *(only when a plan file was found)*: scan the plan header for an `**Issue**:` field.
     - If the value starts with `http`: `firecrawl_scrape` with `url=[value]` and `formats: ["markdown"]`. Trim to 500 words and append to the requirements baseline as: `**Issue context** (from [URL]):\n[scraped content]`. If <200 chars or 403: skip silently and note: "Issue URL requires authentication — using URL as context reference only: [value]."
@@ -87,7 +86,7 @@ Determine what the code was *supposed* to do.
     - If absent: skip.
 
 2. **Check $ARGUMENTS** — if provided:
-   - Ends in `.md` → `Read` to verify the file exists; if it does, treat as the primary requirements source.
+   - Ends in `.md` → `read` to verify the file exists; if it does, treat as the primary requirements source.
    - Otherwise → treat as a text description of requirements.
 3. **Ask the user** — if neither is available: "What was this change supposed to accomplish? What does 'done' look like?" Initial ask, then one re-prompt if vague — two questions maximum.
 
@@ -110,12 +109,12 @@ Initialize Serena project knowledge first: call `check_onboarding_performed`; if
 1. `find_symbol` on changed names — map them to real symbols.
 2. `find_referencing_symbols` on top changed symbols — understand downstream impact.
 3. `get_symbols_overview` on changed files before opening source.
-4. Native `Read` only for the highest-risk symbol bodies or file sections.
-5. Native Bash search when the diff changes a shared helper, exported boundary, exact string, config key, or repeated pattern.
+4. Native `read` only for the highest-risk symbol bodies or file sections.
+5. Native bash search when the diff changes a shared helper, exported boundary, exact string, config key, or repeated pattern.
 
 **Impact-first review rule**: prioritize review depth on (a) symbols with the broadest references, (b) symbols at service boundaries, and (c) symbols implementing explicit requirements from Step 2. Raw line-count alone should not determine review depth.
 
-Read the changed code and check:
+read the changed code and check:
 
 **Control flow**
 - Are all branches of conditionals handled? (if/else, switch cases, error paths)

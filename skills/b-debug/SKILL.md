@@ -1,12 +1,11 @@
 ---
 name: b-debug
 description: >
-  Systematic hypothesis-driven debugging — trace execution paths, form ranked hypotheses,
-  confirm root cause, then fix and verify by default. Use when the user says "debug", "bug",
-  "lỗi", "không chạy", "fix this", or pastes an error message.
-  Unlike b-plan (decide approach) or b-research (lookup info), b-debug traces, confirms, and
-  fixes broken code.
-effort: high
+  Systematic hypothesis-driven debugging — trace execution paths, form ranked hypotheses, confirm root cause, then fix and verify by default. Use when the user says "debug", "bug", "lỗi", "không chạy", "fix this", or pastes an error message. Unlike b-plan (decide approach) or b-research (lookup info), b-debug traces, confirms, and fixes broken code.
+compatibility: opencode
+metadata:
+  suite: b-skills
+  effort: high
 ---
 
 # b-debug
@@ -45,7 +44,7 @@ From `serena` MCP server:
 - `find_referencing_symbols` — trace callers/usages of a function or class.
 - `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol`, `rename_symbol`, `safe_delete_symbol` — apply symbol-level fixes once root cause is confirmed.
 
-Use native Bash search for exact error strings, config keys, and repeated patterns. Use native `Read` for narrow source chunks after Serena identifies relevant symbols/files.
+Use native bash search for exact error strings, config keys, and repeated patterns. Use native `read` for narrow source chunks after Serena identifies relevant symbols/files.
 
 From `sequential-thinking` MCP server:
 - `sequentialthinking` — structured reasoning to form and rank hypotheses.
@@ -60,11 +59,11 @@ From `firecrawl` MCP server *(optional)*:
 - `firecrawl_scrape` — scrape full content of relevant GitHub issue pages, Stack Overflow answers, or changelogs found via web search.
 - `firecrawl_map` — map all URLs on a site when `firecrawl_scrape` returns empty content; use to discover the correct URL before retrying scrape.
 
-If Serena is unavailable: use Bash search and `Read` to map files manually. Always note: "⚠️ Serena unavailable — analysis based on Bash/Read; cross-file tracking incomplete."
+If Serena is unavailable: use bash search and `read` to map files manually. Always note: "⚠️ Serena unavailable — analysis based on bash/read; cross-file tracking incomplete."
 If sequential-thinking is unavailable: reason inline as `Hypothesis N → Evidence for → Evidence against → Cheapest verification → Confirmed/Rejected`.
 If context7 is unavailable: invoke /b-research for library API questions instead.
 
-Graceful degradation: ✅ Possible — if Serena is unavailable, use Bash/Read for file analysis. Quality is reduced but the skill remains functional.
+Graceful degradation: ✅ Possible — if Serena is unavailable, use bash/read for file analysis. Quality is reduced but the skill remains functional.
 
 ## Steps
 
@@ -91,10 +90,10 @@ Use `serena` to trace the execution path in this order:
 1. `find_symbol` on the chosen entry point (route handler, CLI command, event listener) — locate the best starting symbol.
 2. `get_symbols_overview` on the relevant file — confirm which symbols are worth reading.
 3. `find_referencing_symbols` on the relevant function — trace callers/usages across files.
-4. Use native Bash search on the error string, config key, or suspicious behavior.
-5. Use native `Read` on any function or file section that still looks suspicious.
+4. Use native bash search on the error string, config key, or suspicious behavior.
+5. Use native `read` on any function or file section that still looks suspicious.
 
-**Read-order rule**: never jump to native `Read` before completing the supported Serena symbol and reference steps unless the target is prose/config or no relevant symbol exists.
+**read-order rule**: never jump to native `read` before completing the supported Serena symbol and reference steps unless the target is prose/config or no relevant symbol exists.
 
 From this, identify:
 - All layers the request/data passes through (middleware, validators, handlers, services, DB).
@@ -136,7 +135,7 @@ Run before verifying hypotheses — these often eliminate wrong hypotheses immed
 - If results include a GitHub issue, Stack Overflow answer, or changelog URL that looks relevant → `firecrawl_scrape` on the top 1–2 most relevant URLs (`formats: ["markdown"]`). Cap at 2 URLs. If a page returns empty or <200 words → `firecrawl_map` on the domain root to find the correct URL, then retry scrape. If still empty, proceed with snippets only.
 - If results point to API misuse → `resolve-library-id` + `query-docs` with the specific method/behavior in question. Faster than /b-research for a single API question. Escalate to /b-research only if context7 has no index for the library.
 
-**Error string search** — if the error text is short and specific → native Bash search with the exact error string to find all places in the codebase that produce or handle this error. Often reveals the true origin faster than tracing the call graph.
+**Error string search** — if the error text is short and specific → native bash search with the exact error string to find all places in the codebase that produce or handle this error. Often reveals the true origin faster than tracing the call graph.
 
 After Step 3b, re-rank hypotheses if findings shifted the picture.
 
@@ -148,8 +147,8 @@ Test hypotheses starting from the most likely:
 
 - Add targeted logging at the suspected choke point (not scattered everywhere).
 - Check config/env values if hypothesis points there.
-- Use `get_symbols_overview` first when narrowing within a large file; then native `Read` to re-examine the suspicious function.
-- Use `find_referencing_symbols` for semantic references or native Bash search when the bug pattern may exist in multiple text locations.
+- Use `get_symbols_overview` first when narrowing within a large file; then native `read` to re-examine the suspicious function.
+- Use `find_referencing_symbols` for semantic references or native bash search when the bug pattern may exist in multiple text locations.
 - If the hypothesis points to library API misuse: `resolve-library-id` + `query-docs` directly.
 - **Regression detection**: if the bug appeared after a recent change, compare current symbol/file content against the recent git diff before changing code.
 
@@ -175,8 +174,8 @@ State clearly: *"Root cause: [X] because [Y]"* before writing any fix.
 
 Default behavior: implement the minimal safe fix immediately.
 
-- Write the minimal fix — don't refactor unrelated code in the same change.
-- Prefer Serena symbolic edits in this order: `replace_symbol_body` → `insert_before_symbol` / `insert_after_symbol` → `rename_symbol` / `safe_delete_symbol`; use native `Edit` when the fix is a small line-level patch inside a larger symbol.
+- write the minimal fix — don't refactor unrelated code in the same change.
+- Prefer Serena symbolic edits in this order: `replace_symbol_body` → `insert_before_symbol` / `insert_after_symbol` → `rename_symbol` / `safe_delete_symbol`; use native `edit` when the fix is a small line-level patch inside a larger symbol.
 - If the fix touches a non-obvious API or behavior, add a comment explaining why.
 - If the bug reveals a broader pattern (same silent-catch in 3 other places), flag it as a separate follow-up — don't fix everything at once.
 - Keep the change scoped to the confirmed symbol/file only.

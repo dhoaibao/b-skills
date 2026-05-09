@@ -1,12 +1,11 @@
 ---
 name: b-e2e
 description: >
-  Browser-based end-to-end testing. ALWAYS invoke when the user asks to test the UI,
-  run end-to-end tests, use the browser, or verify frontend flows: "test UI", "chạy E2E",
-  "test trên trình duyệt", "browser test". Uses Playwright to navigate, interact, and assert
-  state. Unlike b-test (which handles unit/integration code tests), b-e2e drives a real
-  browser to test user-facing functionality.
-effort: medium
+  Browser-based end-to-end testing. ALWAYS invoke when the user asks to test the UI, run end-to-end tests, use the browser, or verify frontend flows: "test UI", "chạy E2E", "test trên trình duyệt", "browser test". Uses Playwright to navigate, interact, and assert state. Unlike b-test (which handles unit/integration code tests), b-e2e drives a real browser to test user-facing functionality.
+compatibility: opencode
+metadata:
+  suite: b-skills
+  effort: medium
 ---
 
 # b-e2e
@@ -28,18 +27,18 @@ Drives a real browser using Playwright to verify frontend user flows, interact w
 
 ## Tools required
 
-- `mcp__playwright__browser_navigate` — from `playwright` MCP server *(Primary)*
-- `mcp__playwright__browser_snapshot` — from `playwright` MCP server *(Primary)*
-- `mcp__playwright__browser_click` / `browser_fill_form` / `browser_type` / `browser_press_key` — from `playwright` MCP server *(Primary)*
-- `mcp__playwright__browser_take_screenshot` — from `playwright` MCP server *(Secondary, for visual diffs)*
-- `mcp__playwright__browser_evaluate` — from `playwright` MCP server *(optional, for complex DOM assertions)*
-- `mcp__playwright__browser_network_requests` — from `playwright` MCP server *(optional, for asserting API calls)*
-- `mcp__playwright__browser_close` — from `playwright` MCP server *(used in cleanup)*
+- `browser_navigate` — from `playwright` MCP server *(Primary)*
+- `browser_snapshot` — from `playwright` MCP server *(Primary)*
+- `browser_click` / `browser_fill_form` / `browser_type` / `browser_press_key` — from `playwright` MCP server *(Primary)*
+- `browser_take_screenshot` — from `playwright` MCP server *(Secondary, for visual diffs)*
+- `browser_evaluate` — from `playwright` MCP server *(optional, for complex DOM assertions)*
+- `browser_network_requests` — from `playwright` MCP server *(optional, for asserting API calls)*
+- `browser_close` — from `playwright` MCP server *(used in cleanup)*
 - `find_symbol`, `get_symbols_overview`, `insert_before_symbol`, `insert_after_symbol`, `replace_symbol_body` — from `serena` MCP server *(optional, for writing test code in Step 5)*
-- `Bash`, `Write`, `Edit` — for managing temporary artifacts, dev-server health checks, and creating new test files when needed.
+- `bash`, `write`, `edit` — for managing temporary artifacts, dev-server health checks, and creating new test files when needed.
 
 If `playwright` MCP is unavailable: stop and inform the user that E2E browser interactions require the Playwright MCP server.
-If `serena` is unavailable in Step 5: write test code with native `Write`/`Edit` instead.
+If `serena` is unavailable in Step 5: write test code with native `write`/`edit` instead.
 
 Graceful degradation: ❌ Not possible — this skill inherently requires browser automation.
 
@@ -47,7 +46,7 @@ Graceful degradation: ❌ Not possible — this skill inherently requires browse
 
 ### Step 1 — Setup environment and navigate
 
-Use `Bash` to ensure the temporary artifact directory exists: `mkdir -p .claude/b-e2e`.
+Use `bash` to ensure the temporary artifact directory exists: `mkdir -p .opencode/b-e2e`.
 
 Determine the target URL (local dev server or staging). If the URL is a `localhost` address, verify the dev server is reachable before navigating:
 ```bash
@@ -61,7 +60,7 @@ Once confirmed reachable (or for remote URLs), call `browser_navigate` to load t
 
 ### Step 2 — Map the UI and capture visuals
 
-Call `browser_snapshot` (saving to `.claude/b-e2e/snapshot.md`) and `browser_take_screenshot` (saving to `.claude/b-e2e/screenshot.png`) to capture the accessibility tree and visual state. Always use the accessibility snapshot to find exact target references before attempting to click or type.
+Call `browser_snapshot` (saving to `.opencode/b-e2e/snapshot.md`) and `browser_take_screenshot` (saving to `.opencode/b-e2e/screenshot.png`) to capture the accessibility tree and visual state. Always use the accessibility snapshot to find exact target references before attempting to click or type.
 
 ---
 
@@ -73,7 +72,7 @@ Execute the requested user flow by calling `browser_click`, `browser_fill_form`,
 
 ### Step 4 — Verify state
 
-Capture a new snapshot/screenshot in `.claude/b-e2e/` or use `browser_evaluate` to assert that the expected text, elements, or state changes have appeared. Optionally use `browser_network_requests` for API-level assertions when the UI depends on backend calls.
+Capture a new snapshot/screenshot in `.opencode/b-e2e/` or use `browser_evaluate` to assert that the expected text, elements, or state changes have appeared. Optionally use `browser_network_requests` for API-level assertions when the UI depends on backend calls.
 
 ---
 
@@ -82,7 +81,7 @@ Capture a new snapshot/screenshot in `.claude/b-e2e/` or use `browser_evaluate` 
 If the user asked to write or fix a test file:
 
 1. Locate the appropriate spec file:
-   - Use Bash to find existing specs (`find . -name "*.spec.ts" -o -name "*.e2e.ts"`).
+   - Use bash to find existing specs (`find . -name "*.spec.ts" -o -name "*.e2e.ts"`).
    - Use `find_symbol` on existing describe blocks to identify the right insertion point.
 2. Map the successful manual interactions from Steps 3–4 into Playwright code:
    - Mirror selectors from the snapshot (prefer accessible roles/names over CSS).
@@ -90,8 +89,8 @@ If the user asked to write or fix a test file:
 3. Insert the test:
    - Existing describe block → `insert_after_symbol` on the last test in the block.
    - New describe block needed → `insert_after_symbol` on the last describe in the file.
-   - No spec file exists → use `Write` to create one in the conventional location for this project.
-4. Run the new test once via Bash to confirm it passes:
+   - No spec file exists → use `write` to create one in the conventional location for this project.
+4. Run the new test once via bash to confirm it passes:
    ```bash
    npx playwright test path/to/spec.ts
    ```
@@ -105,7 +104,7 @@ If no test code is requested, skip this step and just report the verified flow.
 When testing, verification, and code generation are complete:
 
 1. Close the browser session: `browser_close`.
-2. Remove temporary artifacts: `rm -rf .claude/b-e2e`.
+2. Remove temporary artifacts: `rm -rf .opencode/b-e2e`.
 
 ---
 
@@ -135,15 +134,15 @@ When testing, verification, and code generation are complete:
 Saved to: `[path/to/test.spec.ts]`
 
 #### Cleanup
-✅ Browser closed, `.claude/b-e2e/` removed
+✅ Browser closed, `.opencode/b-e2e/` removed
 ```
 
 ---
 
 ## Rules
 - Always use `browser_snapshot` to get exact element targets before interacting; never guess selectors blindly.
-- Save all intermediate snapshots, screenshots, and visual outputs strictly to `.claude/b-e2e/`.
-- Always close the browser and delete `.claude/b-e2e/` when the testing flow finishes.
+- Save all intermediate snapshots, screenshots, and visual outputs strictly to `.opencode/b-e2e/`.
+- Always close the browser and delete `.opencode/b-e2e/` when the testing flow finishes.
 - Ensure the local dev server is running before attempting to navigate to `localhost`.
 - Keep interactions sequential and verify state changes after major actions.
 - Prefer accessible roles/names from the snapshot over brittle CSS selectors when authoring tests.

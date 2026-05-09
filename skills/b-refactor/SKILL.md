@@ -1,12 +1,11 @@
 ---
 name: b-refactor
 description: >
-  Code refactoring: impact analysis, mechanical transformation, and verification.
-  ALWAYS invoke when the user asks to refactor, tái cấu trúc, rename, extract method,
-  move, inline, simplify, or clean up code. Unlike b-plan (decides what to build),
-  b-refactor owns the mechanical workflow: impact analysis → safe edits → verify.
-  Uses Serena's symbol-aware tools for cross-file impact and safe renaming.
-effort: medium
+  Code refactoring: impact analysis, mechanical transformation, and verification. ALWAYS invoke when the user asks to refactor, tái cấu trúc, rename, extract method, move, inline, simplify, or clean up code. Unlike b-plan (decides what to build), b-refactor owns the mechanical workflow: impact analysis → safe edits → verify. Uses Serena's symbol-aware tools for cross-file impact and safe renaming.
+compatibility: opencode
+metadata:
+  suite: b-skills
+  effort: medium
 ---
 
 # b-refactor
@@ -38,14 +37,14 @@ If `$ARGUMENTS` is provided, treat it as the refactoring instruction. Proceed di
 
 ## Tools required
 
-- `Bash` — run tests, check compilation, inspect git diff.
+- `bash` — run tests, check compilation, inspect git diff.
 - `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol`, `rename_symbol`, `safe_delete_symbol` — from `serena` MCP server *(required for impact analysis and safe symbol-level edits)*
 - `sequentialthinking` — from `sequential-thinking` MCP server *(optional, for evaluating trade-offs on large refactors)*
 
-If Serena is unavailable: use native `Read` + `Edit` + Bash search for manual refactoring. Note: "⚠️ Serena unavailable — cross-file renames and safe deletes require manual verification."
+If Serena is unavailable: use native `read` + `edit` + bash search for manual refactoring. Note: "⚠️ Serena unavailable — cross-file renames and safe deletes require manual verification."
 If sequential-thinking is unavailable: evaluate trade-offs inline with explicit pros/cons.
 
-Graceful degradation: ⚠️ Partial — mechanical refactoring still possible with native Edit, but cross-file renames and safe deletes require manual impact checks.
+Graceful degradation: ⚠️ Partial — mechanical refactoring still possible with native edit, but cross-file renames and safe deletes require manual impact checks.
 
 ## Steps
 
@@ -61,7 +60,7 @@ Graceful degradation: ⚠️ Partial — mechanical refactoring still possible w
 3. Call `find_referencing_symbols` on the target to map every call site and usage.
    Record: how many files reference it, whether it's exported/public, whether any references are in tests.
 
-4. Run tests via Bash to establish a baseline (must pass before refactoring):
+4. Run tests via bash to establish a baseline (must pass before refactoring):
    ```bash
    npm test || pytest || go test ./... || cargo test
    ```
@@ -90,17 +89,17 @@ If the refactor affects >3 files or crosses package boundaries:
 
 ### Step 3 — Execute safely
 
-Apply edits in dependency order. Prefer Serena's symbol-aware tools over native `Edit`:
+Apply edits in dependency order. Prefer Serena's symbol-aware tools over native `edit`:
 
 1. **`rename_symbol`** — for renaming functions, classes, variables, files, or directories. Safest for cross-file renames.
 2. **`safe_delete_symbol`** — for removing dead code. Returns remaining usages; address them before retrying.
 3. **`replace_symbol_body`** — for changing the full body of a function or method while keeping the signature.
 4. **`insert_before_symbol` / `insert_after_symbol`** — for adding new functions or moving declarations.
-5. **Native `Edit`** — only for line-level import updates, config changes, or prose modifications that are not symbol-relative.
+5. **Native `edit`** — only for line-level import updates, config changes, or prose modifications that are not symbol-relative.
 
 **Execution order rule**: apply changes from the inside out — inner helpers first, then outer callers. This prevents broken references during intermediate states.
 
-**Import update rule**: if the refactor moves code across files, update imports manually via native `Edit` after the symbol-level changes are done.
+**Import update rule**: if the refactor moves code across files, update imports manually via native `edit` after the symbol-level changes are done.
 
 ---
 
@@ -159,7 +158,7 @@ After every mechanical step:
 
 - Never refactor without a green test baseline — warn and ask if tests are already failing.
 - Always use `find_referencing_symbols` before renaming or deleting — cross-file impact is the most common source of refactoring bugs.
-- Prefer `rename_symbol` over manual `Edit` for renames — it updates all references atomically.
+- Prefer `rename_symbol` over manual `edit` for renames — it updates all references atomically.
 - Prefer `safe_delete_symbol` over manual deletion — it prevents accidental removal of still-used code.
 - Apply edits from the inside out — inner helpers first, then outer callers.
 - If code moves across files, update imports after the symbol-level changes are done.

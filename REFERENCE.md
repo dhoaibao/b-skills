@@ -31,14 +31,14 @@ how should I approach refactoring the auth module?
 
 **Output**
 - Quick mode: returns a concise 2–5 step chat plan with a verification step.
-- Full mode: writes a plan file to `.claude/b-plans/[task-slug].md`.
+- Full mode: writes a plan file to `.opencode/b-plans/[task-slug].md`.
 - Full-mode plans include: `## Decision` (approach + rejected alternatives), ordered checkbox steps, dependencies, risks, unknowns, and optional `## Feasibility` and `## Mapping outline`.
 - Final plans must be self-contained enough that a fresh agent can execute them without clarifying questions.
 - Saved plan files are always in English.
 
 **Key rules**
 - Do not implement until the user approves the plan; after approval, implementation may proceed in the same session.
-- Full mode must write to `.claude/b-plans/`; quick mode may stay in chat unless the user asks for a saved plan.
+- Full mode must write to `.opencode/b-plans/`; quick mode may stay in chat unless the user asks for a saved plan.
 - The feasibility gate only confirms blockers and scope; it does not replace `/b-research` for deep unknowns.
 - All unresolved unknowns must be surfaced — never deferred silently.
 - **Handoff standard: 90%+** — every step must be detailed enough that a fresh agent with zero prior context can implement it without asking a follow-up question.
@@ -199,12 +199,12 @@ Browser-based frontend testing and E2E script authoring.
 **Core behavior**
 - Uses Playwright MCP to navigate to the target web application.
 - Before navigating to `localhost`, verifies the dev server is reachable via a Bash health check; asks the user to start it if not responding.
-- Creates a temporary directory `.claude/b-e2e/` to store intermediate artifacts (screenshots and snapshots).
+- Creates a temporary directory `.opencode/b-e2e/` to store intermediate artifacts (screenshots and snapshots).
 - Relies on accessibility tree snapshots (`browser_snapshot`) to map the UI and get precise target references.
 - Performs sequential user interactions (clicks, typing, form fills).
 - Verifies UI state changes via updated snapshots; optionally monitors network requests with `browser_network_requests` for API-level assertions.
 - Translates successful manual interactions into Playwright test code via Serena symbol tools when an existing spec exists, or `Write` when no spec file exists.
-- Closes the browser session and removes `.claude/b-e2e/` entirely when the flow finishes.
+- Closes the browser session and removes `.opencode/b-e2e/` entirely when the flow finishes.
 
 **Good triggers**
 ```text
@@ -222,7 +222,7 @@ Target URL → UI Snapshot → Interactions → Assertions → [Optional] Test C
 - Inherently requires the `playwright` MCP to function.
 - Never guess element selectors; always read the `browser_snapshot` first.
 - For `localhost` targets, run a Bash health check before calling `browser_navigate`.
-- All testing artifacts must go into `.claude/b-e2e/` and be removed upon completion.
+- All testing artifacts must go into `.opencode/b-e2e/` and be removed upon completion.
 - Always close the browser at cleanup.
 - Distinct from `b-test`, which handles code-level unit testing without a live browser.
 
@@ -286,7 +286,7 @@ Target → Impact → Risk → Transformation plan → Changes → Verification
 
 ### Implementation protocol
 ```
-1. Read the approved chat plan or .claude/b-plans/[task].md
+1. Read the approved chat plan or .opencode/b-plans/[task].md
 2. Follow confirmed decisions and planned touch points
 3. Execute steps in dependency order
 4. Verify each step with its "Done when" check or the narrowest relevant test/typecheck
@@ -327,7 +327,7 @@ Target → Impact → Risk → Transformation plan → Changes → Verification
 ## Skill interaction map
 
 ```
-/b-plan ──────────────── writes ─────────────────► plan file in .claude/b-plans/
+/b-plan ──────────────── writes ─────────────────► plan file in .opencode/b-plans/
         └── unknown library/approach ────────────► /b-research (before or during planning)
         └── reduced to mechanical steps ─────────► /b-refactor
 
@@ -348,3 +348,28 @@ Target → Impact → Risk → Transformation plan → Changes → Verification
 
 /b-research ──────────── quick lookup or full research, auto-routes internally
 ```
+
+---
+
+## Repository layout and maintenance
+
+This is an OpenCode-native repository.
+
+### Repository source files
+- `global/AGENTS.md` — source for shared runtime instructions installed into OpenCode.
+- `opencode.json` — OpenCode project config.
+- `skills/<name>/SKILL.md` — reusable OpenCode skills.
+- `commands/<name>.md` — explicit slash-command wrappers.
+
+### Runtime artifacts
+- `.opencode/b-plans/` — saved plan files created by `/b-plan`.
+- `.opencode/b-e2e/` — temporary browser artifacts created by `/b-e2e`.
+
+### Maintenance rules
+- Keep one folder per skill under `skills/`.
+- Keep command wrappers thin; they are entrypoints, not duplicate logic stores.
+- Keep shared runtime rule sources under `global/`.
+- When a skill changes, update `README.md` and `REFERENCE.md` in the same commit.
+- Keep skill descriptions trigger-focused and specific enough for correct routing.
+- Preserve skill behavior; do not silently redesign logic while doing platform migrations.
+

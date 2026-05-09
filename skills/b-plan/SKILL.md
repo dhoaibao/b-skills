@@ -1,13 +1,11 @@
 ---
 name: b-plan
 description: >
-  Think before coding. Decompose non-trivial tasks into ordered steps, evaluate approaches,
-  surface risks, and produce an execution-ready plan file. ALWAYS invoke when the user says
-  "plan", "thiết kế", "how should I approach", "lên kế hoạch", "nên bắt đầu từ đâu",
-  or the task spans more than 2 files or has unclear scope.
-  Unlike b-debug (fix broken) or b-research (lookup info), b-plan owns the decision of
-  what to build and in what order.
-effort: high
+  Think before coding. Decompose non-trivial tasks into ordered steps, evaluate approaches, surface risks, and produce an execution-ready plan file. ALWAYS invoke when the user says "plan", "thiết kế", "how should I approach", "lên kế hoạch", "nên bắt đầu từ đâu", or the task spans more than 2 files or has unclear scope. Unlike b-debug (fix broken) or b-research (lookup info), b-plan owns the decision of what to build and in what order.
+compatibility: opencode
+metadata:
+  suite: b-skills
+  effort: high
 ---
 
 # b-plan
@@ -43,11 +41,11 @@ If `$ARGUMENTS` is provided, treat it as the task description — skip asking "w
 - `firecrawl_scrape` — from `firecrawl` MCP server *(optional, for scraping issue/ticket URL when present)*.
 
 If sequential-thinking is unavailable: reason inline as `Goal → Constraints → Options → Decision → Ordered steps → Open questions`.
-If Serena is unavailable: use Bash search and `Read` for narrow code inspection. Note: "⚠️ Serena unavailable — cross-file tracking incomplete."
+If Serena is unavailable: use bash search and `read` for narrow code inspection. Note: "⚠️ Serena unavailable — cross-file tracking incomplete."
 If context7 or brave-search is unavailable: delegate to /b-research.
 If firecrawl is unavailable: store issue URL as a plain reference without scraping.
 
-Graceful degradation: ✅ Possible — core planning works without MCPs using inline reasoning plus Bash/Read.
+Graceful degradation: ✅ Possible — core planning works without MCPs using inline reasoning plus bash/read.
 
 ## Steps
 
@@ -56,7 +54,7 @@ Graceful degradation: ✅ Possible — core planning works without MCPs using in
 Choose the lightest mode that fits the task before any other work.
 
 - **Quick mode** — scoped daily tasks: clear end state, low risk, usually ≤2 files, no DB/schema migration, no public API contract change, no security-sensitive behavior. Output a concise 2–5 step chat plan with a verification step. After approval, implementation may proceed in the same session.
-- **Full mode** — unclear, high-risk, multi-layer, or >2-file work. Run all steps below and write a plan file to `.claude/b-plans/`.
+- **Full mode** — unclear, high-risk, multi-layer, or >2-file work. Run all steps below and write a plan file to `.opencode/b-plans/`.
 
 **Selection rule**: choose yourself from task complexity; do not ask the user. Announce the chosen mode in one sentence and why. Ask only when both modes are genuinely valid and preference matters.
 
@@ -88,7 +86,7 @@ Confirm what is being built before scanning any code.
 **Decision accumulation** *(running record across all steps)*: each time a user answer, codebase finding, or approach choice settles a behavioral or design question, record it as a numbered confirmed decision. Compile into `## Confirmed decisions` in the plan. Format each entry as a single, unambiguous, implementation-actionable statement — no hedging, no "consider", no "may". Example: `"Realtime update must update the existing VoiceCall matched by VendorCallKey; if soft-deleted, insert a new row instead."`
 
 **Feasibility check** *(inline when scope is non-trivial)*:
-- Does the current architecture support this? Use Serena symbol discovery and reference tracing where supported; native Read/Bash for prose, config, and exact strings.
+- Does the current architecture support this? Use Serena symbol discovery and reference tracing where supported; native read/bash for prose, config, and exact strings.
 - Any blockers? (Missing infrastructure, incompatible dependencies, architectural gaps.)
 - Effort estimate: S (hours) / M (1–2 days) / L (3–5 days) / XL (1–2 weeks) / XXL (weeks+).
 - If blockers found: state clearly. If no workaround exists, do not proceed until resolved.
@@ -104,7 +102,7 @@ Use Serena for supported symbol-aware discovery before planning. Follow this exa
 2. **Discover symbols** — `find_symbol` on the main function, class, command, handler, or module involved in the change.
 3. **Inspect structure** — `get_symbols_overview` on each relevant file to see which symbols are worth reading.
 4. **Trace references** — `find_referencing_symbols` on key exported/shared symbols to confirm callers and dependents.
-5. **Read narrowly** — only if the above leaves ambiguity: native `Read` on the exact section needed; native Bash search for exact strings.
+5. **read narrowly** — only if the above leaves ambiguity: native `read` on the exact section needed; native bash search for exact strings.
 
 **Issue/ticket** *(optional context source — runs here if relevant)*:
 - Ask once: "Issue/ticket URL or ID? (Leave blank to skip.)"
@@ -175,14 +173,14 @@ Flag anything unresolved before handing off:
 
 ---
 
-### Step 6 — Write plan
+### Step 6 — write plan
 
 **Quick mode**: keep the plan in chat unless the user asks for a saved plan. Present the step list, ask for approval. After approval, implementation may proceed in the same session.
 
-**Full mode**: write to `.claude/b-plans/[task-slug].md` in the **current project root only**.
+**Full mode**: write to `.opencode/b-plans/[task-slug].md` in the **current project root only**.
 
 - `task-slug` = kebab-case, e.g. `add-retry-logic`, `refactor-auth-module`.
-- Create `.claude/b-plans/` if it doesn't exist.
+- Create `.opencode/b-plans/` if it doesn't exist.
 - Show the exact saved path after writing.
 
 Present a short summary (scope + step count) and ask for confirmation. Update and re-confirm if the user requests changes. After approval, implementation may proceed in the same session unless the user wants a separate handoff.
@@ -254,7 +252,7 @@ Always English, regardless of the user's query language.
 
 ## Rules
 
-- Full mode must write to `.claude/b-plans/` — never leave full-mode plans only in chat.
+- Full mode must write to `.opencode/b-plans/` — never leave full-mode plans only in chat.
 - Quick mode may stay in chat unless the user asks for a saved plan.
 - Always write saved plan files in English.
 - Do not implement until the user approves the plan. After approval, implementation may proceed in the same session.

@@ -1,12 +1,11 @@
 ---
 name: b-research
 description: >
-  External knowledge, from quick lookup to full research. ALWAYS invoke when the user says
-  "research", "tìm hiểu", "deep dive", "so sánh", "tổng hợp", "lookup", "tra cứu nhanh",
-  "what's the API for", "method signature of X", or "config key for Y". Auto-detects
-  quick vs full mode. Unlike b-debug or b-plan, it fetches docs/web info instead of
-  tracing code or choosing implementation.
-effort: medium
+  External knowledge, from quick lookup to full research. ALWAYS invoke when the user says "research", "tìm hiểu", "deep dive", "so sánh", "tổng hợp", "lookup", "tra cứu nhanh", "what's the API for", "method signature of X", or "config key for Y". Auto-detects quick vs full mode. Unlike b-debug or b-plan, it fetches docs/web info instead of tracing code or choosing implementation.
+compatibility: opencode
+metadata:
+  suite: b-skills
+  effort: medium
 ---
 
 # b-research
@@ -42,10 +41,10 @@ If `$ARGUMENTS` is provided, treat it as the research question — proceed direc
 If context7 is unavailable: continue with Brave for library questions.
 If brave-search is unavailable:
 - quick mode with a clear Context7 answer may still complete;
-- otherwise stop and tell the user: `❌ brave-search MCP is not connected. Please check /mcp.`
+- otherwise stop and tell the user: `❌ brave-search MCP is not connected. Please check your MCP configuration.`
 If firecrawl is unavailable:
 - quick mode may still complete without scraping;
-- full mode is blocked — tell the user: `❌ firecrawl MCP is not connected. Please check /mcp.`
+- full mode is blocked — tell the user: `❌ firecrawl MCP is not connected. Please check your MCP configuration.`
 If sequential-thinking is unavailable: summarize conflicts inline as `Source A says X / Source B says Y / Best fit: Z`.
 
 Graceful degradation: ⚠️ Partial — quick mode works with Context7 and/or Brave; full mode requires live search plus Firecrawl.

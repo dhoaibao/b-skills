@@ -1,4 +1,4 @@
-# b-skills — Claude Code Global Rules
+# b-skills — OpenCode Global Rules
 
 > Short rules enforced every turn. Skill-specific behavior lives inside each `SKILL.md`; this file owns only what applies across all of them.
 
@@ -27,13 +27,13 @@ If a request spans multiple skills, run them sequentially in the order above (De
 When an MCP is connected, use it before native fallbacks.
 
 - **Code symbols / structural edits** → `serena:*` first. Flow: symbol discovery → overview → references → narrow reads → symbol-aware edits. Before symbol-aware work, call `check_onboarding_performed`; if false, call `onboarding` once.
-- Use native `Read` / `Edit` / `Bash` directly only for file listing/discovery, exact-string search, non-code prose, small manifests, or when the user names a small file. Do not bypass Serena for broad code exploration.
+- Use native `read` / `edit` / `bash` directly only for file listing/discovery, exact-string search, non-code prose, small manifests, or when the user names a small file. Do not bypass Serena for broad code exploration.
 - **Library / framework / SDK docs** → `context7:*` first. Resolve the library ID before querying. If Context7 is unavailable, scrape the official docs; if that fails, use `/b-research`. Never fill library-specific gaps from training knowledge alone.
-- **Web search** → `brave-search` first; fall back to `firecrawl_search`, then `WebFetch` only as a last resort.
+- **Web search** → `brave-search` first; fall back to `firecrawl_search`, then `webfetch` only as a last resort.
 - **Known URLs / page extraction** → `firecrawl_scrape` first. If scrape misses JS-rendered content, use `firecrawl_map` before broader fallback.
 - **Browser automation** → `playwright:*` (only via `/b-e2e`).
 - **Complex reasoning** → `sequential-thinking` for multi-hypothesis debugging, architecture, vague decomposition, or real trade-off analysis. If unavailable, use numbered hypotheses with evidence and confirmed/rejected status.
-- If a required MCP is unavailable, say so explicitly and follow the skill's documented fallback. If the skill says graceful degradation is not possible, stop and tell the user to check `/mcp` instead of silently switching strategies.
+- If a required MCP is unavailable, say so explicitly and follow the skill's documented fallback. If the skill says graceful degradation is not possible, stop and tell the user to check their MCP configuration instead of silently switching strategies.
 
 ---
 
@@ -61,7 +61,7 @@ When an MCP is connected, use it before native fallbacks.
 ## Session hygiene
 
 - After compaction: re-read the active plan if one exists, re-check Serena onboarding if project context seems lost, and prefer focused reads and diff inspection over pasting large files into chat.
-- After any `/b-plan` approval, the saved plan in `.claude/b-plans/[task-slug].md` is the source of truth for the rest of the session — refer back to it instead of re-deriving decisions.
+- After any `/b-plan` approval, the saved plan in `.opencode/b-plans/[task-slug].md` is the source of truth for the rest of the session — refer back to it instead of re-deriving decisions.
 - When you finish a multi-step task, state what was verified, not just what was changed.
 
 ---

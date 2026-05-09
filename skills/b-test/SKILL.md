@@ -1,13 +1,11 @@
 ---
 name: b-test
 description: >
-  Test-driven development, test debugging, and test coverage evaluation. ALWAYS invoke
-  when the user asks about writing tests, fixing failing tests, test coverage gaps,
-  or TDD: "test", "viết test", "failing test", "test đang fail", "bắt đầu bằng test",
-  "test coverage", "missing test".
-  Unlike b-debug (traces runtime bugs), b-test focuses on test-specific failures:
-  wrong assertions, missing mocks, setup issues, coverage gaps.
-effort: medium
+  Test-driven development, test debugging, and test coverage evaluation. ALWAYS invoke when the user asks about writing tests, fixing failing tests, test coverage gaps, or TDD: "test", "viết test", "failing test", "test đang fail", "bắt đầu bằng test", "test coverage", "missing test". Unlike b-debug (traces runtime bugs), b-test focuses on test-specific failures: wrong assertions, missing mocks, setup issues, coverage gaps.
+compatibility: opencode
+metadata:
+  suite: b-skills
+  effort: medium
 ---
 
 # b-test
@@ -39,16 +37,16 @@ Proceed directly. Do not ask "what test do you want to write?" unless `$ARGUMENT
 
 ## Tools required
 
-- `Bash` — run test commands, inspect test output, locate test files.
-- `Read`, `Edit`, `Write` — native file tools for inspecting tests and creating new test files when no suitable file exists.
+- `bash` — run test commands, inspect test output, locate test files.
+- `read`, `edit`, `write` — native file tools for inspecting tests and creating new test files when no suitable file exists.
 - `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol` — from `serena` MCP server *(required for discovering test files and mapping tests to source symbols)*
 - `resolve-library-id`, `query-docs` — from `context7` MCP server *(optional, for verifying testing framework API — jest, vitest, pytest, etc.)*
 - `sequentialthinking` — from `sequential-thinking` MCP server *(optional, for choosing test strategy: unit vs integration vs e2e)*
 
-If Serena is unavailable: use Bash to find test files (`find`, `ls`) and `Read` for inspection. Note: "⚠️ Serena unavailable — test discovery via file listing."
+If Serena is unavailable: use bash to find test files (`find`, `ls`) and `read` for inspection. Note: "⚠️ Serena unavailable — test discovery via file listing."
 If sequential-thinking is unavailable: choose test strategy inline with explicit pros/cons list.
 
-Graceful degradation: ✅ Possible — core test debugging works with Bash + Read + Edit/Write.
+Graceful degradation: ✅ Possible — core test debugging works with bash + read + edit/write.
 
 ## Steps
 
@@ -56,7 +54,7 @@ Graceful degradation: ✅ Possible — core test debugging works with Bash + Rea
 
 Find test files and understand the test setup:
 
-1. Use Bash to locate test files and identify the testing framework:
+1. Use bash to locate test files and identify the testing framework:
    ```bash
    # Common patterns
    find . -name "*.test.*" -o -name "*.spec.*" | head -20
@@ -84,7 +82,7 @@ Find test files and understand the test setup:
 Pick the branch that matches the work:
 
 - **Branch A — Failing test**: a test is red and the user wants it green.
-- **Branch B — Write tests**: TDD or filling a coverage gap with new tests.
+- **Branch B — write tests**: TDD or filling a coverage gap with new tests.
 - **Branch C — Evaluate coverage**: report on what is and isn't covered, then recommend (and optionally write) the highest-value missing tests.
 
 Use `sequentialthinking` for branch selection only if the user's request is genuinely ambiguous (e.g. "make my tests better"). Otherwise pick from `$ARGUMENTS` directly.
@@ -93,14 +91,14 @@ Use `sequentialthinking` for branch selection only if the user's request is genu
 
 ### Step 3 — Branch A: Fix failing test
 
-1. Read the failing test output via Bash:
+1. read the failing test output via bash:
    ```bash
    npm test 2>&1 | tail -50
    # or
    pytest -x 2>&1 | tail -30
    ```
-2. Read the failing test code with `Read` (narrow section, not full file).
-3. Read the source code under test (the function/class being tested).
+2. read the failing test code with `read` (narrow section, not full file).
+3. read the source code under test (the function/class being tested).
 4. Identify the gap between expected and actual:
 
 | Symptom | Fix |
@@ -112,11 +110,11 @@ Use `sequentialthinking` for branch selection only if the user's request is genu
 | Wrong test data | Provide realistic input matching the scenario |
 | Real bug in production code | Fix production code via symbol-aware edits, then re-run |
 
-Apply the minimal fix. Prefer `replace_symbol_body` for whole test functions over line-level `Edit`.
+Apply the minimal fix. Prefer `replace_symbol_body` for whole test functions over line-level `edit`.
 
 ---
 
-### Step 4 — Branch B: Write tests
+### Step 4 — Branch B: write tests
 
 1. Identify what behavior needs testing:
    - From a plan file → read the acceptance criteria.
@@ -133,7 +131,7 @@ Apply the minimal fix. Prefer `replace_symbol_body` for whole test functions ove
    - **Regression prevention** (would catch a revert of the current change)
 4. Insert tests using Serena where possible:
    - `insert_after_symbol` / `insert_before_symbol` — add tests within an existing describe block.
-   - `Write` — only when no suitable test file exists in the conventional location.
+   - `write` — only when no suitable test file exists in the conventional location.
 
 **Framework-specific conventions**:
 - Jest/Vitest: `describe/it`, `beforeEach`, `mock()`
@@ -145,7 +143,7 @@ Apply the minimal fix. Prefer `replace_symbol_body` for whole test functions ove
 
 ### Step 5 — Branch C: Evaluate coverage
 
-1. Run the project's coverage command via Bash:
+1. Run the project's coverage command via bash:
    ```bash
    npm test -- --coverage
    pytest --cov=.
@@ -163,7 +161,7 @@ Apply the minimal fix. Prefer `replace_symbol_body` for whole test functions ove
 
 ### Step 6 — Run and verify
 
-1. Run the specific test(s) via Bash:
+1. Run the specific test(s) via bash:
    ```bash
    npm test -- --testNamePattern="test name"
    pytest path/to/test.py::test_function
@@ -215,8 +213,8 @@ Apply the minimal fix. Prefer `replace_symbol_body` for whole test functions ove
 - Never modify production code to make a test pass unless the production code is actually buggy.
 - A failing test often reveals a bug in production code → if analysis confirms a real bug, fix production code via symbol-aware edits, then re-run the test.
 - Keep test fixes minimal — if one assertion is wrong, fix that assertion; do not rewrite the entire test suite.
-- Write behavior tests (assert on output), not implementation tests (assert on internal state).
+- write behavior tests (assert on output), not implementation tests (assert on internal state).
 - Use `sequentialthinking` for test strategy decisions only if the choice is genuinely ambiguous.
 - Never trigger destructive git commands.
-- If the test output is truncated in the terminal: increase verbosity or pipe to a file then `Read` the file.
+- If the test output is truncated in the terminal: increase verbosity or pipe to a file then `read` the file.
 - Prefer running specific tests over the full suite during debugging — faster feedback loop.
