@@ -8,6 +8,7 @@
 #   B_SKILLS_REPO  — git URL to clone (default: https://github.com/dhoaibao/b-skills.git)
 #   B_SKILLS_DIR   — local clone path (default: $HOME/.b-skills)
 #   B_SKILLS_REF   — git ref to check out after clone/pull (default: leave on default branch)
+#   B_SKILLS_INSTALL_MCP — Y to install MCP defaults; otherwise skipped
 #   BRAVE_API_KEY  — Brave Search MCP API key
 #   CONTEXT7_API_KEY — Context7 MCP API key
 #   FIRECRAWL_API_KEY — Firecrawl MCP API key
@@ -40,6 +41,7 @@ trap 'rc=$?; [ $rc -ne 0 ] && warn "install.sh failed at line $LINENO (exit $rc)
 BRAVE_API_KEY_VALUE="${BRAVE_API_KEY:-}"
 CONTEXT7_API_KEY_VALUE="${CONTEXT7_API_KEY:-}"
 FIRECRAWL_API_KEY_VALUE="${FIRECRAWL_API_KEY:-}"
+INSTALL_MCPS_VALUE="${B_SKILLS_INSTALL_MCP:-}"
 
 require_bin() {
   command -v "$1" >/dev/null 2>&1 || die "Required binary not found: $1"
@@ -57,6 +59,51 @@ is_placeholder_value() {
 
 prompt_available() {
   [ -r /dev/tty ] && [ -w /dev/tty ]
+}
+
+wants_mcp_install() {
+  local value="${1:-}"
+  case "$value" in
+    y|Y|yes|YES|Yes)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+prompt_mcp_install_if_needed() {
+  local entered_value
+
+  if wants_mcp_install "$INSTALL_MCPS_VALUE"; then
+    INSTALL_MCPS_VALUE="Y"
+    return 0
+  fi
+
+  if [ -n "$INSTALL_MCPS_VALUE" ]; then
+    INSTALL_MCPS_VALUE="N"
+    return 0
+  fi
+
+  if ! prompt_available; then
+    INSTALL_MCPS_VALUE="N"
+    return 0
+  fi
+
+  printf 'Install MCP defaults in OpenCode config? [y/N]: ' > /dev/tty
+  if IFS= read -r entered_value < /dev/tty; then
+    :
+  else
+    entered_value=""
+  fi
+  printf '\n' > /dev/tty
+
+  if wants_mcp_install "$entered_value"; then
+    INSTALL_MCPS_VALUE="Y"
+  else
+    INSTALL_MCPS_VALUE="N"
+  fi
 }
 
 get_existing_mcp_secret() {
@@ -137,6 +184,10 @@ prompt_api_key_if_needed() {
 collect_mcp_api_keys() {
   local existing_brave existing_context7 existing_firecrawl
 
+  if ! wants_mcp_install "$INSTALL_MCPS_VALUE"; then
+    return 0
+  fi
+
   existing_brave=$(get_existing_mcp_secret "brave-search" "environment" "BRAVE_API_KEY")
   existing_context7=$(get_existing_mcp_secret "context7" "headers" "CONTEXT7_API_KEY")
   existing_firecrawl=$(get_existing_mcp_secret "firecrawl" "environment" "FIRECRAWL_API_KEY")
@@ -207,7 +258,7 @@ merge_opencode_config() {
   existing=$(cat "$CONFIG_FILE" 2>/dev/null || echo '{}')
 
   local merged
-  merged=$(env EXISTING="$existing" RULES_DST="$RULES_DST" BRAVE_API_KEY_VALUE="$BRAVE_API_KEY_VALUE" CONTEXT7_API_KEY_VALUE="$CONTEXT7_API_KEY_VALUE" FIRECRAWL_API_KEY_VALUE="$FIRECRAWL_API_KEY_VALUE" python3 - <<'PYEOF'
+  merged=$(env EXISTING="$existing" RULES_DST="$RULES_DST" BRAVE_API_KEY_VALUE="$BRAVE_API_KEY_VALUE" CONTEXT7_API_KEY_VALUE="$CONTEXT7_API_KEY_VALUE" FIRECRAWL_API_KEY_VALUE="$FIRECRAWL_API_KEY_VALUE" INSTALL_MCPS_VALUE="$INSTALL_MCPS_VALUE" python3 - <<'PYEOF'
 import json, os
 
 existing_raw = os.environ.get("EXISTING", "{}")
@@ -215,6 +266,7 @@ rules_dst = os.environ["RULES_DST"]
 brave_api_key = os.environ.get("BRAVE_API_KEY_VALUE") or "YOUR_API_KEY"
 context7_api_key = os.environ.get("CONTEXT7_API_KEY_VALUE") or "YOUR_API_KEY"
 firecrawl_api_key = os.environ.get("FIRECRAWL_API_KEY_VALUE") or "YOUR_API_KEY"
+install_mcps = (os.environ.get("INSTALL_MCPS_VALUE") or "").strip().lower() in {"y", "yes"}
 
 
 def deep_fill(target, defaults):
@@ -308,21 +360,22 @@ mcp_defaults = {
     },
 }
 
-mcp = config.setdefault("mcp", {})
-if not isinstance(mcp, dict):
-    mcp = {}
-    config["mcp"] = mcp
+if install_mcps:
+    mcp = config.setdefault("mcp", {})
+    if not isinstance(mcp, dict):
+        mcp = {}
+        config["mcp"] = mcp
 
-for server_name, defaults in mcp_defaults.items():
-    current = mcp.get(server_name)
-    if isinstance(current, dict):
-        deep_fill(current, defaults)
-    else:
-        mcp[server_name] = defaults
+    for server_name, defaults in mcp_defaults.items():
+        current = mcp.get(server_name)
+        if isinstance(current, dict):
+            deep_fill(current, defaults)
+        else:
+            mcp[server_name] = defaults
 
-ensure_secret(mcp["brave-search"].get("environment"), "BRAVE_API_KEY", brave_api_key)
-ensure_secret(mcp["context7"].get("headers"), "CONTEXT7_API_KEY", context7_api_key)
-ensure_secret(mcp["firecrawl"].get("environment"), "FIRECRAWL_API_KEY", firecrawl_api_key)
+    ensure_secret(mcp["brave-search"].get("environment"), "BRAVE_API_KEY", brave_api_key)
+    ensure_secret(mcp["context7"].get("headers"), "CONTEXT7_API_KEY", context7_api_key)
+    ensure_secret(mcp["firecrawl"].get("environment"), "FIRECRAWL_API_KEY", firecrawl_api_key)
 
 print(json.dumps(config, indent=2))
 PYEOF
@@ -384,19 +437,25 @@ log "$commands_summary → $OPENCODE_DIR/commands"
 section "Install shared instructions"
 mkdir -p "$(dirname "$RULES_DST")"
 cp "$RULES_SRC" "$RULES_DST"
-section "MCP API keys"
-collect_mcp_api_keys
+section "MCP setup"
+prompt_mcp_install_if_needed
+if wants_mcp_install "$INSTALL_MCPS_VALUE"; then
+  collect_mcp_api_keys
+fi
 merge_opencode_config
 log "✅ Rules installed: $RULES_DST"
 log "✅ Config updated: $CONFIG_FILE"
 
 section "MCP defaults"
-log "✅ MCP defaults merged into: $CONFIG_FILE"
-log "   Servers: serena, context7, brave-search, firecrawl, playwright, sequential-thinking"
-log "   brave-search: $(api_key_status "$BRAVE_API_KEY_VALUE")"
-log "   context7: $(api_key_status "$CONTEXT7_API_KEY_VALUE")"
-log "   firecrawl: $(api_key_status "$FIRECRAWL_API_KEY_VALUE")"
-log "   Replace any remaining YOUR_API_KEY placeholders before using API-backed MCP servers."
+if wants_mcp_install "$INSTALL_MCPS_VALUE"; then
+  log "✅ MCP defaults merged into: $CONFIG_FILE"
+  log "   Servers: serena, context7, brave-search, firecrawl, playwright, sequential-thinking"
+  log "   brave-search: $(api_key_status "$BRAVE_API_KEY_VALUE")"
+  log "   context7: $(api_key_status "$CONTEXT7_API_KEY_VALUE")"
+  log "   firecrawl: $(api_key_status "$FIRECRAWL_API_KEY_VALUE")"
+else
+  log "⏭ MCP defaults skipped."
+fi
 
 section "Done"
 log "✅ b-skills installed successfully for OpenCode."
