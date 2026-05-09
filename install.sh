@@ -418,7 +418,7 @@ done
 pruned_skills=$(prune_stale_skills "$SKILLS_SRC" "$OPENCODE_DIR/skills")
 skills_summary="✅ Skills synced: $synced_skills"
 [ "$pruned_skills" -gt 0 ] && skills_summary="$skills_summary, $pruned_skills stale removed"
-log "$skills_summary → $OPENCODE_DIR/skills"
+log "$skills_summary"
 
 section "Install OpenCode commands"
 [ -d "$COMMANDS_SRC" ] || die "Missing commands source directory: $COMMANDS_SRC"
@@ -432,23 +432,24 @@ done
 pruned_commands=$(prune_stale_commands "$COMMANDS_SRC" "$OPENCODE_DIR/commands")
 commands_summary="✅ Commands synced: $synced_commands"
 [ "$pruned_commands" -gt 0 ] && commands_summary="$commands_summary, $pruned_commands stale removed"
-log "$commands_summary → $OPENCODE_DIR/commands"
+log "$commands_summary"
 
 section "Install shared instructions"
 mkdir -p "$(dirname "$RULES_DST")"
 cp "$RULES_SRC" "$RULES_DST"
+log "✅ Rules installed"
+
 section "MCP setup"
 prompt_mcp_install_if_needed
 if wants_mcp_install "$INSTALL_MCPS_VALUE"; then
   collect_mcp_api_keys
 fi
 merge_opencode_config
-log "✅ Rules installed: $RULES_DST"
-log "✅ Config updated: $CONFIG_FILE"
+log "✅ Config updated"
 
 section "MCP defaults"
 if wants_mcp_install "$INSTALL_MCPS_VALUE"; then
-  log "✅ MCP defaults merged into: $CONFIG_FILE"
+  log "✅ MCP defaults merged"
   log "   Servers: serena, context7, brave-search, firecrawl, playwright, sequential-thinking"
   log "   brave-search: $(api_key_status "$BRAVE_API_KEY_VALUE")"
   log "   context7: $(api_key_status "$CONTEXT7_API_KEY_VALUE")"
