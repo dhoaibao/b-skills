@@ -258,7 +258,7 @@ merge_opencode_config() {
   existing=$(cat "$CONFIG_FILE" 2>/dev/null || echo '{}')
 
   local merged
-  merged=$(env EXISTING="$existing" BRAVE_API_KEY_VALUE="$BRAVE_API_KEY_VALUE" CONTEXT7_API_KEY_VALUE="$CONTEXT7_API_KEY_VALUE" FIRECRAWL_API_KEY_VALUE="$FIRECRAWL_API_KEY_VALUE" INSTALL_MCPS_VALUE="$INSTALL_MCPS_VALUE" python3 - <<'PYEOF'
+  merged=$(env CONFIG_FILE="$CONFIG_FILE" EXISTING="$existing" BRAVE_API_KEY_VALUE="$BRAVE_API_KEY_VALUE" CONTEXT7_API_KEY_VALUE="$CONTEXT7_API_KEY_VALUE" FIRECRAWL_API_KEY_VALUE="$FIRECRAWL_API_KEY_VALUE" INSTALL_MCPS_VALUE="$INSTALL_MCPS_VALUE" python3 - <<'PYEOF'
 import json, os
 
 existing_raw = os.environ.get("EXISTING", "{}")
@@ -266,6 +266,117 @@ brave_api_key = os.environ.get("BRAVE_API_KEY_VALUE") or "YOUR_API_KEY"
 context7_api_key = os.environ.get("CONTEXT7_API_KEY_VALUE") or "YOUR_API_KEY"
 firecrawl_api_key = os.environ.get("FIRECRAWL_API_KEY_VALUE") or "YOUR_API_KEY"
 install_mcps = (os.environ.get("INSTALL_MCPS_VALUE") or "").strip().lower() in {"y", "yes"}
+
+
+def strip_jsonc_comments(text):
+    result = []
+    in_string = False
+    string_char = ""
+    escaped = False
+    i = 0
+
+    while i < len(text):
+        char = text[i]
+        next_char = text[i + 1] if i + 1 < len(text) else ""
+
+        if in_string:
+            result.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == string_char:
+                in_string = False
+            i += 1
+            continue
+
+        if char == '"':
+            in_string = True
+            string_char = char
+            result.append(char)
+            i += 1
+            continue
+
+        if char == "/" and next_char == "/":
+            i += 2
+            while i < len(text) and text[i] not in "\r\n":
+                i += 1
+            continue
+
+        if char == "/" and next_char == "*":
+            i += 2
+            while i + 1 < len(text) and text[i:i + 2] != "*/":
+                i += 1
+            i += 2 if i + 1 < len(text) else 0
+            continue
+
+        result.append(char)
+        i += 1
+
+    return "".join(result)
+
+
+def strip_trailing_commas(text):
+    result = []
+    in_string = False
+    string_char = ""
+    escaped = False
+    i = 0
+
+    while i < len(text):
+        char = text[i]
+
+        if in_string:
+            result.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == string_char:
+                in_string = False
+            i += 1
+            continue
+
+        if char == '"':
+            in_string = True
+            string_char = char
+            result.append(char)
+            i += 1
+            continue
+
+        if char == ",":
+            j = i + 1
+            while j < len(text) and text[j] in " \t\r\n":
+                j += 1
+            if j < len(text) and text[j] in "]}":
+                i += 1
+                continue
+
+        result.append(char)
+        i += 1
+
+    return "".join(result)
+
+
+def load_existing_config(raw_text):
+    source = raw_text.strip()
+    if not source:
+        return {}
+
+    try:
+        return json.loads(source)
+    except json.JSONDecodeError:
+        pass
+
+    # OpenCode configs may include JSONC-style comments and trailing commas.
+    normalized = strip_trailing_commas(strip_jsonc_comments(raw_text)).strip()
+    if not normalized:
+        return {}
+
+    try:
+        return json.loads(normalized)
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"Unable to parse existing OpenCode config at {os.environ.get('CONFIG_FILE', 'opencode.json')}: {exc}")
 
 
 def deep_fill(target, defaults):
@@ -290,10 +401,7 @@ def ensure_secret(container, key, value):
     if is_placeholder(current):
         container[key] = value
 
-try:
-    config = json.loads(existing_raw) if existing_raw.strip() else {}
-except json.JSONDecodeError:
-    config = {}
+config = load_existing_config(existing_raw)
 
 permission = config.setdefault("permission", {})
 skill_permission = permission.setdefault("skill", {})
