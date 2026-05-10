@@ -42,6 +42,12 @@ BRAVE_API_KEY_VALUE="${BRAVE_API_KEY:-}"
 CONTEXT7_API_KEY_VALUE="${CONTEXT7_API_KEY:-}"
 FIRECRAWL_API_KEY_VALUE="${FIRECRAWL_API_KEY:-}"
 INSTALL_MCPS_VALUE="${B_SKILLS_INSTALL_MCP:-}"
+CUSTOM_PROVIDER_ENABLED_VALUE="N"
+CUSTOM_PROVIDER_ID_VALUE=""
+CUSTOM_PROVIDER_NAME_VALUE=""
+CUSTOM_PROVIDER_BASE_URL_VALUE=""
+CUSTOM_PROVIDER_API_KEY_VALUE=""
+CUSTOM_PROVIDER_MODELS_VALUE=""
 
 require_bin() {
   command -v "$1" >/dev/null 2>&1 || die "Required binary not found: $1"
@@ -97,7 +103,6 @@ prompt_mcp_install_if_needed() {
   else
     entered_value=""
   fi
-  printf '\n' > /dev/tty
 
   if wants_mcp_install "$entered_value"; then
     INSTALL_MCPS_VALUE="Y"
@@ -143,6 +148,41 @@ if isinstance(value, str):
 PYEOF
 }
 
+get_existing_provider_value() {
+  local provider_id="$1" value_path="$2"
+  [ -f "$CONFIG_FILE" ] || return 0
+
+  env CONFIG_FILE="$CONFIG_FILE" PROVIDER_ID="$provider_id" VALUE_PATH="$value_path" python3 - <<'PYEOF'
+import json, os
+from pathlib import Path
+
+config_path = Path(os.environ["CONFIG_FILE"])
+provider_id = os.environ["PROVIDER_ID"]
+value_path = os.environ["VALUE_PATH"]
+
+try:
+    config = json.loads(config_path.read_text())
+except (FileNotFoundError, json.JSONDecodeError, OSError):
+    raise SystemExit(0)
+
+provider = config.get("provider", {})
+if not isinstance(provider, dict):
+    raise SystemExit(0)
+
+value = provider.get(provider_id)
+if not isinstance(value, dict):
+    raise SystemExit(0)
+
+for part in value_path.split("."):
+    if not isinstance(value, dict):
+        raise SystemExit(0)
+    value = value.get(part)
+
+if isinstance(value, str):
+    print(value)
+PYEOF
+}
+
 prompt_api_key_if_needed() {
   local var_name="$1" prompt_label="$2" existing_value="$3"
   local current_value="${!var_name:-}"
@@ -181,6 +221,46 @@ prompt_api_key_if_needed() {
   fi
 }
 
+prompt_value_with_default() {
+  local var_name="$1" prompt_label="$2" default_value="${3:-}" secret_input="${4:-N}"
+  local entered_value prompt_suffix=""
+
+  if ! prompt_available; then
+    printf -v "$var_name" '%s' "$default_value"
+    return 0
+  fi
+
+  if [ -n "$default_value" ]; then
+    if [ "$secret_input" = "Y" ] && ! is_placeholder_value "$default_value"; then
+      prompt_suffix=" [saved]"
+    else
+      prompt_suffix=" [$default_value]"
+    fi
+  fi
+
+  printf 'Enter %s%s: ' "$prompt_label" "$prompt_suffix" > /dev/tty
+  if [ "$secret_input" = "Y" ]; then
+    if IFS= read -r -s entered_value < /dev/tty; then
+      printf '\n' > /dev/tty
+    else
+      entered_value=""
+      printf '\n' > /dev/tty
+    fi
+  else
+    if IFS= read -r entered_value < /dev/tty; then
+      :
+    else
+      entered_value=""
+    fi
+  fi
+
+  if [ -n "$entered_value" ]; then
+    printf -v "$var_name" '%s' "$entered_value"
+  else
+    printf -v "$var_name" '%s' "$default_value"
+  fi
+}
+
 collect_mcp_api_keys() {
   local existing_brave existing_context7 existing_firecrawl
 
@@ -197,6 +277,87 @@ collect_mcp_api_keys() {
   prompt_api_key_if_needed FIRECRAWL_API_KEY_VALUE "Firecrawl API key" "$existing_firecrawl"
 }
 
+append_custom_provider_model() {
+  local model_id="$1" model_name="$2"
+
+  if [ -n "$CUSTOM_PROVIDER_MODELS_VALUE" ]; then
+    CUSTOM_PROVIDER_MODELS_VALUE="${CUSTOM_PROVIDER_MODELS_VALUE}"$'\n'
+  fi
+
+  CUSTOM_PROVIDER_MODELS_VALUE="${CUSTOM_PROVIDER_MODELS_VALUE}${model_id}"$'\t'"${model_name}"
+}
+
+collect_custom_provider_config() {
+  local entered_value model_id model_name existing_provider_name existing_provider_base_url existing_provider_api_key
+
+  CUSTOM_PROVIDER_ENABLED_VALUE="N"
+  CUSTOM_PROVIDER_ID_VALUE=""
+  CUSTOM_PROVIDER_NAME_VALUE=""
+  CUSTOM_PROVIDER_BASE_URL_VALUE=""
+  CUSTOM_PROVIDER_API_KEY_VALUE=""
+  CUSTOM_PROVIDER_MODELS_VALUE=""
+
+  if ! prompt_available; then
+    return 0
+  fi
+
+  printf 'Add a custom OpenAI-compatible provider to OpenCode config? [y/N]: ' > /dev/tty
+  if IFS= read -r entered_value < /dev/tty; then
+    :
+  else
+    entered_value=""
+  fi
+
+  if ! wants_mcp_install "$entered_value"; then
+    return 0
+  fi
+
+  prompt_value_with_default CUSTOM_PROVIDER_ID_VALUE "provider id" ""
+  if [ -z "$CUSTOM_PROVIDER_ID_VALUE" ]; then
+    warn "Skipping custom provider: provider id is required."
+    return 0
+  fi
+
+  existing_provider_name=$(get_existing_provider_value "$CUSTOM_PROVIDER_ID_VALUE" "name")
+  existing_provider_base_url=$(get_existing_provider_value "$CUSTOM_PROVIDER_ID_VALUE" "options.baseURL")
+  existing_provider_api_key=$(get_existing_provider_value "$CUSTOM_PROVIDER_ID_VALUE" "options.apiKey")
+
+  prompt_value_with_default CUSTOM_PROVIDER_NAME_VALUE "provider name" "${existing_provider_name:-$CUSTOM_PROVIDER_ID_VALUE}"
+  [ -n "$CUSTOM_PROVIDER_NAME_VALUE" ] || CUSTOM_PROVIDER_NAME_VALUE="$CUSTOM_PROVIDER_ID_VALUE"
+
+  prompt_value_with_default CUSTOM_PROVIDER_BASE_URL_VALUE "base URL" "$existing_provider_base_url"
+  if [ -z "$CUSTOM_PROVIDER_BASE_URL_VALUE" ]; then
+    warn "Skipping custom provider: base URL is required."
+    return 0
+  fi
+
+  prompt_value_with_default CUSTOM_PROVIDER_API_KEY_VALUE "API key" "${existing_provider_api_key:-YOUR_API_KEY}" "Y"
+  [ -n "$CUSTOM_PROVIDER_API_KEY_VALUE" ] || CUSTOM_PROVIDER_API_KEY_VALUE="YOUR_API_KEY"
+
+  while :; do
+    prompt_value_with_default model_id "model id (press Enter to finish)" ""
+    if [ -z "$model_id" ]; then
+      break
+    fi
+
+    prompt_value_with_default model_name "model name" "$model_id"
+    [ -n "$model_name" ] || model_name="$model_id"
+
+    append_custom_provider_model "$model_id" "$model_name"
+  done
+
+  if [ -z "$CUSTOM_PROVIDER_MODELS_VALUE" ]; then
+    warn "Skipping custom provider: add at least one model to install it."
+    CUSTOM_PROVIDER_ID_VALUE=""
+    CUSTOM_PROVIDER_NAME_VALUE=""
+    CUSTOM_PROVIDER_BASE_URL_VALUE=""
+    CUSTOM_PROVIDER_API_KEY_VALUE=""
+    return 0
+  fi
+
+  CUSTOM_PROVIDER_ENABLED_VALUE="Y"
+}
+
 api_key_status() {
   local value="$1"
   if is_placeholder_value "$value"; then
@@ -204,6 +365,21 @@ api_key_status() {
   else
     printf 'set'
   fi
+}
+
+count_custom_provider_models() {
+  local count=0 ignored_line
+
+  if [ -z "$CUSTOM_PROVIDER_MODELS_VALUE" ]; then
+    printf '0'
+    return 0
+  fi
+
+  while IFS= read -r ignored_line; do
+    count=$((count + 1))
+  done <<< "$CUSTOM_PROVIDER_MODELS_VALUE"
+
+  printf '%s' "$count"
 }
 
 sync_directory() {
@@ -258,7 +434,20 @@ merge_opencode_config() {
   existing=$(cat "$CONFIG_FILE" 2>/dev/null || echo '{}')
 
   local merged
-  merged=$(env CONFIG_FILE="$CONFIG_FILE" EXISTING="$existing" BRAVE_API_KEY_VALUE="$BRAVE_API_KEY_VALUE" CONTEXT7_API_KEY_VALUE="$CONTEXT7_API_KEY_VALUE" FIRECRAWL_API_KEY_VALUE="$FIRECRAWL_API_KEY_VALUE" INSTALL_MCPS_VALUE="$INSTALL_MCPS_VALUE" python3 - <<'PYEOF'
+  merged=$(env \
+    CONFIG_FILE="$CONFIG_FILE" \
+    EXISTING="$existing" \
+    BRAVE_API_KEY_VALUE="$BRAVE_API_KEY_VALUE" \
+    CONTEXT7_API_KEY_VALUE="$CONTEXT7_API_KEY_VALUE" \
+    FIRECRAWL_API_KEY_VALUE="$FIRECRAWL_API_KEY_VALUE" \
+    INSTALL_MCPS_VALUE="$INSTALL_MCPS_VALUE" \
+    CUSTOM_PROVIDER_ENABLED_VALUE="$CUSTOM_PROVIDER_ENABLED_VALUE" \
+    CUSTOM_PROVIDER_ID_VALUE="$CUSTOM_PROVIDER_ID_VALUE" \
+    CUSTOM_PROVIDER_NAME_VALUE="$CUSTOM_PROVIDER_NAME_VALUE" \
+    CUSTOM_PROVIDER_BASE_URL_VALUE="$CUSTOM_PROVIDER_BASE_URL_VALUE" \
+    CUSTOM_PROVIDER_API_KEY_VALUE="$CUSTOM_PROVIDER_API_KEY_VALUE" \
+    CUSTOM_PROVIDER_MODELS_VALUE="$CUSTOM_PROVIDER_MODELS_VALUE" \
+    python3 - <<'PYEOF'
 import json, os
 
 existing_raw = os.environ.get("EXISTING", "{}")
@@ -266,6 +455,12 @@ brave_api_key = os.environ.get("BRAVE_API_KEY_VALUE") or "YOUR_API_KEY"
 context7_api_key = os.environ.get("CONTEXT7_API_KEY_VALUE") or "YOUR_API_KEY"
 firecrawl_api_key = os.environ.get("FIRECRAWL_API_KEY_VALUE") or "YOUR_API_KEY"
 install_mcps = (os.environ.get("INSTALL_MCPS_VALUE") or "").strip().lower() in {"y", "yes"}
+custom_provider_enabled = (os.environ.get("CUSTOM_PROVIDER_ENABLED_VALUE") or "").strip().lower() in {"y", "yes"}
+custom_provider_id = (os.environ.get("CUSTOM_PROVIDER_ID_VALUE") or "").strip()
+custom_provider_name = (os.environ.get("CUSTOM_PROVIDER_NAME_VALUE") or "").strip()
+custom_provider_base_url = (os.environ.get("CUSTOM_PROVIDER_BASE_URL_VALUE") or "").strip()
+custom_provider_api_key = os.environ.get("CUSTOM_PROVIDER_API_KEY_VALUE") or "YOUR_API_KEY"
+custom_provider_models_raw = os.environ.get("CUSTOM_PROVIDER_MODELS_VALUE", "")
 
 
 def strip_jsonc_comments(text):
@@ -379,6 +574,23 @@ def load_existing_config(raw_text):
         raise SystemExit(f"Unable to parse existing OpenCode config at {os.environ.get('CONFIG_FILE', 'opencode.json')}: {exc}")
 
 
+def parse_custom_provider_models(raw_text):
+    models = {}
+    for line in raw_text.splitlines():
+        model_id, _, model_name = line.partition("\t")
+        model_id = model_id.strip()
+        model_name = model_name.strip()
+
+        if not model_id:
+            continue
+
+        models[model_id] = {
+            "name": model_name or model_id,
+        }
+
+    return models
+
+
 def deep_fill(target, defaults):
     for key, value in defaults.items():
         if key not in target:
@@ -400,6 +612,16 @@ def ensure_secret(container, key, value):
     current = container.get(key)
     if is_placeholder(current):
         container[key] = value
+
+
+def ensure_mapping(container, key):
+    value = container.get(key)
+    if isinstance(value, dict):
+        return value
+
+    value = {}
+    container[key] = value
+    return value
 
 config = load_existing_config(existing_raw)
 
@@ -480,6 +702,34 @@ if install_mcps:
     ensure_secret(mcp["context7"].get("headers"), "CONTEXT7_API_KEY", context7_api_key)
     ensure_secret(mcp["firecrawl"].get("environment"), "FIRECRAWL_API_KEY", firecrawl_api_key)
 
+custom_provider_models = parse_custom_provider_models(custom_provider_models_raw)
+
+if custom_provider_enabled and custom_provider_id and custom_provider_base_url and custom_provider_models:
+    provider = config.setdefault("provider", {})
+    if not isinstance(provider, dict):
+        provider = {}
+        config["provider"] = provider
+
+    current_provider = provider.get(custom_provider_id)
+    if not isinstance(current_provider, dict):
+        current_provider = {}
+        provider[custom_provider_id] = current_provider
+
+    current_provider["npm"] = "@ai-sdk/openai-compatible"
+    current_provider["name"] = custom_provider_name or custom_provider_id
+
+    options = ensure_mapping(current_provider, "options")
+    options["baseURL"] = custom_provider_base_url
+    options["apiKey"] = custom_provider_api_key
+
+    models = ensure_mapping(current_provider, "models")
+    for model_id, model_config in custom_provider_models.items():
+        current_model = models.get(model_id)
+        if isinstance(current_model, dict):
+            current_model["name"] = model_config["name"]
+        else:
+            models[model_id] = model_config
+
 print(json.dumps(config, indent=2))
 PYEOF
 )
@@ -547,6 +797,10 @@ prompt_mcp_install_if_needed
 if wants_mcp_install "$INSTALL_MCPS_VALUE"; then
   collect_mcp_api_keys
 fi
+
+section "Provider setup"
+collect_custom_provider_config
+
 merge_opencode_config
 log "✅ Config updated"
 
@@ -559,6 +813,17 @@ if wants_mcp_install "$INSTALL_MCPS_VALUE"; then
   log "   firecrawl: $(api_key_status "$FIRECRAWL_API_KEY_VALUE")"
 else
   log "⏭ MCP defaults skipped."
+fi
+
+section "Custom provider"
+if wants_mcp_install "$CUSTOM_PROVIDER_ENABLED_VALUE"; then
+  log "✅ Custom provider merged"
+  log "   provider: $CUSTOM_PROVIDER_ID_VALUE"
+  log "   baseURL:  $CUSTOM_PROVIDER_BASE_URL_VALUE"
+  log "   models:   $(count_custom_provider_models)"
+  log "   apiKey:   $(api_key_status "$CUSTOM_PROVIDER_API_KEY_VALUE")"
+else
+  log "⏭ Custom provider skipped."
 fi
 
 section "Done"
