@@ -261,6 +261,50 @@ prompt_value_with_default() {
   fi
 }
 
+prompt_choice() {
+  local var_name="$1" prompt_label="$2" default_value="${3:-}" valid_values="$4"
+  local entered_value choice i
+  local -a options
+  IFS=',' read -ra options <<< "$valid_values"
+
+  if ! prompt_available; then
+    printf -v "$var_name" '%s' "$default_value"
+    return 0
+  fi
+
+  printf '%s\n' "$prompt_label" > /dev/tty
+  for i in "${!options[@]}"; do
+    local opt="${options[$i]}"
+    if [ "$opt" = "$default_value" ]; then
+      printf '  %d) %s (default)\n' "$((i + 1))" "$opt" > /dev/tty
+    else
+      printf '  %d) %s\n' "$((i + 1))" "$opt" > /dev/tty
+    fi
+  done
+
+  while :; do
+    printf 'Enter number [1-%d] or press Enter for default: ' "${#options[@]}" > /dev/tty
+    if IFS= read -r entered_value < /dev/tty; then
+      :
+    else
+      entered_value=""
+    fi
+
+    if [ -z "$entered_value" ]; then
+      printf -v "$var_name" '%s' "$default_value"
+      return 0
+    fi
+
+    if [[ "$entered_value" =~ ^[0-9]+$ ]] && [ "$entered_value" -ge 1 ] && [ "$entered_value" -le "${#options[@]}" ]; then
+      choice="${options[$((entered_value - 1))]}"
+      printf -v "$var_name" '%s' "$choice"
+      return 0
+    fi
+
+    printf '⚠️  Invalid choice. Enter 1-%d or press Enter for default.\n' "${#options[@]}" > /dev/tty
+  done
+}
+
 collect_mcp_api_keys() {
   local existing_brave existing_context7 existing_firecrawl
 
@@ -278,13 +322,13 @@ collect_mcp_api_keys() {
 }
 
 append_custom_provider_model() {
-  local model_id="$1" model_name="$2"
+  local model_id="$1" model_name="$2" reasoning="${3:-}"
 
   if [ -n "$CUSTOM_PROVIDER_MODELS_VALUE" ]; then
     CUSTOM_PROVIDER_MODELS_VALUE="${CUSTOM_PROVIDER_MODELS_VALUE}"$'\n'
   fi
 
-  CUSTOM_PROVIDER_MODELS_VALUE="${CUSTOM_PROVIDER_MODELS_VALUE}${model_id}"$'\t'"${model_name}"
+  CUSTOM_PROVIDER_MODELS_VALUE="${CUSTOM_PROVIDER_MODELS_VALUE}${model_id}"$'\t'"${model_name}"$'\t'"${reasoning}"
 }
 
 collect_custom_provider_config() {
@@ -343,7 +387,9 @@ collect_custom_provider_config() {
     prompt_value_with_default model_name "model name" "$model_id"
     [ -n "$model_name" ] || model_name="$model_id"
 
-    append_custom_provider_model "$model_id" "$model_name"
+    prompt_choice model_reasoning "reasoning effort" "high" "low,medium,high,xhigh,max"
+
+    append_custom_provider_model "$model_id" "$model_name" "$model_reasoning"
   done
 
   if [ -z "$CUSTOM_PROVIDER_MODELS_VALUE" ]; then
@@ -577,16 +623,22 @@ def load_existing_config(raw_text):
 def parse_custom_provider_models(raw_text):
     models = {}
     for line in raw_text.splitlines():
-        model_id, _, model_name = line.partition("\t")
-        model_id = model_id.strip()
-        model_name = model_name.strip()
+        parts = line.split("\t")
+        model_id = parts[0].strip() if len(parts) > 0 else ""
+        model_name = parts[1].strip() if len(parts) > 1 else ""
+        reasoning = parts[2].strip() if len(parts) > 2 else ""
 
         if not model_id:
             continue
 
-        models[model_id] = {
+        model_config = {
             "name": model_name or model_id,
         }
+
+        if reasoning:
+            model_config["reasoning"] = reasoning
+
+        models[model_id] = model_config
 
     return models
 
@@ -732,10 +784,15 @@ if custom_provider_enabled and custom_provider_id and custom_provider_base_url a
     models = ensure_mapping(current_provider, "models")
     for model_id, model_config in custom_provider_models.items():
         current_model = models.get(model_id)
-        if isinstance(current_model, dict):
-            current_model["name"] = model_config["name"]
-        else:
-            models[model_id] = model_config
+        if not isinstance(current_model, dict):
+            current_model = {}
+            models[model_id] = current_model
+
+        current_model["name"] = model_config["name"]
+
+        if "reasoning" in model_config:
+            options = ensure_mapping(current_model, "options")
+            options["reasoningEffort"] = model_config["reasoning"]
 
 print(json.dumps(config, indent=2))
 PYEOF
