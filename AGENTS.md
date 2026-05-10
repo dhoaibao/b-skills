@@ -163,9 +163,15 @@ When deciding which MCPs a skill should use:
 **Rules:**
 - Never add an MCP just to increase coverage — every MCP must have a clear use case in the Steps section
 - Always document what happens when an optional/secondary MCP is unavailable
-- Label each MCP in "Tools required" with its role: required vs `*(optional, for [condition])*`
+- Label each MCP in "Tools required" with its role: required vs `*(optional, for [condition])`*
 - Always include a `Graceful degradation:` line summarizing fallback behavior
 - Serena-using skills in this repo must assume OpenCode's generic `ide` context: prefer Serena for symbol-aware code work, keep overlapping basic file/shell tasks on native OpenCode tools, and avoid multi-project assumptions unless the runtime contract changes
+
+**GitNexus-specific criteria:**
+- GitNexus is always **optional** for this suite. It is never a primary dependency of any skill.
+- Add GitNexus to a skill only when graph-level intelligence (cross-file impact, architecture context, stale-index detection, multi-repo mapping) materially improves the workflow beyond what Serena + native tools provide.
+- Every skill that uses GitNexus must document `gitnexus analyze` as a prerequisite and must fall back to Serena/native tools when the repo is unindexed or the MCP is unavailable.
+- GitNexus must never replace Serena for precise symbol-level edits (`rename_symbol`, `safe_delete_symbol`, `replace_symbol_body`, etc.).
 
 ---
 
@@ -251,3 +257,9 @@ b-skills/
 2. In each skill that uses it, add it to the "Tools required" section with a role label
 3. Update the docs that mention the expected MCP set size
 4. Document graceful degradation for every skill that uses the new MCP
+
+**GitNexus-specific steps:**
+- Add GitNexus as an optional row in the `MCP dependencies` table with "optional" role and a note that it requires per-repo indexing.
+- Ensure `global/AGENTS.md` reflects the GitNexus tool-priority boundary vs Serena.
+- Ensure `install.sh` supports an opt-in `gitnexus` MCP entry without auto-installation or global CLI setup.
+- Never add GitNexus as a primary dependency and never vendor its upstream skill pack or hooks in this repo.

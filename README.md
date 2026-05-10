@@ -126,10 +126,17 @@ When you open this repo in OpenCode, the checked-in `AGENTS.md` provides maintai
 | `firecrawl` | Full page scraping, structured data extraction |
 | `playwright` | Browser automation, DOM snapshots, and UI interaction for E2E testing |
 | `sequential-thinking` | Structured reasoning for multi-hypothesis decisions |
+| `gitnexus` *(optional)* | Graph-level repo intelligence: cross-file impact, architecture context, stale-index detection, and multi-repo mapping — only useful after `gitnexus analyze` |
 
-Verify all 6 are connected in OpenCode before relying on the full suite.
+Verify the **6 core MCPs** are connected in OpenCode before relying on the full suite. GitNexus is optional and augments the suite when a repo has been indexed.
 
-For OpenCode, `install.sh` intentionally configures Serena as `serena start-mcp-server --context=ide --project-from-cwd`. The suite treats OpenCode as a generic Serena `ide` client: one project is activated from the current working directory, Serena owns symbol-aware code discovery and structural edits, and OpenCode's native file/shell tools handle the overlapping basic operations that `ide` context assumes the harness already provides. Serena memory remains available for durable project knowledge, but this suite uses it selectively when task-relevant rather than as a default workflow step.
+**GitNexus best-practice flow:**
+1. Install the GitNexus CLI separately (`npm install -g gitnexus` or your preferred method).
+2. Enable GitNexus MCP support in `install.sh` by setting `B_SKILLS_INSTALL_GITNEXUS=Y` or answering `y` at the prompt.
+3. Index each repo with `gitnexus analyze` before using GitNexus tools/resources.
+4. Selected skills will then use GitNexus automatically when it is connected; if it is unavailable or the repo is unindexed, they fall back to Serena and native tools.
+
+For OpenCode, `install.sh` intentionally configures Serena as `serena start-mcp-server --context=ide --project-from-cwd`. The suite treats OpenCode as a generic Serena `ide` client: one project is activated from the current working directory, Serena owns symbol-aware code discovery and structural edits, and OpenCode's native file/shell tools handle the overlapping basic operations that `ide` context assumes the harness already provides. Serena memory remains available for durable project knowledge, but this suite uses it selectively when task-relevant rather than as a default workflow step. GitNexus augments Serena for graph-level intelligence but never replaces it for precise symbol-level edits.
 
 ---
 

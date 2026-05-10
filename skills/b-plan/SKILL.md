@@ -39,11 +39,13 @@ If `$ARGUMENTS` is provided, treat it as the task description — skip asking "w
 - `resolve-library-id`, `query-docs` — from `context7` MCP server *(optional, for inline library verification — simple lookups only)*.
 - `brave_web_search` — from `brave-search` MCP server *(optional, for tool/approach comparison — simple lookups only)*.
 - `firecrawl_scrape` — from `firecrawl` MCP server *(optional, for scraping issue/ticket URL when present)*.
+- `gitnexus` — from `gitnexus` MCP server *(optional, for graph-level repo context — architecture, cross-file impact, multi-repo mapping — only after `gitnexus analyze`)*.
 
 If sequential-thinking is unavailable: reason inline as `Goal → Constraints → Options → Decision → Ordered steps → Open questions`.
 If Serena is unavailable: use bash search and `read` for narrow code inspection. Note: "⚠️ Serena unavailable — cross-file tracking incomplete."
 If context7 or brave-search is unavailable: delegate to /b-research.
 If firecrawl is unavailable: store issue URL as a plain reference without scraping.
+If gitnexus is unavailable or the repo is unindexed: fall back to Serena and native tools for discovery and impact analysis. Note: "⚠️ GitNexus unavailable — using Serena for cross-file impact."
 
 Graceful degradation: ✅ Possible — core planning works without MCPs using inline reasoning plus bash/read.
 
@@ -104,6 +106,11 @@ Use Serena for supported symbol-aware discovery before planning. Follow this exa
 4. **Trace references** — `find_referencing_symbols` on key exported/shared symbols to confirm callers and dependents.
 5. **read narrowly** — only if the above leaves ambiguity: native `read` on the exact section needed; native bash search for exact strings.
 
+**Optional graph-level discovery** *(only when gitnexus is connected and the repo has been indexed)*:
+- If the codebase is large or unfamiliar, query `gitnexus://repos` or `gitnexus://repo/{name}/context` for high-level architecture context.
+- Use `gitnexus query` or `gitnexus context` to understand cross-module boundaries before diving into symbols.
+- If GitNexus reports the repo is unindexed or stale, warn the user to run `gitnexus analyze` and continue with Serena/native discovery.
+
 **Issue/ticket** *(optional context source — runs here if relevant)*:
 - Ask once: "Issue/ticket URL or ID? (Leave blank to skip.)"
 - If a URL is provided: `firecrawl_scrape` with `formats: ["markdown"], onlyMainContent: true`. Trim to 800 words; use as **requirements context** for Steps 3–5. If <200 chars or 403: store the URL as a plain reference.
@@ -145,6 +152,8 @@ Use `sequentialthinking` to break the chosen approach into atomic, ordered steps
 
 **Impact checkpoint** *(modify-existing-code only)*:
 - `find_referencing_symbols` on the main symbol/module being changed.
+- If gitnexus is available and the repo is indexed, optionally use `gitnexus impact` or `gitnexus context` to confirm broad blast radius beyond what Serena's symbol references show.
+- If GitNexus reports the repo is unindexed or stale, warn the user to run `gitnexus analyze` and continue with Serena references alone.
 - If the plan explicitly includes renaming an exported/public symbol, call out broad references as migration risk and leave the actual rename to `b-implement` or `b-refactor`.
 - Wide downstream impact → split into smaller phases or add rollback steps.
 
