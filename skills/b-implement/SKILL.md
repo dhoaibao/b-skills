@@ -38,7 +38,7 @@ ambiguous.
 ## Tools required
 
 - `bash` — inspect git status/diff and run verification commands.
-- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `find_declaration`, `find_implementations`, `get_diagnostics_for_file`, `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol`, `rename_symbol`, `safe_delete_symbol` — from `serena` MCP server *(preferred for symbol discovery and code edits)*.
+- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `find_declaration`, `find_implementations`, `search_for_pattern`, `get_diagnostics_for_file`, `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol`, `rename_symbol`, `safe_delete_symbol` — from `serena` MCP server *(preferred for symbol discovery and code edits)*.
 - `resolve-library-id`, `query-docs` — from `context7` MCP server *(optional, for narrow library/API checks discovered during implementation)*.
 - `sequentialthinking` — from `sequential-thinking` MCP server *(optional, for resolving step-order ambiguity or failure triage)*.
 - `gitnexus` — from `gitnexus` MCP server *(optional radar for high-risk shared/exported symbol checks and post-change scope validation — only when indexed and fresh)*.
@@ -90,12 +90,16 @@ Follow this order:
 
 1. Locate the named symbol or file from the plan.
 2. Use `get_symbols_overview` before opening large source files.
-3. Use `find_declaration` when the plan names a call site, imported helper, or method usage but not the owning definition.
-4. Use `find_implementations` when the step targets an interface, abstract method, or polymorphic boundary.
-5. Use `find_referencing_symbols` when the step changes exported/shared behavior.
-6. Optionally call `gitnexus_impact` when GitNexus passes the global gate and the step changes a shared/exported boundary; confirm with Serena references.
-7. Apply the smallest edit that satisfies the step.
-8. Do not add unplanned abstractions, features, cleanup, or compatibility code.
+3. Use `search_for_pattern` when the plan describes behavior, log text, or a config/code shape rather than a stable symbol name.
+4. Use `find_declaration` when the plan names a call site, imported helper, or method usage but not the owning definition.
+5. Use `find_implementations` when the step targets an interface, abstract method, or polymorphic boundary.
+6. Use `find_referencing_symbols` when the step changes exported/shared behavior.
+7. If the step changes an API route/handler or response contract, optionally call `gitnexus_api_impact`; if it changes an MCP/RPC tool handler, optionally call `gitnexus_tool_map`.
+8. Optionally call `gitnexus_impact` when GitNexus passes the global gate and the step changes a shared/exported boundary; confirm with Serena references.
+9. Apply the smallest edit that satisfies the step.
+10. Do not add unplanned abstractions, features, cleanup, or compatibility code.
+
+When GitNexus is used in this step, stop after it answers the graph or contract question; Serena remains the source of truth for the exact symbol read and the edit itself.
 
 Use `rename_symbol`, `safe_delete_symbol`, and other refactor-oriented tools only when the approved plan explicitly calls for that mechanical transformation. If implementation reveals an unplanned rename, move, extract, inline, or delete, switch to **b-refactor** instead of folding it into the feature step.
 
@@ -138,7 +142,8 @@ Before reporting completion:
 1. Inspect `git diff` to confirm only planned files changed.
 2. Run the final verification command from the plan, if present.
 3. If the implementation is non-trivial, recommend `/b-review` before commit or PR.
-4. **Optional changed-scope validation** *(only when GitNexus passes the global gate and the implementation touched shared/exported boundaries or broad flows)*: call `gitnexus_detect_changes`; otherwise rely on diff inspection and Serena references.
+4. If the implementation changed an API route or consumer-facing response shape, optionally call `gitnexus_api_impact` or `gitnexus_shape_check` before the final handoff.
+5. **Optional changed-scope validation** *(only when GitNexus passes the global gate and the implementation touched shared/exported boundaries or broad flows)*: call `gitnexus_detect_changes`; otherwise rely on diff inspection and Serena references.
 
 Do not commit unless the user explicitly requested a commit.
 

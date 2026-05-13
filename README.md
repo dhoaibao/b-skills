@@ -111,13 +111,13 @@ When you open this repo in OpenCode, the checked-in `AGENTS.md` provides maintai
 
 | MCP | Role |
 |---|---|
-| `serena` | Symbol discovery, declaration/implementation lookup, file diagnostics, reference tracing, symbol-level edits, and memory — the primary semantic code layer where supported |
+| `serena` | Symbol discovery, declaration/implementation lookup, code-pattern search, file diagnostics, reference tracing, symbol-level edits, and memory — the primary semantic code layer where supported |
 | `context7` | Live, version-accurate library docs |
-| `brave-search` | Real web search |
-| `firecrawl` | Full page scraping, structured data extraction |
-| `playwright` | Browser automation, DOM snapshots, and UI interaction for E2E testing |
+| `brave-search` | Real web search, news lookups, and optional visual-reference discovery |
+| `firecrawl` | Full page scraping, local document parsing, structured extraction, JS follow-up interaction, and deep research fallback |
+| `playwright` | Browser automation, DOM snapshots, advanced UI interaction, network/console inspection, and Playwright E2E authoring |
 | `sequential-thinking` | Structured reasoning for multi-hypothesis decisions |
-| `gitnexus` *(optional)* | Radar for graph-level repo intelligence: cross-file impact, architecture context, execution-flow discovery, stale-index detection, route/API consumers, and multi-repo mapping — only useful when indexed and fresh |
+| `gitnexus` *(optional)* | Radar for graph-level repo intelligence: cross-file impact, architecture context, execution-flow discovery, route/API consumers, response-shape checks, tool maps, and multi-repo mapping — only useful when indexed and fresh |
 
 Verify the **6 core MCPs** are connected in OpenCode before relying on the full suite. GitNexus is optional and augments the suite when a repo has been indexed.
 
@@ -133,10 +133,19 @@ Verify the **6 core MCPs** are connected in OpenCode before relying on the full 
 - Exact symbol / body / symbol edit? → Serena first; `apply_patch` for manual line/prose/config edits.
 - GitNexus unavailable / stale / unindexed / missing FTS / missing target? → Warn once, continue with Serena/native tools.
 
+**Using both together**
+- GitNexus answers: which subsystem, route, process, consumer set, or contract surface matters.
+- Serena answers: which exact symbol/file owns that behavior, what the source says, and what to edit.
+- Do not ask both tools the same question. A normal handoff is `GitNexus narrow -> Serena inspect/edit`.
+- Go back to GitNexus only if Serena reveals a new graph question, such as an unexpected shared boundary or consumer contract.
+
 OpenCode integration:
 - Serena runs as `serena start-mcp-server --context=ide --project-from-cwd`.
 - Serena owns symbol discovery, references, and structural edits; native tools handle files, strings, manifests, commands, prose, and configs.
-- Serena 1.3.0 tools adopted in this suite: `find_declaration` and `find_implementations` for tighter symbol navigation, plus `get_diagnostics_for_file` for narrow local verification in implement/debug/review/test/refactor flows.
+- Serena tools adopted in this suite: `find_declaration`, `find_implementations`, `search_for_pattern`, and `get_diagnostics_for_file` for tighter navigation, fuzzy code discovery, and narrow local verification.
+- Firecrawl is now used beyond scrape/search: `firecrawl_parse` for local docs, `firecrawl_interact` for JS-heavy known pages, and `firecrawl_agent` only as a last-resort deep-research fallback.
+- Playwright guidance now covers uploads, dialogs, dropdowns, drag/drop, and multi-tab flows, while keeping `playwright_browser_run_code_unsafe` as a strict last resort.
+- GitNexus guidance now includes API-aware tools such as `api_impact`, `shape_check`, `route_map`, and `tool_map` where route or tool contracts are the real risk surface.
 - GitNexus augments Serena for graph-level intelligence only when indexed, fresh, and target-aware.
 
 **Evidence model:** GitNexus evidence scopes graph risk; Serena evidence confirms exact symbols and references; text search confirms strings/config/prose; runtime checks verify behavior.

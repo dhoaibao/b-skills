@@ -36,7 +36,7 @@ If `$ARGUMENTS` explicitly limits scope to investigation-only, honor that limit 
 
 ## Tools required
 
-- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `find_declaration`, `find_implementations`, `get_diagnostics_for_file`, `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol`, `rename_symbol`, `safe_delete_symbol` — from `serena` MCP server *(preferred for tracing execution paths and applying focused fixes once root cause is confirmed)*.
+- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `find_declaration`, `find_implementations`, `search_for_pattern`, `get_diagnostics_for_file`, `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol`, `rename_symbol`, `safe_delete_symbol` — from `serena` MCP server *(preferred for tracing execution paths and applying focused fixes once root cause is confirmed)*.
 - Native search/read — exact error strings, config keys, repeated patterns, and narrow source chunks.
 - `sequential-thinking` — rank hypotheses when there are multiple plausible causes.
 - `context7` — verify library API behavior when a hypothesis points to API misuse or version mismatch.
@@ -67,7 +67,9 @@ If `$ARGUMENTS` includes a concrete symptom, error, or stack trace, begin tracin
 
 **Graph-level fast path** *(only when GitNexus passes the global gate and the bug path is unfamiliar or cross-module)*:
 - Use `gitnexus query`, `context`, or `impact` to narrow the subsystem and dependencies.
+- If the symptom points at an API route, consumer mismatch, or handler contract, prefer `gitnexus_api_impact`, `gitnexus_route_map`, or `gitnexus_shape_check` before broad graph search.
 - Confirm exact symbols and references with Serena below.
+- End the GitNexus pass as soon as the likely route/process/consumer surface is identified; do not keep GitNexus in the loop for symbol-level tracing that Serena can perform directly.
 
 Use `serena` to trace the execution path in this order:
 
@@ -77,8 +79,9 @@ Use `serena` to trace the execution path in this order:
 3. `find_referencing_symbols` on the relevant function — trace callers/usages across files.
 4. Use `find_declaration` when a suspicious call, import, or helper usage needs its owning definition.
 5. Use `find_implementations` when the bug path crosses an interface, abstract method, or polymorphic boundary.
-6. Use native bash search on the error string, config key, or suspicious behavior.
-7. Use native `read` on any function or file section that still looks suspicious.
+6. Use `search_for_pattern` when the suspicious code path is easier to describe by behavior or code shape than by exact symbol name.
+7. Use native bash search on the error string, config key, or suspicious behavior.
+8. Use native `read` on any function or file section that still looks suspicious.
 
 **read-order rule**: never jump to native `read` before completing the supported Serena symbol and reference steps unless the target is prose/config or no relevant symbol exists.
 
@@ -137,6 +140,7 @@ Test hypotheses starting from the most likely:
 - Use `get_symbols_overview` first when narrowing within a large file; then native `read` to re-examine the suspicious function.
 - Use `find_referencing_symbols` for semantic references or native bash search when the bug pattern may exist in multiple text locations.
 - Use `get_diagnostics_for_file` on touched files when editor/compiler diagnostics may explain the symptom faster than runtime reproduction.
+- If the bug looks like an API response/consumer mismatch, use `gitnexus_api_impact` or `gitnexus_shape_check` before adding instrumentation.
 - If the hypothesis points to library API misuse: `resolve-library-id` + `query-docs` directly.
 - **Regression detection**: if the bug appeared after a recent change, compare current symbol/file content against the recent git diff before changing code.
 

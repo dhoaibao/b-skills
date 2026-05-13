@@ -26,7 +26,7 @@ Drives a real browser using Playwright to verify frontend user flows, inspect th
 
 ## Tools required
 
-- Playwright MCP: navigate, snapshot, click/fill/type/press, wait, resize, screenshot, evaluate, network, console, and close tools.
+- Playwright MCP: navigate, snapshot, click/fill/type/press, select-option, hover, drag/drop, file upload, dialog handling, tabs/history, wait, resize, screenshot, evaluate, network, console, and close tools. `playwright_browser_run_code_unsafe` is last-resort only when first-class tools cannot express the interaction or assertion.
 - `find_symbol`, `get_symbols_overview`, `insert_before_symbol`, `insert_after_symbol`, `replace_symbol_body` — from `serena` MCP server *(optional, for writing test code in Step 5)*
 - `bash`, `apply_patch` — for managing temporary artifacts, dev-server health checks, and creating/updating test files when needed.
 
@@ -68,13 +68,27 @@ Call `playwright_browser_snapshot` to capture the accessibility tree and `playwr
 
 ### Step 3 — Execute interactions
 
-Execute the requested user flow by calling `playwright_browser_click`, `playwright_browser_fill_form`, `playwright_browser_type`, or `playwright_browser_press_key` using the precise targets mapped in Step 2. Keep interactions sequential and use `playwright_browser_wait_for` for expected text/state instead of arbitrary sleeps. Verify state after major actions (form submission, navigation, async loading).
+Execute the requested user flow using the precise targets mapped in Step 2:
+
+- Click/tap actions → `playwright_browser_click`
+- Form fills and typing → `playwright_browser_fill_form`, `playwright_browser_type`, `playwright_browser_press_key`
+- Dropdowns/autocomplete/selects → `playwright_browser_select_option`
+- Hover-revealed menus/tooltips → `playwright_browser_hover`
+- Drag-and-drop flows → `playwright_browser_drag` or `playwright_browser_drop`
+- File uploads/imports → `playwright_browser_file_upload`
+- Confirm/alert/prompt dialogs → `playwright_browser_handle_dialog`
+- Multi-tab or popup flows → `playwright_browser_tabs`
+- Browser history checks → `playwright_browser_navigate_back`
+
+Keep interactions sequential and use `playwright_browser_wait_for` for expected text/state instead of arbitrary sleeps. Verify state after major actions (form submission, navigation, async loading).
 
 ---
 
 ### Step 4 — Verify state
 
 Capture a new snapshot/screenshot with the Playwright MCP tools or use `playwright_browser_evaluate` to assert that the expected text, elements, or state changes have appeared. Use `playwright_browser_console_messages` to surface client-side errors when the UI misbehaves. Optionally use `playwright_browser_network_requests` and `playwright_browser_network_request` for API-level assertions when the UI depends on backend calls.
+
+If a deterministic assertion or interaction still cannot be expressed with the first-class Playwright MCP tools, use `playwright_browser_run_code_unsafe` with a tiny, purpose-built snippet and state why the normal tools were insufficient.
 
 Responsive check:
 - For visual/layout work or user-facing flows, verify at least one desktop viewport and one mobile viewport with `playwright_browser_resize` unless the user explicitly scoped the test to one viewport.
@@ -156,6 +170,7 @@ Artifacts: `.opencode/b-skills/b-e2e/[run-id]/`
 ## Rules
 - Always use `playwright_browser_snapshot` to get exact element targets before interacting; never guess selectors blindly.
 - Save Playwright MCP artifacts with the tool-supported `filename` parameter when available; otherwise record the returned path. Keep native notes, manifest, and generated test files in the session-specific `.opencode/b-skills/b-e2e/[run-id]/` directory.
+- Prefer first-class Playwright MCP tools over `playwright_browser_run_code_unsafe`; use the unsafe runner only as a last resort for small bounded snippets.
 - Always close the browser when the testing flow finishes. Do not delete artifacts unless the user asks, and only delete this run's directory.
 - Ensure the local dev server is running before attempting to navigate to `localhost`.
 - Do not start a dev server unless the user approves the discovered command.

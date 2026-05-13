@@ -33,8 +33,10 @@ If `$ARGUMENTS` is provided, treat it as the research question — proceed direc
 - **Quick mode primary**: `resolve-library-id`, `query-docs` — from `context7` MCP server for library/framework API questions
 - **Search**: `brave_web_search` — from `brave-search` MCP server; `firecrawl_search` as fallback when Brave is unavailable or too sparse
 - **NEWS full mode**: `brave_news_search` — from `brave-search` MCP server
-- **Full-mode page reads**: `firecrawl_scrape` — from `firecrawl` MCP server
-- **Full-mode fallbacks**: `firecrawl_map`, `firecrawl_extract`
+- **Visual/reference lookups**: `brave_image_search` *(optional, for UI/design/screenshot questions)*; `brave_summarizer` *(optional triage aid only when the connected Brave plan supports it)*
+- **Full-mode page reads**: `firecrawl_scrape`, `firecrawl_parse` — from `firecrawl` MCP server
+- **Full-mode fallbacks**: `firecrawl_map`, `firecrawl_extract`, `firecrawl_interact`, `firecrawl_interact_stop`
+- **Deep research fallback**: `firecrawl_agent`, `firecrawl_agent_status` *(optional, only after search + scrape/map/interact are insufficient)*
 - **Bounded known-site crawl**: `firecrawl_crawl`, `firecrawl_check_crawl_status` *(optional, only when the user asks for comprehensive coverage of a known site section)*
 - **Conflict resolution**: `sequentialthinking` — from `sequential-thinking` MCP server *(optional)*
 
@@ -43,10 +45,12 @@ If brave-search is unavailable:
 - quick mode with a clear Context7 answer may still complete;
 - use `firecrawl_search` for full-mode search fallback;
 - otherwise stop only when neither Brave nor Firecrawl search is available.
+If `brave_image_search` or `brave_summarizer` is unavailable or unsupported by the connected Brave plan: skip those branches and continue with ordinary Brave/Firecrawl search.
 If firecrawl is unavailable:
 - quick mode may still complete without scraping;
 - full mode may continue only when official docs, changelogs, source repos, or Context7 provide enough evidence without page scraping; label the result as limited;
 - stop only when the question requires page extraction or multiple source reads that cannot be performed without Firecrawl.
+If `firecrawl_parse`, `firecrawl_interact`, or `firecrawl_agent` is unavailable: continue with the simpler `scrape`/`map`/manual synthesis path and label the limitation when it affects confidence.
 If sequential-thinking is unavailable: summarize conflicts inline as `Source A says X / Source B says Y / Best fit: Z`.
 
 Graceful degradation: ⚠️ Partial — quick mode works with Context7 and/or Brave; full mode prefers live search plus Firecrawl, but can produce a clearly limited answer from official/search evidence when scraping is unavailable.
@@ -56,6 +60,8 @@ Graceful degradation: ⚠️ Partial — quick mode works with Context7 and/or B
 ### Step 1 — Detect mode
 
 Choose the lightest mode that can answer correctly.
+
+If the user provides a known URL, local file path, or document attachment, prefer direct extraction from that source over open-ended web search.
 
 Use **quick mode** when the question is likely answerable in 1–3 sentences or a tiny code snippet:
 - method signature
@@ -70,6 +76,8 @@ Use **full mode** when the question needs:
 - citations or report output
 - recency or news
 - reading full pages or extracting structured details from pages
+- extracting content from a local PDF/Doc/Sheet/HTML file
+- screenshot, image, or visual-reference collection
 
 If uncertain, start in quick mode and escalate automatically to full mode if the answer needs more than 2 tool calls, more than 1 source, or any page scraping.
 
@@ -91,7 +99,7 @@ If uncertain, start in quick mode and escalate automatically to full mode if the
 
 ### Step 3 — Full-mode type classification
 
-Classify the query into one of four full-mode types:
+Classify the query into one of six full-mode types:
 
 | Type | Signals | Strategy |
 |---|---|---|
@@ -99,6 +107,8 @@ Classify the query into one of four full-mode types:
 | **COMPARE** | "vs", "so sánh", "which is better", "A or B", "compare X and Y" | Balanced coverage for both sides |
 | **NEWS** | "recent", "2025/2026", "mới nhất", "latest news", time-sensitive topics | `brave_news_search` with freshness |
 | **HOWTO / API** | "how to", "cách dùng", "tutorial", "setup", "configure", API usage | Context7 first, then official/community sources |
+| **VISUAL** | "what does it look like", "UI inspiration", "screenshot", "logo", "design reference" | `brave_image_search`, then scrape source pages if provenance matters |
+| **LOCALDOC** | local `.pdf`, `.docx`, `.xlsx`, `.xls`, `.html`, `.htm`, attachment paths | `firecrawl_parse` directly, then synthesize |
 
 If the topic is library/framework API, also run Step 4 before Step 5.
 
@@ -131,19 +141,31 @@ Apply the search strategy for the full-mode type:
 **HOWTO / API**
 - After Context7, search for official docs, examples, and high-quality community explanations.
 
+**VISUAL**
+- Use `brave_image_search` first.
+- If an image result needs provenance, pricing, or implementation context, scrape the originating page before making claims.
+
+**LOCALDOC**
+- Skip open-ended web search.
+- Go directly to `firecrawl_parse` in Step 6.
+
 Universal rules:
 - Use English queries unless the topic is Vietnamese-specific.
 - Prefer 3 high-quality sources over 5 mixed ones.
 - Rank sources in this order: official docs/changelogs, source repository or release artifacts, vendor engineering posts, reputable community references, then low-context snippets/SEO content.
 - If Brave is unavailable or returns fewer than 3 relevant results, retry with `firecrawl_search`.
+- If the connected Brave plan supports summarization and the query is broad, you may run `brave_web_search` with summary enabled and use `brave_summarizer` only as a triage aid. Do not cite the summarizer output as a primary source.
 
 ### Step 6 — Scrape or extract
 
 - Scrape only high-signal pages.
 - Use `firecrawl_scrape` with `formats: ["markdown"]` and `onlyMainContent: true`.
+- For local documents, use `firecrawl_parse` instead of hosting or scraping them indirectly. Choose `markdown` for full reading and structured extraction for targeted fields.
 - For structured fields, params, prices, or specs, prefer structured extraction. Ask for or infer the exact output fields first, then use `firecrawl_extract` or `firecrawl_scrape` with JSON options when supported.
 - Default cap: 3 URLs; 5 for COMPARE queries.
 - If JS-rendered pages return empty content, retry once with `waitFor: 5000`, then fall back to `firecrawl_map` if needed.
+- If `waitFor` plus `firecrawl_map` still cannot expose the relevant content on a known page, use `firecrawl_interact` for the smallest needed click/search/expand flow, then call `firecrawl_interact_stop` when done.
+- Use `firecrawl_agent` only as a last resort for multi-source or heavily dynamic research where search + scrape/map/interact still cannot reach the content. Poll with `firecrawl_agent_status` patiently until completion or failure.
 - Use `firecrawl_crawl` only when the user asks for comprehensive coverage of a known site section; set `limit <= 10` and `maxDiscoveryDepth <= 2`, then poll with `firecrawl_check_crawl_status`.
 - If fewer than 2 usable sources remain after quality filtering, stop unless a single official source is sufficient for the specific fact. Label single-source answers clearly.
 
@@ -218,6 +240,9 @@ Keep it short. No citations list, no report structure, no recommendations unless
 - Quick mode caps at 2 tool calls before escalating or answering.
 - Never scrape in quick mode.
 - Always attempt Context7 first for library/framework API questions.
+- Prefer `firecrawl_parse` for local docs and `firecrawl_interact` for known JS-heavy pages before jumping to autonomous research.
+- Do not use `firecrawl_agent` before trying search + scrape/map, unless the user explicitly asks for deep autonomous research.
+- Use `brave_image_search` only for genuinely visual/reference queries; ordinary factual questions stay on web/news/docs search.
 - In full mode, scrape or extract before making factual claims from web results when page tools are available. If scraping is unavailable, use only official/high-authority search evidence and label the limitation.
 - Prefer authoritative sources over aggregators.
 - Do not answer quick-mode web questions from weak snippets; escalate to full mode when authority or context is unclear.

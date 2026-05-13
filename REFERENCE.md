@@ -63,10 +63,12 @@ All external knowledge in one skill: auto-detects quick lookup vs full multi-sou
 - For library/framework API questions: Context7 first.
 - In quick mode: answers in 1–3 sentences with a minimal example, capped at 2 tool calls, never scrapes, and only trusts web snippets when the source is official or high-authority.
 - Starts with quick mode when plausible, then escalates automatically when the answer needs more than 2 tool calls, more than 1 source, or any page scraping.
-- In full mode: classifies query into VERSION / COMPARE / NEWS / HOWTO/API → Brave Search with `firecrawl_search` fallback → Firecrawl scrape/extract when available → quality gate → synthesis report.
+- In full mode: classifies query into VERSION / COMPARE / NEWS / HOWTO/API / VISUAL / LOCALDOC → Brave Search with `firecrawl_search` fallback → Firecrawl scrape/parse/extract when available → quality gate → synthesis report.
 - If Firecrawl is unavailable, full mode may continue only from official/high-authority search, source, changelog, or Context7 evidence and must label the limitation.
 - NEWS mode widens freshness from daily to weekly to monthly when the topic is not breaking news.
 - Structured extraction first locks the exact output fields, then uses Firecrawl extract or JSON scraping when supported.
+- Uses `brave_image_search` for visual-reference questions and may use `brave_summarizer` only as a non-citable triage aid when the connected Brave plan supports it.
+- Uses `firecrawl_parse` for local PDFs/docs/sheets, `firecrawl_interact` for known JS-heavy pages after scrape/map fails, and `firecrawl_agent` only as a last-resort deep-research fallback.
 - Applies source-quality ranking: official docs/changelogs, source repos/releases, vendor engineering posts, reputable community sources, then low-context snippets/SEO content.
 - Uses `sequentialthinking` only when conflicting sources materially change the recommendation.
 - Prefers 3 high-quality sources over 5 mixed-quality ones.
@@ -105,8 +107,10 @@ Approved/scoped-plan execution: read the source of truth, apply one step at a ti
 - Extracts confirmed decisions, planned touch points, ordered steps, dependencies, and `Done when` checks before editing.
 - Checks `git status --short` and preserves unrelated user changes.
 - Uses Serena for symbol-aware code changes: onboarding check -> symbol/file discovery -> overview -> declaration/implementation resolution when needed -> references -> minimal edit.
+- Uses `search_for_pattern` when an approved step describes behavior or code shape more clearly than a stable symbol name.
 - Implements exactly one dependency-ready step at a time, then verifies with the plan's `Done when` command or the narrowest relevant check.
 - Uses `get_diagnostics_for_file` as a narrow local verification pass before broader commands when the touched language supports diagnostics.
+- Uses GitNexus API-aware checks (`api_impact`, `shape_check`, `tool_map`) when the implementation changes route or tool contracts instead of treating every shared change as generic graph impact.
 - Marks saved plan checkboxes complete only after verification passes.
 - Stops for new product/behavior decisions instead of self-inferring.
 - Hands unplanned mechanical transformations (rename/move/extract/inline/delete) to `b-refactor` unless the approved plan explicitly includes them.
@@ -144,6 +148,7 @@ Systematic, hypothesis-driven debugging with full-loop execution by default.
 **Core behavior**
 - Uses supported Serena tools to map execution path, references, suspicious symbols, and file structure (Step 2).
 - Uses `find_declaration` to jump from suspicious usages to owning definitions and `find_implementations` to trace polymorphic boundaries without widening reads too early.
+- Uses `search_for_pattern` when a suspicious code path is described by behavior or code shape rather than a precise symbol.
 - If Serena is unavailable, falls back to bash/read with reduced cross-file confidence.
 - Initializes Serena project knowledge with onboarding check before tracing when needed.
 - **Step 3a** forms ranked hypotheses with evidence/verification per item, reports them as progress, then continues verification without waiting unless the user requested diagnosis-only mode.
@@ -151,6 +156,7 @@ Systematic, hypothesis-driven debugging with full-loop execution by default.
 - Library error shortcut: web search → Firecrawl scrape (top 1–2 URLs) → Context7 verification.
 - Dynamic verification loop in Step 4 when static analysis is insufficient (try safe local reproduction first, then max 3 instrumentation rounds; remove added debug logging before stopping unconfirmed).
 - Uses `get_diagnostics_for_file` as an optional fast signal when editor/compiler diagnostics may explain the symptom faster than runtime reproduction.
+- For API handler or consumer bugs, can prefer GitNexus `api_impact`, `route_map`, or `shape_check` before broad graph or runtime instrumentation.
 - Starts from a concrete symptom/error when available; asks only for missing context that blocks the next verification step.
 - Inspects the final diff/touched lines to confirm temporary debug logging or probes were removed.
 - After confirming root cause, implements the minimal fix using symbol-aware tools and states exact verification steps.
@@ -192,6 +198,7 @@ Human-judgment pre-PR changed-code review: correctness, requirements, edge cases
 - Treats multiple plan-file candidates as ambiguous and asks which requirements source to use instead of guessing.
 - Uses supported Serena tools to prioritize review depth by changed symbols, references, and affected files.
 - Adds `find_declaration` / `find_implementations` when the diff highlights a usage or contract boundary more clearly than the owning definition, and may use `get_diagnostics_for_file` for narrow typed-language breakage checks.
+- Uses GitNexus `api_impact` / `shape_check` for API diffs and `tool_map` for MCP/RPC tool-handler diffs when those surfaces are the likely review risk.
 - Initializes Serena project knowledge with onboarding check before reviewing changed symbols when needed.
 - Follows a strict read-order: find symbol → find referencing symbols → overview → narrow reads. Never jumps straight from diff to full file reads.
 - Reviews changed files outline-first, then opens only high-risk symbols/source paths.
@@ -284,11 +291,12 @@ Browser-based frontend testing and Playwright E2E script authoring.
 - Clarifies auth/session, seed data, cleanup expectations, and environment safety before executing stateful flows.
 - Prefers disposable accounts, seeded state, or pre-authenticated local sessions; it must not ask for real production credentials in chat.
 - Relies on accessibility tree snapshots (`playwright_browser_snapshot`) to map the UI and get precise target references.
-- Performs sequential user interactions (clicks, typing, form fills).
+- Performs sequential user interactions (clicks, typing, form fills, dropdowns, uploads, hover flows, drag/drop, dialogs, and multi-tab checks).
 - Verifies UI state changes via updated snapshots, console checks, responsive desktop/mobile passes when relevant, and optional network assertions.
 - Translates successful manual interactions into Playwright test code via Serena symbol tools when an existing spec exists, or `apply_patch` when no spec file exists.
 - Reads Playwright config and package scripts before authoring tests to preserve test directory, base URL, project, and command conventions.
 - Uses stable waits/assertions and reruns generated tests once when manual and scripted results conflict to detect flakiness.
+- Keeps `playwright_browser_run_code_unsafe` as a tightly scoped last resort when first-class browser tools cannot express the needed interaction or assertion.
 - Closes the browser session when the flow finishes and keeps artifacts unless the user asks to delete this run's directory.
 
 **Good triggers**
@@ -321,6 +329,7 @@ Code refactoring with impact analysis and safe mechanical transformation.
 **Core behavior**
 - Maps full impact radius with `find_referencing_symbols` before touching any code.
 - Uses `find_declaration` and `find_implementations` to lock the exact refactor target before renaming, moving, or deleting when the request starts from usage sites or abstract contracts.
+- Uses `search_for_pattern` when the request starts from a repeated code shape or behavior instead of a named symbol.
 - Requires a green baseline check for medium/high-risk refactors; low-risk single-file mechanical edits may skip baseline with an explicit note.
 - Uses Serena's symbol-aware tools (`rename_symbol`, `safe_delete_symbol`, `replace_symbol_body`) for cross-file safe edits where symbol-level operations apply.
 - Uses `get_diagnostics_for_file` as a local post-edit guard before broader typecheck/test commands when supported.
@@ -335,6 +344,7 @@ Code refactoring with impact analysis and safe mechanical transformation.
 - For large refactors (>3 files or crossing package boundaries): uses `sequentialthinking` to plan phases.
 - Vague cleanup requests without a specific target or behavior-preserving transformation go to `b-plan` first.
 - Hands off post-refactor failures: real regression → `/b-debug`; test-mechanic drift → `/b-test`.
+- Uses GitNexus `api_impact` or `tool_map` when the refactor target is a route/tool contract instead of a plain internal symbol.
 
 **Transformations supported**
 - Rename symbol
@@ -404,12 +414,13 @@ This repository is the install-only source layout for the suite. OpenCode does n
 - `install.sh` configures Serena as `serena start-mcp-server --context=ide --project-from-cwd`.
 - The suite treats OpenCode as a generic Serena `ide` client, not as a custom Serena context with separate runtime semantics.
 - Serena is the semantic layer for symbol discovery, references, and structural edits.
-- The suite selectively uses Serena 1.3.0 additions: `find_declaration`, `find_implementations`, and `get_diagnostics_for_file` where they reduce broad reads or replace heavier verification.
+- The suite selectively uses Serena additions such as `find_declaration`, `find_implementations`, `search_for_pattern`, and `get_diagnostics_for_file` where they reduce broad reads or replace heavier verification.
 - OpenCode's native file and shell tools remain the default for overlapping basic operations that Serena's `ide` context assumes the harness already provides.
 - Manual line/prose/config edits use `apply_patch`; runtime skill instructions should not rely on unavailable native `edit` or `write` tools.
 - The activated Serena project is expected to follow the current working directory, so core skill guidance must stay single-project and must not depend on project-switching workflows.
 - Serena memory is available for durable project knowledge, but the suite treats it as selective and task-driven rather than a default read/write step in every skill.
 - **GitNexus** *(optional radar)* — graph-level repo intelligence (cross-file impact, architecture context, execution-flow discovery, stale-index detection, route/API consumers, multi-repo mapping). Use it only for graph-shaped tasks when the repo is indexed, fresh, and the target file/symbol is represented. Serena then handles exact symbol inspection and edits. If GitNexus is unavailable, stale, unindexed, missing FTS, or missing the target, skills warn once and fall back to Serena and native tools.
+- **Non-overlap rule** — GitNexus should answer only the graph question first; Serena should answer the exact-symbol question next. Do not keep both MCPs active on the same exact question unless a new graph question is uncovered mid-flow.
 
 ### Evidence model
 - **Graph evidence**: GitNexus relationships, routes, processes, and impact. Use for prioritization and risk, not proof that edits are safe.

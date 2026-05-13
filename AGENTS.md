@@ -174,6 +174,7 @@ When deciding which MCPs a skill should use:
 - If the target symbol or file is already known, or the task is local to a single file/module, skip GitNexus and go straight to Serena. Use GitNexus only when cross-file, architectural, execution-flow, or blast-radius context is needed.
 - Every skill that uses GitNexus must use the global indexing/freshness/target gate and fall back to Serena/native tools when the gate fails.
 - GitNexus must never replace Serena for precise symbol-level edits (`rename_symbol`, `safe_delete_symbol`, `replace_symbol_body`, etc.).
+- When both MCPs appear in one workflow, GitNexus must answer only the graph question first; Serena then becomes the source of truth for symbol lookup, body inspection, references, and edits. Do not keep both active on the same exact question.
 - Before maintainers suggest `gitnexus analyze` or add indexing guidance to a skill, verify it is only when indexing is safe.
 
 ---

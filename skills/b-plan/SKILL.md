@@ -35,7 +35,7 @@ If `$ARGUMENTS` is provided, treat it as the task description — skip asking "w
 ## Tools required
 
 - `sequentialthinking` — from `sequential-thinking` MCP server *(optional, for approach evaluation and decomposition when available)*.
-- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `find_declaration`, `find_implementations` — from `serena` MCP server *(required for symbol-aware modify-existing-code tasks; optional for greenfield)*.
+- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `find_declaration`, `find_implementations`, `search_for_pattern` — from `serena` MCP server *(required for symbol-aware modify-existing-code tasks; optional for greenfield)*.
 - `resolve-library-id`, `query-docs` — from `context7` MCP server *(optional, for inline library verification — simple lookups only)*.
 - `brave_web_search` — from `brave-search` MCP server *(optional, for tool/approach comparison — simple lookups only)*.
 - `firecrawl_scrape` — from `firecrawl` MCP server *(optional, for scraping issue/ticket URL when present)*.
@@ -96,14 +96,15 @@ Confirm what is being built before scanning any code.
 
 Use GitNexus only for graph-shaped discovery under the global freshness/target gate; skip it for known-file, known-symbol, or local-only planning. Then follow this order:
 
-1. **Graph-level discovery first** *(only when GitNexus applies)* — use repo context/query to understand architecture or cross-module boundaries, then confirm exact symbols with Serena.
+1. **Graph-level discovery first** *(only when GitNexus applies)* — use repo context/query to understand architecture or cross-module boundaries, then confirm exact symbols with Serena. If the plan changes an API route or consumer contract, prefer `gitnexus_api_impact` or `gitnexus_route_map`. If it changes an MCP/RPC tool handler, use `gitnexus_tool_map`. Stop the GitNexus leg once the subsystem/route/contract surface is clear; do not keep using GitNexus for symbol bodies that Serena can inspect directly.
 2. **Initialize project knowledge** — call `check_onboarding_performed`. If false, call `onboarding` once.
 3. **Discover symbols** — `find_symbol` on the main function, class, command, handler, or module involved in the change.
-4. **Inspect structure** — `get_symbols_overview` on each relevant file to see which symbols are worth reading.
-5. **Resolve owners** — use `find_declaration` when the task description or code path points at a call site, imported helper, or usage rather than the owning definition.
-6. **Trace polymorphic boundaries** — use `find_implementations` when the change hangs off an interface, abstract class, or protocol.
-7. **Trace references** — `find_referencing_symbols` on key exported/shared symbols to confirm callers and dependents.
-8. **Read narrowly** — only if the above leaves ambiguity: native `read` on the exact section needed; native bash search for exact strings.
+4. **Pattern-search code when names are fuzzy** — use `search_for_pattern` when the task is described by behavior, code shape, or log text rather than a stable symbol name.
+5. **Inspect structure** — `get_symbols_overview` on each relevant file to see which symbols are worth reading.
+6. **Resolve owners** — use `find_declaration` when the task description or code path points at a call site, imported helper, or usage rather than the owning definition.
+7. **Trace polymorphic boundaries** — use `find_implementations` when the change hangs off an interface, abstract class, or protocol.
+8. **Trace references** — `find_referencing_symbols` on key exported/shared symbols to confirm callers and dependents.
+9. **Read narrowly** — only if the above leaves ambiguity: native `read` on the exact section needed; native bash search for exact strings.
 
 **Issue/ticket** *(optional context source — only when the user provides or explicitly mentions one)*:
 - If a URL is provided: `firecrawl_scrape` with `formats: ["markdown"], onlyMainContent: true`. Trim to 800 words; use as **requirements context** for Steps 3–5. If <200 chars or 403: store the URL as a plain reference.
@@ -146,7 +147,7 @@ Use `sequentialthinking` to break the chosen approach into atomic, ordered steps
 
 **Impact checkpoint** *(modify-existing-code only)*:
 - `find_referencing_symbols` on the main symbol/module being changed.
-- If GitNexus applies under the global gate, use `gitnexus impact` or `gitnexus context` to estimate broad blast radius before narrowing with Serena references.
+- If GitNexus applies under the global gate, use `gitnexus impact` or `gitnexus context` to estimate broad blast radius before narrowing with Serena references. Use `gitnexus_api_impact` for planned API route changes and `gitnexus_tool_map` for planned tool-handler changes.
 - If the plan explicitly includes renaming an exported/public symbol, call out broad references as migration risk and leave the actual rename to `b-implement` or `b-refactor`.
 - Wide downstream impact → split into smaller phases or add rollback steps.
 

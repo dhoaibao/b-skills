@@ -107,6 +107,10 @@ If GitNexus passes the global gate and is relevant to the diff scope, run blast-
 
 **Blast-radius analysis**: use `gitnexus detect_changes` or `gitnexus impact` to prioritize deeper review, then confirm findings with `git diff` and Serena reference checks.
 
+If the diff touches an API route, route consumer, or response contract, prefer `gitnexus_api_impact` or `gitnexus_shape_check` before broad graph traversal. If it touches an MCP/RPC tool definition or handler, use `gitnexus_tool_map`.
+
+Stop the GitNexus leg once review priority is clear. Use Serena and the diff as the source of truth for the actual code finding; do not duplicate source inspection in GitNexus.
+
 Initialize Serena project knowledge next: call `check_onboarding_performed`; if onboarding has not been performed, run `onboarding`. Then follow this exact read-order:
 
 1. `find_symbol` on changed names — map them to real symbols.

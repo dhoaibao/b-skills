@@ -38,7 +38,7 @@ If `$ARGUMENTS` is provided, treat it as the refactoring instruction. Proceed di
 ## Tools required
 
 - `bash` — run tests, check compilation, inspect git diff.
-- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `find_declaration`, `find_implementations`, `get_diagnostics_for_file`, `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol`, `rename_symbol`, `safe_delete_symbol` — from `serena` MCP server *(required for impact analysis and safe symbol-level edits)*
+- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `find_declaration`, `find_implementations`, `search_for_pattern`, `get_diagnostics_for_file`, `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol`, `rename_symbol`, `safe_delete_symbol` — from `serena` MCP server *(required for impact analysis and safe symbol-level edits)*
 - `sequentialthinking` — from `sequential-thinking` MCP server *(optional, for evaluating trade-offs on large refactors)*
 - `gitnexus` — from `gitnexus` MCP server *(optional radar for broad blast-radius discovery before exported/shared mechanical edits — only when indexed and fresh)*
 
@@ -56,10 +56,11 @@ Graceful degradation: ⚠️ Partial — mechanical refactoring still possible w
    - User names a function/class → `find_symbol` with that name.
    - User references a file → `get_symbols_overview` to inspect top-level symbols.
    - Vague instruction ("clean up the auth module") → `get_symbols_overview` on the file, then ask the user for a specific target.
+   - User describes a repeated code shape or behavior but not a symbol → `search_for_pattern` first, then resolve to the owning symbol.
 
    If the request points at a call site or imported helper rather than the owner, use `find_declaration` to resolve the exact symbol first. If the target is an interface or abstract method, use `find_implementations` before locking scope.
 
-3. **Broad blast-radius discovery** *(only when the target is exported/shared, crosses packages, or affects >2 files and GitNexus passes the global gate)*: call `gitnexus impact` or `gitnexus context`, then confirm with Serena references. Record hidden callers, event boundaries, or architecture constraints.
+3. **Broad blast-radius discovery** *(only when the target is exported/shared, crosses packages, or affects >2 files and GitNexus passes the global gate)*: call `gitnexus impact` or `gitnexus context`, then confirm with Serena references. If the target is an API route/handler, prefer `gitnexus_api_impact`; if it is an MCP/RPC tool handler, use `gitnexus_tool_map`. Record hidden callers, event boundaries, or architecture constraints, then stop the GitNexus pass and let Serena own the exact refactor target and edit plan.
 
 4. Call `find_referencing_symbols` on the target to map every call site and usage.
    Record: how many files reference it, whether it's exported/public, whether any references are in tests.

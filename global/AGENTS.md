@@ -35,11 +35,19 @@ When a relevant MCP is connected, use it before native fallbacks. Native Glob/Gr
 | Exact symbol discovery, body inspection, references, symbol edits | `serena:*` | Native tools + `apply_patch` |
 | Library/framework docs | `context7:*` | `/b-research` |
 | Web search | `brave-search` | `firecrawl_search`, then `webfetch` |
-| Known URL extraction | `firecrawl_scrape` | `firecrawl_map`, then broader search |
+| Known URL extraction | `firecrawl_scrape` | `firecrawl_interact`, then `firecrawl_map` |
+| Local document extraction | `firecrawl_parse` | `firecrawl_scrape` only if the file is already hosted |
 | Browser automation | `playwright:*` via `/b-e2e` | none |
 | Multi-hypothesis reasoning | `sequential-thinking` | inline evidence table |
 
 **Radar/hands boundary**: GitNexus is optional radar; Serena is primary hands. GitNexus scopes graph risk, flows, routes, and cross-module/cross-repo impact. Serena confirms exact symbols, bodies, references, and performs symbol-aware edits.
+
+**Parallel-use model**:
+- Ask GitNexus graph questions: What process/route/module is involved? Who consumes this contract? How wide is the blast radius?
+- Ask Serena code questions: Which exact symbol is this? Where is its declaration? What does its body do? What references must be updated?
+- Do not use both MCPs to answer the same exact question. Once GitNexus has narrowed the area, switch to Serena for source-of-truth inspection and edits.
+- Return to GitNexus only when a new graph question appears after Serena inspection, such as a newly discovered shared boundary, route consumer, or contract surface.
+- In normal flows, one GitNexus pass is enough before Serena takes over.
 
 **GitNexus freshness gate**: rely on GitNexus only when the repo is indexed, not stale, and the target file/symbol is represented. If unavailable, stale, unindexed, missing FTS, or missing the target, warn once and continue with Serena/native tools. Stale graph output is not evidence.
 
@@ -50,6 +58,7 @@ For symbol-aware work, call `check_onboarding_performed`; if false, call `onboar
 - Known symbol edit: Serena first; GitNexus only for exported/shared or cross-boundary symbols.
 - Large unfamiliar area: GitNexus once to narrow, then Serena confirms.
 - Review/debug: GitNexus only for cross-file, flow, route/API, or changed-scope risk.
+- Never run GitNexus and Serena in parallel for the same symbol hunt; use them sequentially to avoid overlapping evidence.
 - Tool names in skill prose describe MCP capabilities; actual calls must use the exact tool names exposed by the current OpenCode session.
 
 **Evidence standards**:
