@@ -95,7 +95,7 @@ Classify failures:
 - Unresolved library/API behavior → `context7-docs`, then **b-research** if still unclear.
 - External (CI down, registry outage, dep yanked) → record the blocker, do not retry inside the iteration cap.
 
-**Mid-step rollback:** if a partial edit has left the tree in a broken state (compile failure, import cycle, half-renamed symbol) and the next iteration cannot move forward without first restoring a coherent baseline, stop attempting to push through. Either (a) finish the edit to a coherent state in one more focused pass, or (b) revert the in-progress changes for the current step with `git checkout -- <path>` / `git restore <path>` and re-attempt from the last known-good state. Never leave the working tree mid-transform across a skill exit — surface the rollback explicitly to the user.
+**Mid-step rollback:** if a partial edit has left the tree in a broken state (compile failure, import cycle, half-renamed symbol) and the next iteration cannot move forward without first restoring a coherent baseline, stop attempting to push through. Either (a) finish the edit to a coherent state in one more focused pass, or (b) manually roll back only the edits made in the current step using patch-based reversals. If a file-level restore is truly required, stop and ask for approval first because it can discard unrelated user changes in the same path. Never leave the working tree mid-transform across a skill exit — surface the rollback explicitly to the user.
 
 Apply the iteration cap from `global/AGENTS.md` §7.
 

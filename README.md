@@ -34,7 +34,7 @@ You can inspect and maintain the suite from this source repository, which contai
 | `/b-debug` | Validate | Runtime bug ownership — trace, confirm root cause, fix minimally, verify; handles errors, races, perf regressions, and cannot-reproduce reports |
 | `/b-test` | Validate | Code-level tests — write tests, fix test-only failures, or review coverage gaps without confusing them with runtime bugs |
 | `/b-e2e` | Validate | Live browser verification and browser-test authoring, while respecting the repo's existing E2E framework |
-| `/b-review` | Validate | Pre-PR changed-code review focused on blockers, regressions, security, and missing coverage |
+| `/b-review` | Validate | Pre-PR changed-code review, or an explicitly requested repository audit, focused on blockers, regressions, security, and missing coverage |
 
 ### Typical Flows
 
@@ -45,6 +45,7 @@ You can inspect and maintain the suite from this source repository, which contai
 /b-debug [symptom]      (any time something breaks or is slow)
 /b-refactor [target]    (mechanical code transformation)
 /b-e2e [flow]           (browser UI verification or browser test authoring)
+/b-review --repo-audit [area]  (reviewer-style repository or maintainer audit)
 ```
 
 `/b-plan` supports **quick mode** for trivial scoped tasks and **full mode** for non-trivial work. It owns broad or unclear refactors until they reduce to concrete mechanical steps, at which point `/b-refactor` becomes the safer executor. After plan approval, `/b-implement` is the default executor for multi-step work.

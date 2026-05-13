@@ -1,5 +1,5 @@
 ---
-description: Run the b-review skill for pre-PR changed-code review
+description: Run the b-review skill for changed-code review or explicit repo audits
 ---
 
 <!-- b-skills-managed -->

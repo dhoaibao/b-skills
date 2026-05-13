@@ -95,7 +95,7 @@ If the work turns into a behavioral redesign instead of a mechanical transform, 
 3. Re-check references when the target is shared or exported.
 4. Inspect `git diff` to confirm the change stayed within intended scope.
 5. If failures indicate a real regression, use **b-debug**. If they indicate test-mechanic drift, use **b-test**.
-6. **Partial-completion recovery:** if verification fails partway through a multi-file transform (e.g., a move with imports half-updated, a rename that missed a re-export), do not paper over the broken state with more edits. Either (a) finish the transform to a coherent baseline in one focused pass using the Step 2 reference map as the worklist, or (b) revert the in-flight changes (`git restore <path>`) and restart from the locked target. Never exit the skill with the tree mid-transform — surface the rollback to the user.
+6. **Partial-completion recovery:** if verification fails partway through a multi-file transform (e.g., a move with imports half-updated, a rename that missed a re-export), do not paper over the broken state with more edits. Either (a) finish the transform to a coherent baseline in one focused pass using the Step 2 reference map as the worklist, or (b) manually roll back only the in-flight edits for the current transform. If a file-level restore is truly required, stop and ask for approval first because it can discard unrelated user changes in the same path. Never exit the skill with the tree mid-transform — surface the rollback to the user.
 7. Apply the iteration cap from `global/AGENTS.md` §7.
 
 Close with the skill-exit status block (`global/AGENTS.md` §9).

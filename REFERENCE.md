@@ -160,14 +160,16 @@ Symptoms -> Code path -> Hypotheses -> Root cause -> Fix -> Verification
 
 ### b-review
 
-`b-review` is the suite's PR-style changed-code review skill.
+`b-review` is the suite's changed-code review skill and also handles explicitly requested repository audits.
 
 **Core behavior**
 - Defaults to `git diff HEAD`; supports `--range=<ref>..<ref>` for a specific commit range and uses `git log` on the range.
+- Supports `--repo-audit` for maintainer-style review of an explicitly requested repository area or suite slice; in that mode it names the audited surface and avoids implying full-repository coverage unless the full repository was actually inspected.
 - Picks **self-review** or **external review** mode per the boundary in `global/AGENTS.md` §10. Defaults to self-review when the working tree is dirty and unspecified.
 - Fast path is **risk-bucket-gated**, not line-count-gated: allowed only when changes are confined to a single non-sensitive module, no auth/billing/secrets/crypto/migration files are touched, no public contract changes, and no new external dependency. Auth/security/migration/contract touches always force standard review.
+- `--repo-audit` always uses the standard path.
 - Builds a requirements baseline from `$ARGUMENTS`, `--baseline=<path|url>`, an approved plan, or a short clarification.
-- Falls back to clearly labeled **diff-only risk review** when no baseline exists after bounded clarification.
+- Falls back to clearly labeled **diff-only risk review** or **repo-audit risk review** when no baseline exists after bounded clarification.
 - Reviews highest-risk symbols and boundaries first.
 - Runs the **security checklist** (correctness, input validation, injection, auth/authz, sensitive-data exposure, concurrency, dependency hygiene, secret handling, regex DoS, rate limits, error handling) on every changed entry point and shared boundary, even on the fast path.
 - Skips test adequacy and observability only when `--skip-tests` is present.
@@ -177,6 +179,7 @@ Symptoms -> Code path -> Hypotheses -> Root cause -> Fix -> Verification
 ```text
 /b-review
 /b-review --range=origin/main..HEAD
+/b-review --repo-audit runtime contract and installer
 review before PR
 what would a reviewer flag here?
 ```
@@ -191,6 +194,7 @@ Findings -> Coverage / Tests / Observability -> READY FOR PR or NEEDS FIXES
 - Do not run broad verification by default; use only the evidence needed.
 - Security-checklist items are never skipped for changed entry points, sensitive paths, or shared boundaries.
 - The fast path is gated by risk bucket, not by line/file count.
+- In `--repo-audit` mode, say exactly what area was inspected and avoid implying whole-repo coverage unless the review was actually exhaustive.
 - For self-review, bias for author blind spots; for external review, be explicit about blocker-vs-style.
 - If no findings, say so explicitly and note residual risk or skipped checks; attach the confidence signal from `global/AGENTS.md` §3 when evidence is partial.
 

@@ -2,11 +2,10 @@
 name: b-review
 description: >
   Pre-PR changed-code review. ALWAYS invoke after implementation is done and
-  the user wants a reviewer-style read of the diff. Do NOT invoke for
-  UI/design review, plan review, research synthesis review, or repository
-  audit unless the user explicitly asks for PR-style code review. Unlike
-  b-test, b-review judges adequacy and risk; it does not primarily write
-  tests.
+  the user wants a reviewer-style read of a diff, commit range, or explicitly
+  requested repository audit. Do NOT invoke for UI/design review, plan review,
+  or research synthesis review. Unlike b-test, b-review judges adequacy and
+  risk; it does not primarily write tests.
 compatibility: opencode
 metadata:
   suite: b-skills
@@ -24,12 +23,14 @@ If `$ARGUMENTS` is provided, treat it as the requirements pointer or summary.
 - `--skip-tests` — skip the test-adequacy and observability assessment.
 - `--baseline=<path|url>` — point at a plan, ticket, or requirements doc to ground the review.
 - `--range=<ref>..<ref>` — review a specific commit range instead of `HEAD`. Defaults to `HEAD` against the working tree.
+- `--repo-audit` — audit an explicitly requested repository area or suite slice rather than a diff.
 - `--self` — author is the same person asking for the review; bias for author blind spots.
 - `--external` — author is someone else; bias for blocker-vs-style clarity.
 
 ## When to use
 
 - The user wants a pre-PR or pre-commit changed-code review.
+- The user explicitly wants a reviewer-style repository or maintainer audit.
 - The goal is to find correctness, regression, security, edge-case, or coverage risks.
 - The implementation is done and needs reviewer-style scrutiny.
 
@@ -38,7 +39,7 @@ If `$ARGUMENTS` is provided, treat it as the requirements pointer or summary.
 - Something is broken and needs root-cause tracing → use **b-debug**.
 - The task is writing or fixing tests → use **b-test**.
 - The task is external docs or API lookup → use **b-research**.
-- The request is plan review, UX critique, or repository audit rather than PR-style code review.
+- The request is plan review, UX critique, or research synthesis review rather than code-review-style risk assessment.
 
 ## Tools required
 
@@ -57,8 +58,9 @@ Graceful degradation: ✅ Possible — review still works with `bash`, native fi
 ### Step 1 — Scope the review
 
 1. Read the diff. Default scope is `git diff HEAD` against the working tree. Use `git diff <range>` when `--range=<ref>..<ref>` is present, and run `git log --oneline <range>` to enumerate commits.
+   In `--repo-audit` mode, skip diff-first scoping and instead lock the audit surface from the user's request. Prefer the named area first; only expand broader when the request requires it.
 2. Run `git status --short` to surface uncommitted changes alongside committed ones.
-3. **Empty-state** (`global/AGENTS.md` §7): if there is no diff, ask which commit, branch, or range to review. Do not silently fall back.
+3. **Empty-state** (`global/AGENTS.md` §7): if there is no diff and `--repo-audit` is not present, ask which commit, branch, or range to review. Do not silently fall back.
 4. If the diff is very large, ask the user which area to prioritize first.
 5. Pick **self-review** (`--self` or author = user) or **external review** (`--external` or author ≠ user) per the boundary in `global/AGENTS.md` §10. Default to **self-review** when unspecified and the working tree is dirty.
 
@@ -75,6 +77,8 @@ Use risk bucket, not raw line count, as the gate:
   On the fast path, run the security checklist on changed entry points and shared boundaries only — but still run it.
 - **Standard review** — anything else. Run the full Step 3 inspection.
 
+`--repo-audit` always uses the standard path.
+
 Line/file count alone never decides the path; a 5-line change touching auth is not a fast-path candidate.
 
 ### Step 3 — Establish baseline and inspect risk
@@ -82,12 +86,14 @@ Line/file count alone never decides the path; a 5-line change touching auth is n
 **Baseline:**
 1. Use `$ARGUMENTS`, `--baseline=…`, an approved plan, or short user clarification to define what the change was supposed to do.
 2. If a selected plan references an issue URL, optionally extract it via `firecrawl-extraction` for context.
-3. If no concrete baseline is available after bounded clarification, continue in **diff-only risk review** mode. In this mode, do not claim requirements coverage; only flag risks, regressions, and security findings against best-practice expectations and the security checklist.
+3. If no concrete baseline is available after bounded clarification, continue in **diff-only risk review** mode or **repo-audit risk review** mode. In those modes, do not claim requirements coverage; only flag risks, regressions, and security findings against best-practice expectations and the security checklist.
 
 **Inspect in impact-first order:**
 1. Changed symbols with the broadest references.
 2. Service boundaries, route handlers, tool handlers.
 3. Code that claims to satisfy explicit requirements.
+
+In `--repo-audit` mode, start with the highest-risk shared surfaces in the requested area: runtime contracts, install/update entry points, validators, route/tool boundaries, and the most reused rules before lower-risk docs.
 
 Optionally use `gitnexus-radar` once when the diff is graph-shaped or contract-heavy. Initialize Serena per `global/AGENTS.md` §4 only when symbol-aware inspection adds value.
 
@@ -128,10 +134,10 @@ Close with the skill-exit status block (`global/AGENTS.md` §9).
 ### b-review: [task or diff]
 
 **Scope:** [files / commits / range]
-**Mode:** [self-review / external review] · [requirements-based / diff-only]
+**Mode:** [self-review / external review] · [requirements-based / diff-only / repo-audit]
 **Path:** [fast / standard]
 **Baseline:** [plan / arguments / user-stated / unavailable]
-**Flags:** [--skip-tests / --range / ...]
+**Flags:** [--skip-tests / --range / --repo-audit / ...]
 
 #### Findings
 - **BLOCKER** `[path:line]` — [issue] → [expected behavior]
@@ -161,6 +167,7 @@ Close with the skill-exit status block (`global/AGENTS.md` §9).
 - Security checklist items are never skipped for changed entry points, sensitive paths, or shared boundaries — even on the fast path.
 - The fast path is gated by **risk bucket**, not by line/file count. Auth/security/migration/contract touches always force standard review.
 - Always include "Checked and clean" so the author sees what scope was actually reviewed.
+- In `--repo-audit` mode, name the audited surface explicitly and avoid implying full-repository coverage unless you actually inspected the full repository.
 - For self-review, be harsher on author bias; for external review, be explicit about blocker-vs-style. Concretely:
   - **Self-review** — re-derive intent from the diff alone instead of trusting "I meant to do this"; explicitly question test cases the author skipped, error paths the author treated as "won't happen," and naming the author rationalized late; bias toward MAJOR/BLOCKER over NIT when the author's own confidence may be inflated.
   - **External review** — never suggest stylistic rewrites disguised as findings; clearly separate BLOCKER/MAJOR (must change before merge) from MINOR/NIT (author may decline); give the author the benefit of the doubt on idiomatic choices unless they affect correctness, security, or contract.
