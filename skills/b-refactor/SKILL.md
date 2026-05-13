@@ -40,7 +40,7 @@ If `$ARGUMENTS` is provided, treat it as the refactoring instruction and proceed
 - `serena-symbol-toolkit` *(preferred for exact target locking, reference mapping, and symbol-aware edits)*
 - `gitnexus-radar` *(optional, for broad exported/shared impact)*
 
-Fallbacks: `global/AGENTS.md` §4 MCP fallback ladder. Serena's LSP-coverage caveat applies — for non-LSP languages, treat every rename, safe-delete, and diagnostics result as **not authoritative** and widen verification.
+Fallbacks: `AGENTS.md` §4 MCP fallback ladder. Serena's LSP-coverage caveat applies — for non-LSP languages, treat every rename, safe-delete, and diagnostics result as **not authoritative** and widen verification.
 
 Graceful degradation: ⚠️ Partial — small local refactors remain possible with native search plus `apply_patch`, but cross-file renames and safe deletes are riskier without symbol-aware tooling.
 
@@ -49,14 +49,14 @@ Graceful degradation: ⚠️ Partial — small local refactors remain possible w
 ### Step 1 — Lock the target
 
 1. Resolve the exact symbol or file to change.
-2. Initialize Serena per `global/AGENTS.md` §4 (once per session, only when symbol-aware work first becomes necessary).
+2. Initialize Serena per `AGENTS.md` §4 (once per session, only when symbol-aware work first becomes necessary).
 3. If the request starts from a usage site, helper import, interface, or repeated code shape, use the cheapest Serena discovery tool that closes the next question.
 4. If the request is still vague after a short inspection, ask the smallest question needed to make the target concrete.
 
 ### Step 2 — Assess impact and choose verification depth
 
 1. Run `find_referencing_symbols` on the locked target to enumerate impact. This is the single canonical mapping step — do not repeat it under different framings.
-2. Classify the refactor on the **risk rubric** in `global/AGENTS.md` §3 (trivial / low / medium / high).
+2. Classify the refactor on the **risk rubric** in `AGENTS.md` §3 (trivial / low / medium / high).
 3. **Trivial-local fast path** is allowed only when **all** of:
    - One file.
    - No exported/public contract change.
@@ -86,19 +86,19 @@ Choose the smallest matching transformation:
 
 Use `apply_patch` only for import updates, config, prose, or non-symbol glue.
 
-If the work turns into a behavioral redesign instead of a mechanical transform, stop and hand it back to **b-plan** via the handoff envelope in `global/AGENTS.md` §9. Include the locked target, the reference map produced in Step 2, and the specific decision that turned mechanical.
+If the work turns into a behavioral redesign instead of a mechanical transform, stop and hand it back to **b-plan** via the handoff envelope in `AGENTS.md` §9. Include the locked target, the reference map produced in Step 2, and the specific decision that turned mechanical.
 
 ### Step 4 — Verify
 
-1. Run `get_diagnostics_for_file` on touched files when supported (LSP caveat per `global/AGENTS.md` §4).
-2. Run the narrowest typecheck, build, or test command that matches the risk band (verification ladder in `global/AGENTS.md` §7).
+1. Run `get_diagnostics_for_file` on touched files when supported (LSP caveat per `AGENTS.md` §4).
+2. Run the narrowest typecheck, build, or test command that matches the risk band (verification ladder in `AGENTS.md` §7).
 3. Re-check references when the target is shared or exported.
 4. Inspect `git diff` to confirm the change stayed within intended scope.
 5. If failures indicate a real regression, use **b-debug**. If they indicate test-mechanic drift, use **b-test**.
 6. **Partial-completion recovery:** if verification fails partway through a multi-file transform (e.g., a move with imports half-updated, a rename that missed a re-export), do not paper over the broken state with more edits. Either (a) finish the transform to a coherent baseline in one focused pass using the Step 2 reference map as the worklist, or (b) manually roll back only the in-flight edits for the current transform. If a file-level restore is truly required, stop and ask for approval first because it can discard unrelated user changes in the same path. Never exit the skill with the tree mid-transform — surface the rollback to the user.
-7. Apply the iteration cap from `global/AGENTS.md` §7.
+7. Apply the iteration cap from `AGENTS.md` §7.
 
-Close with the skill-exit status block (`global/AGENTS.md` §9).
+Close with the skill-exit status block (`AGENTS.md` §9).
 
 ## Output format
 
@@ -106,7 +106,7 @@ Close with the skill-exit status block (`global/AGENTS.md` §9).
 ### b-refactor: [transformation]
 
 **Target:** [symbol or file]
-**Risk:** [trivial / low / medium / high]   (per global/AGENTS.md §3)
+**Risk:** [trivial / low / medium / high]   (per AGENTS.md §3)
 **Impact:** [key references or boundaries]
 
 #### Changes

@@ -2,7 +2,7 @@
 name: b-plan
 description: >
   Think before coding. ALWAYS invoke when the task is non-trivial per
-  global/AGENTS.md §3, scope or acceptance is unclear, or the user explicitly
+  AGENTS.md §3, scope or acceptance is unclear, or the user explicitly
   asks for a plan, architecture direction, or ordered implementation steps.
   Decomposes work, chooses an approach, and writes an execution-ready plan.
   Unlike b-implement, b-plan decides what to build; it does not execute
@@ -22,7 +22,7 @@ If `$ARGUMENTS` is present, treat it as the task description and proceed. Ask on
 
 ## When to use
 
-- The task is **non-trivial** per `global/AGENTS.md` §3.
+- The task is **non-trivial** per `AGENTS.md` §3.
 - Scope or acceptance criteria are unclear.
 - There are multiple valid approaches and the choice matters.
 - The user wants a plan, architecture direction, or ordered implementation steps.
@@ -30,7 +30,7 @@ If `$ARGUMENTS` is present, treat it as the task description and proceed. Ask on
 
 ## When NOT to use
 
-- The request meets the **small direct request** threshold in `global/AGENTS.md` §3 → use **b-implement**.
+- The request meets the **small direct request** threshold in `AGENTS.md` §3 → use **b-implement**.
 - The user already approved a plan → use **b-implement**.
 - The request is a concrete behavior-preserving mechanical transformation → use **b-refactor**.
 - The blocker is external docs or library behavior → use **b-research**.
@@ -43,7 +43,7 @@ If `$ARGUMENTS` is present, treat it as the task description and proceed. Ask on
 - `context7-docs` *(optional, for a narrow library/API check discovered during planning)*
 - `firecrawl-extraction` *(optional, for an issue or ticket URL the user already provided)*
 
-Fallbacks: `global/AGENTS.md` §4 MCP fallback ladder. If the task depends on broader external research, stop and use **b-research** instead of stretching planning into research.
+Fallbacks: `AGENTS.md` §4 MCP fallback ladder. If the task depends on broader external research, stop and use **b-research** instead of stretching planning into research.
 
 Graceful degradation: ✅ Possible — planning still works with native reads plus inline reasoning.
 
@@ -51,10 +51,10 @@ Graceful degradation: ✅ Possible — planning still works with native reads pl
 
 ### Step 1 — Pick the planning mode
 
-Use the **non-trivial** definition (`global/AGENTS.md` §3) as the threshold:
+Use the **non-trivial** definition (`AGENTS.md` §3) as the threshold:
 
 - **Quick mode**: the task is trivial — single area, no public contract, no sensitive path, low risk. Return a concise chat plan with a verification step.
-- **Full mode**: anything **non-trivial**, or where a real structural choice exists. Write a saved plan to `.opencode/b-skills/b-plan/<task-slug>.md` using the slug algorithm in `global/AGENTS.md` §8. Saved plans are canonical source-of-truth files and are not rerouted by the repo-local runtime-artifact fallback.
+- **Full mode**: anything **non-trivial**, or where a real structural choice exists. Write a saved plan to `.opencode/b-skills/b-plan/<task-slug>.md` using the slug algorithm in `AGENTS.md` §8. Saved plans are canonical source-of-truth files and are not rerouted by the repo-local runtime-artifact fallback.
 
 Choose the mode yourself. Only ask when both modes are genuinely valid and the user's preference changes the output.
 
@@ -78,7 +78,7 @@ If the task depends on unresolved external research that affects feasibility, ar
 Skip this step for greenfield work.
 
 - Use `gitnexus-radar` only when the area is graph-shaped or unfamiliar. Stop once the subsystem, route, consumer set, or boundary is clear.
-- Use `serena-symbol-toolkit` to pin owners, declarations, references, or behavior. Pick the cheapest discovery tool for the next question per `global/AGENTS.md` §4.
+- Use `serena-symbol-toolkit` to pin owners, declarations, references, or behavior. Pick the cheapest discovery tool for the next question per `AGENTS.md` §4.
 
 If the user already provided an issue URL, you may extract it via `firecrawl-extraction` as planning context.
 
@@ -105,9 +105,9 @@ For full-mode plans, follow this saved-plan skeleton:
 ```markdown
 # <task title>
 
-**Slug:** <task-slug>   (per global/AGENTS.md §8)
+**Slug:** <task-slug>   (per AGENTS.md §8)
 **Created:** <YYYY-MM-DD>
-**Risk:** <trivial | low | medium | high>   (per global/AGENTS.md §3)
+**Risk:** <trivial | low | medium | high>   (per AGENTS.md §3)
 
 ## Goal
 <one paragraph stating the end state>
@@ -153,7 +153,7 @@ If the task involves field mapping or protocol translation, add a small mapping 
 **Quick mode:**
 - Keep the plan in chat.
 - Ask for approval.
-- Hand approved execution to **b-implement** via the handoff envelope in `global/AGENTS.md` §9.
+- Hand approved execution to **b-implement** via the handoff envelope in `AGENTS.md` §9.
 
 **Full mode:**
 - Write an English plan to `.opencode/b-skills/b-plan/<task-slug>.md`.
@@ -164,20 +164,20 @@ The plan is complete only when a fresh agent could execute it without re-derivin
 
 ### Step 7 — Revisions (if the user asks to revise)
 
-Follow the **plan revision protocol** in `global/AGENTS.md` §2:
+Follow the **plan revision protocol** in `AGENTS.md` §2:
 - Edit the plan file in place.
 - Append the change to the `## Revisions` section with the date and a one-line delta.
 - Re-request approval only when the revision changes confirmed decisions, planned touch points, or steps.
 
-Close the run with the skill-exit status block (`global/AGENTS.md` §9).
+Close the run with the skill-exit status block (`AGENTS.md` §9).
 
 ## Rules
 
 - Do not implement while planning.
 - Keep quick plans lean; do not turn every small task into a full document.
 - Save only full-mode plans to `.opencode/b-skills/b-plan/`. The legacy `.opencode/b-plans/` path is deprecated; do not write there.
-- Use the slug algorithm in `global/AGENTS.md` §8; do not invent ad-hoc filenames.
+- Use the slug algorithm in `AGENTS.md` §8; do not invent ad-hoc filenames.
 - Surface blocking unknowns instead of hiding them in vague prose.
 - Broad or unclear refactors stay in **b-plan** until they reduce to concrete mechanical steps for **b-refactor**.
-- After approval, treat the approved plan as the execution source of truth (`global/AGENTS.md` §2). If the touched files change before execution begins, re-plan rather than improvise.
+- After approval, treat the approved plan as the execution source of truth (`AGENTS.md` §2). If the touched files change before execution begins, re-plan rather than improvise.
 - Revisions go in place under `## Revisions`; never write `plan-v2.md`.

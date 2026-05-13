@@ -47,9 +47,9 @@ If `$ARGUMENTS` is provided, treat it as the requirements pointer or summary.
 - `serena-symbol-toolkit` *(preferred for impact-first code inspection)*
 - `gitnexus-radar` *(optional, for broad route/API/tool/shared-flow review risk)*
 - `context7-docs` *(optional, for suspicious third-party API usage in the diff)*
-- `brave-discovery` + `firecrawl-extraction` *(optional, for focused CVE or risky-pattern lookups; honor `global/AGENTS.md` §6 privacy gate)*
+- `brave-discovery` + `firecrawl-extraction` *(optional, for focused CVE or risky-pattern lookups; honor `AGENTS.md` §6 privacy gate)*
 
-Fallbacks: `global/AGENTS.md` §4 MCP fallback ladder. If optional bundles are unavailable, continue with a narrower manual review and label the limitation only when it affects confidence.
+Fallbacks: `AGENTS.md` §4 MCP fallback ladder. If optional bundles are unavailable, continue with a narrower manual review and label the limitation only when it affects confidence.
 
 Graceful degradation: ✅ Possible — review still works with `bash`, native file tools, and focused source inspection.
 
@@ -60,9 +60,9 @@ Graceful degradation: ✅ Possible — review still works with `bash`, native fi
 1. Read the diff. Default scope is `git diff HEAD` against the working tree. Use `git diff <range>` when `--range=<ref>..<ref>` is present, and run `git log --oneline <range>` to enumerate commits.
    In `--repo-audit` mode, skip diff-first scoping and instead lock the audit surface from the user's request. Prefer the named area first; only expand broader when the request requires it.
 2. Run `git status --short` to surface uncommitted changes alongside committed ones.
-3. **Empty-state** (`global/AGENTS.md` §7): if there is no diff and `--repo-audit` is not present, ask which commit, branch, or range to review. Do not silently fall back.
+3. **Empty-state** (`AGENTS.md` §7): if there is no diff and `--repo-audit` is not present, ask which commit, branch, or range to review. Do not silently fall back.
 4. If the diff is very large, ask the user which area to prioritize first.
-5. Pick **self-review** (`--self` or author = user) or **external review** (`--external` or author ≠ user) per the boundary in `global/AGENTS.md` §10. Default to **self-review** when unspecified and the working tree is dirty.
+5. Pick **self-review** (`--self` or author = user) or **external review** (`--external` or author ≠ user) per the boundary in `AGENTS.md` §10. Default to **self-review** when unspecified and the working tree is dirty.
 
 ### Step 2 — Pick the review depth
 
@@ -95,7 +95,7 @@ Line/file count alone never decides the path; a 5-line change touching auth is n
 
 In `--repo-audit` mode, start with the highest-risk shared surfaces in the requested area: runtime contracts, install/update entry points, validators, route/tool boundaries, and the most reused rules before lower-risk docs.
 
-Optionally use `gitnexus-radar` once when the diff is graph-shaped or contract-heavy. Initialize Serena per `global/AGENTS.md` §4 only when symbol-aware inspection adds value.
+Optionally use `gitnexus-radar` once when the diff is graph-shaped or contract-heavy. Initialize Serena per `AGENTS.md` §4 only when symbol-aware inspection adds value.
 
 **Security checklist** (run on changed entry points, sensitive paths, and shared boundaries — never skipped, even on the fast path):
 - Correctness against stated behavior.
@@ -121,12 +121,12 @@ Skip entirely when `--skip-tests` is present.
 
 ### Step 5 — Report
 
-1. Findings first, ordered by severity from `global/AGENTS.md` §3 (BLOCKER / MAJOR / MINOR / NIT).
+1. Findings first, ordered by severity from `AGENTS.md` §3 (BLOCKER / MAJOR / MINOR / NIT).
 2. Include **Checked and clean** — risk areas inspected with no finding — so the author sees what scope was actually covered.
 3. If there are no findings, say so explicitly and note residual risk or skipped verification.
-4. Attach the confidence signal from `global/AGENTS.md` §3 when review depended on partial evidence.
+4. Attach the confidence signal from `AGENTS.md` §3 when review depended on partial evidence.
 
-Close with the skill-exit status block (`global/AGENTS.md` §9).
+Close with the skill-exit status block (`AGENTS.md` §9).
 
 ## Output format
 

@@ -23,7 +23,7 @@ If `$ARGUMENTS` includes a symptom, error, or stack trace, start from it directl
 ## When to use
 
 - The user reports a runtime bug, broken behavior, or error message.
-- A test likely exposes a real product bug rather than a test harness issue (`global/AGENTS.md` §10).
+- A test likely exposes a real product bug rather than a test harness issue (`AGENTS.md` §10).
 - The failure path may cross middleware, async boundaries, configuration, or multiple modules.
 - The bug is non-deterministic (flake, race, time/network dependence) and the test lane has ruled out fixture or harness drift.
 - The symptom is **slow**, not wrong — latency regression, memory leak, runaway CPU, or unbounded growth.
@@ -39,10 +39,10 @@ If `$ARGUMENTS` includes a symptom, error, or stack trace, start from it directl
 - `serena-symbol-toolkit` *(preferred for tracing and focused fixes)*
 - `gitnexus-radar` *(optional radar for unfamiliar cross-module paths)*
 - `context7-docs` *(optional, for suspected library/API misuse)*
-- `brave-discovery` + `firecrawl-extraction` *(optional, for known public errors; honor `global/AGENTS.md` §6 privacy gate)*
+- `brave-discovery` + `firecrawl-extraction` *(optional, for known public errors; honor `AGENTS.md` §6 privacy gate)*
 - Native search and `bash` — exact error strings, config keys, repeated patterns, narrow source reads, reproduction commands, profilers.
 
-Fallbacks: `global/AGENTS.md` §4 MCP fallback ladder.
+Fallbacks: `AGENTS.md` §4 MCP fallback ladder.
 
 Graceful degradation: ✅ Possible — native analysis still works; cross-file tracing is slower without Serena.
 
@@ -63,7 +63,7 @@ If a stack trace or diagnostic already points at one function or file, mark it a
 
 Use `gitnexus-radar` only when the path is unfamiliar, graph-shaped, or route/consumer oriented. Stop once the likely subsystem or boundary is identified.
 
-Then use `serena-symbol-toolkit` to confirm owners, references, and code shape. Pick the cheapest discovery tool that closes the next question (`global/AGENTS.md` §4).
+Then use `serena-symbol-toolkit` to confirm owners, references, and code shape. Pick the cheapest discovery tool that closes the next question (`AGENTS.md` §4).
 
 **First-suspect heuristic** — bias toward these patterns before broader experimentation:
 - Swallowed errors and silent catches.
@@ -83,7 +83,7 @@ Rank remaining hypotheses by likelihood × cheapest verification. Example: a "co
 Start with the cheapest verification:
 - Search the codebase for the exact error string or log text.
 - For library/framework errors, check `context7-docs` for exact API/option behavior.
-- For known public errors, optionally use `brave-discovery` + `firecrawl-extraction` after honoring the privacy gate (`global/AGENTS.md` §6).
+- For known public errors, optionally use `brave-discovery` + `firecrawl-extraction` after honoring the privacy gate (`AGENTS.md` §6).
 - Local diagnostics: `get_diagnostics_for_file`.
 - A narrow repro command already in the project.
 - Targeted temporary logging at one choke point.
@@ -112,11 +112,11 @@ Do not roll broader cleanup or unrelated refactors into the bug fix.
 3. For perf bugs, re-run the benchmark and report the before/after delta, not just "feels faster."
 4. **Re-scan the diff** for every temporary probe added during Step 3: `console.log`, `print`, breakpoints, extra metrics, debug flags, fake clocks, profiler hooks. Remove each one that was not part of the final fix and re-run verification.
 5. If the fix affects config or process startup, tell the user whether a restart or reload is required.
-6. If the fix touched several files or a shared boundary, emit a handoff envelope (`global/AGENTS.md` §9) recommending **b-review**.
+6. If the fix touched several files or a shared boundary, emit a handoff envelope (`AGENTS.md` §9) recommending **b-review**.
 
-Apply the verification ladder and iteration cap from `global/AGENTS.md` §7.
+Apply the verification ladder and iteration cap from `AGENTS.md` §7.
 
-Close with the skill-exit status block (`global/AGENTS.md` §9).
+Close with the skill-exit status block (`AGENTS.md` §9).
 
 ## Rules
 
@@ -125,4 +125,4 @@ Close with the skill-exit status block (`global/AGENTS.md` §9).
 - For perf bugs, measure before and after; do not infer speed from code structure.
 - For cannot-reproduce reports, stop and surface the gap; do not speculate-fix.
 - Verify probe removal explicitly before reporting success.
-- Attach the confidence signal (`global/AGENTS.md` §3) when the fix relies on indirect or partial evidence.
+- Attach the confidence signal (`AGENTS.md` §3) when the fix relies on indirect or partial evidence.

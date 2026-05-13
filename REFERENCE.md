@@ -2,6 +2,8 @@
 
 Detailed contract reference for the maintained eight-skill suite. For install and high-level overview, see [README.md](README.md).
 
+When this document cites `global/AGENTS.md`, that is the source-repo path. Installed skill prose should reference the runtime path `AGENTS.md`.
+
 ---
 
 ## Skill reference
@@ -329,7 +331,7 @@ This repository is the install-only source layout for the suite. OpenCode does n
 
 ### Repository source files
 - `AGENTS.md` — maintainer guidance for this source repo.
-- `global/AGENTS.md` — runtime global rules installed as OpenCode's main `AGENTS.md`.
+- `global/AGENTS.md` — source copy of the runtime global rules, installed as OpenCode's main `AGENTS.md`; installed skill prose should cite `AGENTS.md`.
 - `skills/<name>/SKILL.md` — skill sources.
 - `commands/<name>.md` — thin slash-command wrappers.
 - `scripts/validate-skills.sh` — suite validator for frontmatter, required sections, stale phrases, docs coverage, and global-rule guardrails.

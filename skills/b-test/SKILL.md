@@ -6,7 +6,7 @@ description: >
   evaluate coverage, or work TDD-style. Unlike b-debug, which traces runtime
   bugs, b-test owns test-specific failures: wrong assertions, missing mocks,
   fixture or setup issues, and coverage gaps. Use the test-vs-bug decision in
-  global/AGENTS.md §10 when a red test could go either way.
+  AGENTS.md §10 when a red test could go either way.
 compatibility: opencode
 metadata:
   suite: b-skills
@@ -23,14 +23,14 @@ If `$ARGUMENTS` is provided, treat it as the test task or failing symptom and pr
 ## When to use
 
 - User asks to write tests for new or existing behavior.
-- A test is failing and the **test-vs-bug decision** in `global/AGENTS.md` §10 routes the work to the test lane.
+- A test is failing and the **test-vs-bug decision** in `AGENTS.md` §10 routes the work to the test lane.
 - User asks about coverage gaps or missing regression tests.
-- DOM-rendered unit tests (jsdom, happy-dom, React Testing Library, Vue Test Utils, Svelte testing-library) — these stay here, not in **b-e2e**. See the **DOM-unit vs browser-flow boundary** in `global/AGENTS.md` §10.
+- DOM-rendered unit tests (jsdom, happy-dom, React Testing Library, Vue Test Utils, Svelte testing-library) — these stay here, not in **b-e2e**. See the **DOM-unit vs browser-flow boundary** in `AGENTS.md` §10.
 - **Hybrid component tests** (component-scoped tests that mount a real router, real store, real query client, or other non-trivial provider chain) stay in **b-test** as long as the runner is jsdom/happy-dom/node — the test is still a unit/integration test, just with realistic wiring. Route to **b-e2e** only when a real browser engine drives the flow. When a hybrid test starts requiring real network, real cookies, or visual assertions, that is the signal to promote it to **b-e2e**, not to keep stretching jsdom.
 
 ## When NOT to use
 
-- The failing test likely exposes a real runtime or product bug (`global/AGENTS.md` §10) → use **b-debug**.
+- The failing test likely exposes a real runtime or product bug (`AGENTS.md` §10) → use **b-debug**.
 - The task drives a real browser (Playwright, Cypress, WebdriverIO, Puppeteer) → use **b-e2e**.
 - Scope or acceptance is still unclear → use **b-plan**.
 - The request is a pre-PR logic review → use **b-review**.
@@ -44,7 +44,7 @@ If `$ARGUMENTS` is provided, treat it as the test task or failing symptom and pr
 - `serena-symbol-toolkit` *(preferred for mapping tests to source behavior and editing existing test code)*
 - `context7-docs` *(optional, for verifying testing-framework APIs or matcher behavior)*
 
-Fallbacks: `global/AGENTS.md` §4 MCP fallback ladder. Without Serena, discover tests with native tools and edit carefully with `apply_patch`. The Serena LSP coverage caveat applies.
+Fallbacks: `AGENTS.md` §4 MCP fallback ladder. Without Serena, discover tests with native tools and edit carefully with `apply_patch`. The Serena LSP coverage caveat applies.
 
 Graceful degradation: ✅ Possible — the core workflow still works with native file tools, `bash`, and `apply_patch`.
 
@@ -54,19 +54,19 @@ Graceful degradation: ✅ Possible — the core workflow still works with native
 
 1. Locate the relevant test files and project-specific test commands from manifests or CI config.
 2. If the user named a failing test, start from the narrowest runnable target for that test.
-3. Initialize Serena per `global/AGENTS.md` §4 only when symbol-aware inspection adds value.
+3. Initialize Serena per `AGENTS.md` §4 only when symbol-aware inspection adds value.
 4. Map the test ↔ source relationship with the cheapest discovery tool that closes the next question.
 
-**Empty-state** (`global/AGENTS.md` §7): if the repo has no test framework, do not introduce one as a side effect. Ask the user before adding a framework, even when the request implies tests are wanted.
+**Empty-state** (`AGENTS.md` §7): if the repo has no test framework, do not introduce one as a side effect. Ask the user before adding a framework, even when the request implies tests are wanted.
 
 ### Step 2 — Choose the lane
 
-Use `global/AGENTS.md` §10 (test failure vs runtime bug) to pick the lane:
+Use `AGENTS.md` §10 (test failure vs runtime bug) to pick the lane:
 
 - **Failing test** — fix the test, fixture, setup, or clearly confirmed production bug.
 - **Write tests** — add new regression, unit, or integration coverage for known behavior.
 - **Coverage review** — identify the highest-value missing tests and optionally add the top ones.
-- **Flaky test** — apply the flake handling procedure in `global/AGENTS.md` §10 before rewriting or skipping.
+- **Flaky test** — apply the flake handling procedure in `AGENTS.md` §10 before rewriting or skipping.
 
 If the failure might reflect a real product bug and the correct behavior is not already confirmed, switch to **b-debug**.
 
@@ -74,10 +74,10 @@ If the failure might reflect a real product bug and the correct behavior is not 
 
 **Failing test:**
 1. Run the narrowest test command.
-2. If output is large, capture it under `/tmp/opencode/b-skills/b-test/` (`global/AGENTS.md` §7) and inspect the failure section.
+2. If output is large, capture it under `/tmp/opencode/b-skills/b-test/` (`AGENTS.md` §7) and inspect the failure section.
 3. Read the failing test and the source behavior it exercises.
-4. Classify per the test-vs-bug table in `global/AGENTS.md` §10.
-5. For snapshot or golden updates, follow the **snapshot confirmation procedure** in `global/AGENTS.md` §10.
+4. Classify per the test-vs-bug table in `AGENTS.md` §10.
+5. For snapshot or golden updates, follow the **snapshot confirmation procedure** in `AGENTS.md` §10.
 
 **New tests:**
 1. Identify the behavior, branches, and edge cases that matter.
@@ -102,10 +102,10 @@ Prefer `serena-symbol-toolkit` insertions for existing test bodies. Use `apply_p
 
 1. Run `get_diagnostics_for_file` on touched files — both the test and the underlying source — when the language supports it.
 2. Re-run the narrowest relevant tests.
-3. Widen to a broader suite only when the change touches shared fixtures/helpers, public contracts, or the repo's normal test workflow requires it (verification ladder in `global/AGENTS.md` §7).
-4. Apply the iteration cap from `global/AGENTS.md` §7.
+3. Widen to a broader suite only when the change touches shared fixtures/helpers, public contracts, or the repo's normal test workflow requires it (verification ladder in `AGENTS.md` §7).
+4. Apply the iteration cap from `AGENTS.md` §7.
 
-Close with the skill-exit status block (`global/AGENTS.md` §9).
+Close with the skill-exit status block (`AGENTS.md` §9).
 
 ## Output format
 
@@ -134,8 +134,8 @@ Close with the skill-exit status block (`global/AGENTS.md` §9).
 
 ## Rules
 
-- Never change production code just because a test is red. Defer to `global/AGENTS.md` §10.
-- Never update an assertion, snapshot, or golden file without confirming intended behavior first; follow the snapshot procedure in `global/AGENTS.md` §10.
+- Never change production code just because a test is red. Defer to `AGENTS.md` §10.
+- Never update an assertion, snapshot, or golden file without confirming intended behavior first; follow the snapshot procedure in `AGENTS.md` §10.
 - Real-browser flows belong to **b-e2e**; keep DOM-rendered unit tests here.
 - Property-based, fuzz, and contract testing are out of scope; route them via **b-plan** + **b-implement**.
 - Prefer behavior assertions over implementation-detail assertions.

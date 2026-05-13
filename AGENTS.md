@@ -8,6 +8,8 @@ Guidelines for creating, editing, and maintaining the install-only OpenCode skil
 - Runtime suite behavior lives in `global/AGENTS.md` and the individual `skills/*/SKILL.md` files.
 - `install.sh` deploys the runtime files into `~/.config/opencode/`.
 
+When authoring runtime-facing skill prose, reference `AGENTS.md`. In this source repo, that runtime file is authored at `global/AGENTS.md` and copied into place by `install.sh`.
+
 ## Quick links
 
 - `skills/b-plan/SKILL.md` — Task decomposition and planning
@@ -86,7 +88,7 @@ For this repo, each skill currently uses a single `SKILL.md` file plus a thin co
 name: b-example
 description: >
   [<=80 words, intent + disambiguation. Do NOT include trigger keyword
-  lists; those live in global/AGENTS.md and maintainer docs.]
+  lists; those live in AGENTS.md and maintainer docs.]
 compatibility: opencode
 metadata:
   suite: b-skills
@@ -105,16 +107,16 @@ $ARGUMENTS
 - [Scenarios that should trigger a different skill instead]
 
 ## Tools required
-- `bundle-name` (see `global/AGENTS.md` §4)
+- `bundle-name` (see `AGENTS.md` §4)
 - `bundle-name` *(optional, for [condition])*
 
 Skills reference **MCP bundles** by name (e.g., `serena-symbol-toolkit`,
 `gitnexus-radar`, `context7-docs`). Do not enumerate per-tool lists inside
-the skill; the bundle definition in `global/AGENTS.md` is the source of
+the skill; the bundle definition in `AGENTS.md` is the source of
 truth, including session-init steps, fallback ladder, and cost/approval
 caveats.
 
-Fallbacks: reference `global/AGENTS.md` MCP fallback ladder. Skills add
+Fallbacks: reference `AGENTS.md` MCP fallback ladder. Skills add
 only skill-specific stop/degrade behavior.
 
 Graceful degradation: [✅ Possible / ⚠️ Partial / ❌ Not possible] — [brief explanation]
@@ -139,7 +141,7 @@ Graceful degradation: [✅ Possible / ⚠️ Partial / ❌ Not possible] — [br
   risk, iteration cap, privacy gate, onboarding rule, confidence signal,
   run-id format, artifact paths, slug algorithm, status block, handoff
   envelope, manifest schema, test-vs-bug decision, DOM/browser boundary,
-  or canonical approval ask — those live in global/AGENTS.md and skills
+  or canonical approval ask — those live in AGENTS.md and skills
   reference them.]
 ```
 

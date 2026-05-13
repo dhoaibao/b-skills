@@ -35,13 +35,13 @@ If `$ARGUMENTS` is provided, treat it as the research question and proceed direc
 
 ## Tools required
 
-- `context7-docs` (primary for library/framework API lookups) — including the version-pinning rule in `global/AGENTS.md` §4.
+- `context7-docs` (primary for library/framework API lookups) — including the version-pinning rule in `AGENTS.md` §4.
 - `brave-discovery` (page discovery).
 - `firecrawl-extraction` (default extraction tier).
 - `firecrawl-extended` *(optional, for site maps or structured field extraction)*.
 - `firecrawl-deep` *(last resort; requires explicit user approval per invocation)*.
 
-Fallbacks: `global/AGENTS.md` §4 MCP fallback ladder.
+Fallbacks: `AGENTS.md` §4 MCP fallback ladder.
 
 Graceful degradation: ⚠️ Partial — lookups remain strong with Context7 or authoritative search; deep synthesis is weaker without page tools.
 
@@ -80,9 +80,9 @@ Skip this step for non-library research.
 2. Use `brave_news_search` only for recency-sensitive topics; use `brave_image_search` only when the question is genuinely visual.
 3. Use `firecrawl-extraction` (`firecrawl_scrape` for known URLs, `firecrawl_parse` for local documents) on the highest-signal pages.
 4. Reach for `firecrawl-extended` only for site mapping or structured-field extraction.
-5. Reach for `firecrawl-deep` only after default and extended tiers are insufficient. Surface the cost warning and obtain approval per invocation (see canonical approval ask in `global/AGENTS.md` §6).
+5. Reach for `firecrawl-deep` only after default and extended tiers are insufficient. Surface the cost warning and obtain approval per invocation (see canonical approval ask in `AGENTS.md` §6).
 
-Honor the public-web privacy gate (`global/AGENTS.md` §6) on every external call. Reuse fetched results from earlier in the session instead of re-fetching (`global/AGENTS.md` §4 cross-turn cache).
+Honor the public-web privacy gate (`AGENTS.md` §6) on every external call. Reuse fetched results from earlier in the session instead of re-fetching (`AGENTS.md` §4 cross-turn cache).
 
 ### Step 3b — Handle gated sources
 
@@ -107,9 +107,9 @@ When two authoritative sources disagree:
 2. For lookup, stay concise and direct.
 3. For research, cite the sources that support the answer.
 4. Note freshness or access limitations when relevant.
-5. Attach the **confidence signal** from `global/AGENTS.md` §3 whenever evidence is partial, single-source, or recency-sensitive. Omit the line on trivial high-confidence answers.
+5. Attach the **confidence signal** from `AGENTS.md` §3 whenever evidence is partial, single-source, or recency-sensitive. Omit the line on trivial high-confidence answers.
 
-Close the run with the skill-exit status block (`global/AGENTS.md` §9) for research-mode work; lookup answers may omit it.
+Close the run with the skill-exit status block (`AGENTS.md` §9) for research-mode work; lookup answers may omit it.
 
 ## Output format
 
@@ -156,7 +156,7 @@ Close the run with the skill-exit status block (`global/AGENTS.md` §9) for rese
 
 - Never ask the user to choose between lookup and research; the skill decides and auto-deepens.
 - Use the lightest depth that can answer correctly.
-- Public-web privacy gate is owned in `global/AGENTS.md` §6; honor it on every external call.
+- Public-web privacy gate is owned in `AGENTS.md` §6; honor it on every external call.
 - Do not scrape in open-ended lookup when a docs or search result already answers; direct-source lookup from a user-provided URL, file path, or document may extract that one source immediately.
 - Pin the library version (manifests + lockfiles) before any `context7-docs` query.
 - Prefer 2–4 authoritative sources over a long weak list.

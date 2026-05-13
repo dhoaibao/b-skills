@@ -85,6 +85,9 @@ for path in skill_paths:
         if re.search(pattern, text):
             errors.append(f'{path}: forbidden stale runtime pattern {pattern!r}')
 
+    if 'global/AGENTS.md' in text:
+        errors.append(f'{path}: runtime skill files must reference `AGENTS.md`, not `global/AGENTS.md`')
+
     if name in {'b-research', 'b-test', 'b-e2e'} and re.search(r'gitnexus', text, re.IGNORECASE):
         errors.append(f'{path}: GitNexus should stay out of this skill workflow')
 

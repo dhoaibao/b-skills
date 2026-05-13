@@ -25,17 +25,17 @@ Use a real browser to verify user-facing flows, then optionally turn a successfu
 
 ## When NOT to use
 
-- The task is a DOM-rendered unit test (jsdom, RTL, Vue Test Utils) → use **b-test**. See the **DOM-unit vs browser-flow boundary** in `global/AGENTS.md` §10.
+- The task is a DOM-rendered unit test (jsdom, RTL, Vue Test Utils) → use **b-test**. See the **DOM-unit vs browser-flow boundary** in `AGENTS.md` §10.
 - The issue is backend or non-UI runtime debugging → use **b-debug**.
 - The task is planning a feature or flow before implementation → use **b-plan**.
 
 ## Tools required
 
-- `playwright-browser` (required) — see `global/AGENTS.md` §4 for the bundle, including the local-CLI fallback.
+- `playwright-browser` (required) — see `AGENTS.md` §4 for the bundle, including the local-CLI fallback.
 - `serena-symbol-toolkit` *(optional, for editing existing browser test files)*
 - `bash` and native file tools — target health checks, config discovery, manifests, and writing repo test files when needed.
 
-Fallbacks: per `global/AGENTS.md` §4, prefer Playwright MCP; if unavailable, drive the project's local Playwright CLI via `bash`; if neither is available, stop and tell the user browser automation is unavailable.
+Fallbacks: per `AGENTS.md` §4, prefer Playwright MCP; if unavailable, drive the project's local Playwright CLI via `bash`; if neither is available, stop and tell the user browser automation is unavailable.
 
 Graceful degradation: ⚠️ Partial — MCP path is fastest; CLI fallback works when the project already has Playwright installed.
 
@@ -43,9 +43,9 @@ Graceful degradation: ⚠️ Partial — MCP path is fastest; CLI fallback works
 
 ### Step 1 — Prepare the run
 
-1. Create a session-specific artifact directory using the run-id format from `global/AGENTS.md` §8. Use `.opencode/b-skills/b-e2e/<run-id>/` only when `.opencode/` is already ignored by git in the current repo; otherwise use `~/.config/opencode/b-skills/b-e2e/<run-id>/` for persistent artifacts or `/tmp/opencode/b-skills/b-e2e/<run-id>/` for disposable ones.
+1. Create a session-specific artifact directory using the run-id format from `AGENTS.md` §8. Use `.opencode/b-skills/b-e2e/<run-id>/` only when `.opencode/` is already ignored by git in the current repo; otherwise use `~/.config/opencode/b-skills/b-e2e/<run-id>/` for persistent artifacts or `/tmp/opencode/b-skills/b-e2e/<run-id>/` for disposable ones.
 2. Determine the **target**: a URL, an extension surface, a local app, or an authenticated entry point. Record the target type.
-3. Before touching `localhost`, verify the server is reachable. Do not start a dev server without approval (canonical approval ask in `global/AGENTS.md` §6).
+3. Before touching `localhost`, verify the server is reachable. Do not start a dev server without approval (canonical approval ask in `AGENTS.md` §6).
 4. Clarify only what blocks the flow: auth/session state, test data, and whether writes are allowed.
 5. **Auth state reuse:** if a safe stored auth state file already exists (for example under `~/.config/opencode/b-skills/b-e2e/.../storage-state.json`), load it instead of re-authenticating. If no auth state exists and the flow needs auth, store the post-login state in a non-worktree path such as `~/.config/opencode/b-skills/b-e2e/<run-id>/storage-state.json` so later steps and re-runs can reuse it. Do not create real auth state under repo-local `.opencode/...` unless that path is already ignored and the user explicitly wants repo-local persistence.
 
@@ -65,14 +65,14 @@ If the user wants both ("verify it then write a test"), do verify first, then tr
 5. Re-snapshot or screenshot the relevant state.
 6. Inspect console or network when the UI outcome depends on client errors or API calls.
 7. **Viewport check is opt-in.** Test only the requested viewport unless the user explicitly asks for multi-viewport (or the task is responsive-layout work).
-8. If a step looks flaky, apply the flake handling rule in `global/AGENTS.md` §10 before reporting flake.
+8. If a step looks flaky, apply the flake handling rule in `AGENTS.md` §10 before reporting flake.
 9. Distinguish **functional snapshot** (assert state or text content) from **visual regression** (pixel diff). Use the former by default; do not introduce visual regression baselines without approval.
 
 ### Step 3A — Author or fix browser tests (author mode)
 
 1. Inspect the repo's existing browser-test setup first: `playwright.config.*`, `cypress.config.*`, package scripts, test directories, naming conventions.
 2. Preserve the repo's current framework instead of forcing Playwright everywhere.
-3. **Empty state** (`global/AGENTS.md` §7): if no browser-test framework exists and the user wants new test code, ask before introducing one.
+3. **Empty state** (`AGENTS.md` §7): if no browser-test framework exists and the user wants new test code, ask before introducing one.
 4. Translate a successful flow into stable test code using accessible selectors and clear assertions.
 5. Persist auth state via `storageState` when the test would otherwise re-authenticate every run.
 6. Run the new/updated test once via the project's normal command and confirm it passes.
@@ -82,9 +82,9 @@ If the user wants both ("verify it then write a test"), do verify first, then tr
 1. Close the browser.
 2. Clean up only test data created by this run, and only when that cleanup was approved.
 3. **Partial-run cleanup:** if the flow failed mid-way, enumerate every write the run completed before the failure (accounts created, records inserted, files uploaded, sessions opened) and clean those up too — do not assume "test failed → nothing to undo." If cleanup of a partial write was not pre-approved, surface the list explicitly so the user can decide.
-4. Record artifact paths, generated test files, partial writes, and cleanup status in the run manifest per `global/AGENTS.md` §8.
+4. Record artifact paths, generated test files, partial writes, and cleanup status in the run manifest per `AGENTS.md` §8.
 
-Close with the skill-exit status block (`global/AGENTS.md` §9).
+Close with the skill-exit status block (`AGENTS.md` §9).
 
 ## Output format
 
@@ -119,6 +119,6 @@ Close with the skill-exit status block (`global/AGENTS.md` §9).
 - Do not introduce Playwright test files into a non-Playwright repo unless the user approves.
 - Multi-viewport checks are opt-in, not default.
 - Do not introduce visual regression baselines without approval; default to functional snapshots.
-- `*_unsafe` tool variants require explicit user approval per invocation (`global/AGENTS.md` §4).
+- `*_unsafe` tool variants require explicit user approval per invocation (`AGENTS.md` §4).
 - Always close the browser when the run is complete.
 - Persist auth state in a non-worktree path when re-login would be repeated work; never commit auth state files containing real credentials.

@@ -52,7 +52,7 @@ You can inspect and maintain the suite from this source repository, which contai
 
 ### Runtime conventions
 
-All shared rules live in `global/AGENTS.md`. The headlines:
+In this source repo, the shared runtime rules are authored in `global/AGENTS.md` and installed as `~/.config/opencode/AGENTS.md`; installed skill prose should reference `AGENTS.md`. The headlines:
 
 - **Definitions** (`§3`): "non-trivial", **small direct request** (≤3 files), **severity** (BLOCKER/MAJOR/MINOR/NIT), **risk** (trivial/low/medium/high), and the **confidence signal** every partial-evidence answer carries.
 - **MCP bundles** (`§4`): skills reference named bundles — `serena-symbol-toolkit`, `gitnexus-radar`, `context7-docs`, `brave-discovery`, `firecrawl-extraction` / `firecrawl-extended` / `firecrawl-deep`, `playwright-browser`. Bundle definitions own session-init, fallback ladder, language-coverage caveats, and cost/approval gates.
@@ -122,6 +122,8 @@ This tree is the source repository layout used by `install.sh`, not a directly d
 - `skills/` → `~/.config/opencode/skills/`
 - `commands/` → `~/.config/opencode/commands/`
 - `global/AGENTS.md` → `~/.config/opencode/AGENTS.md`
+
+Installed skill prose references `AGENTS.md`, while this repository keeps the source copy at `global/AGENTS.md`.
 
 When you open this repo in OpenCode, the checked-in `AGENTS.md` provides maintainer guidance for editing the source repository itself.
 
