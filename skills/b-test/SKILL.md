@@ -11,211 +11,135 @@ metadata:
 
 $ARGUMENTS
 
-Dedicated skill for test-driven development, test debugging, and coverage evaluation.
-Failing CI test and runtime bug have different patterns — this skill owns the test path.
+Own code-level test work: write tests, fix test-only failures, and evaluate coverage
+without treating every red test as proof that production code is wrong.
 
-If `$ARGUMENTS` is provided, treat it as the test task or failing test symptom.
-Proceed directly. Do not ask "what test do you want to write?" unless `$ARGUMENTS` is empty.
+If `$ARGUMENTS` is provided, treat it as the test task or failing symptom and proceed
+directly.
 
 ## When to use
 
-- User asks to write tests for new or existing code.
-- A test is failing and the issue is assertion, mock, or setup — not runtime logic.
-- Evaluating whether test coverage is adequate for a behavior change.
+- User asks to write tests for new or existing behavior.
+- A test is failing and the likely issue is assertion logic, mocks, fixtures, setup, or timing.
+- User asks about coverage gaps or missing regression tests.
 - User says: "test", "viết test", "test case", "failing test", "test coverage",
   "TDD", "unit test", "integration test", "test đang fail", "bắt đầu bằng test",
-  "missing test".
+  or "missing test".
 
 ## When NOT to use
 
-- Runtime bug in production code → use **b-debug**
-- Need a plan for a feature → use **b-plan**
-- Review code before PR → use **b-review**
-- Quick library API lookup → use **b-research**
-- Browser/UI testing or user-flow verification → use **b-e2e**
+- The failing test likely exposes a real runtime or product bug -> use **b-debug**.
+- The task is browser-driven UI verification or a live user flow -> use **b-e2e**.
+- Scope or acceptance is still unclear -> use **b-plan**.
+- The request is a pre-PR logic review -> use **b-review**.
+- The task is only an external docs or testing-framework lookup -> use **b-research**.
 
 ## Tools required
 
-- `bash` — run test commands, inspect test output, locate test files.
-- Native file tools — Glob/Grep/Read for discovery and inspection; `apply_patch` for modifying or creating test files when no suitable file exists.
-- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `find_declaration`, `find_implementations`, `get_diagnostics_for_file`, `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol` — from `serena` MCP server *(required for discovering test files and mapping tests to source symbols)*
-- `resolve-library-id`, `query-docs` — from `context7` MCP server *(optional, for verifying testing framework API — jest, vitest, pytest, etc.)*
-- `sequentialthinking` — from `sequential-thinking` MCP server *(optional, for choosing test strategy: unit vs integration vs e2e)*
+- `bash` — run project test and coverage commands, inspect failure output.
+- Native file tools — discover test files, manifests, and focused source/test sections.
+- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `find_declaration`, `find_implementations`, `get_diagnostics_for_file`, `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol` — from `serena` MCP server *(preferred for mapping tests to source behavior and editing existing test code)*.
+- `resolve-library-id`, `query-docs` — from `context7` MCP server *(optional, for verifying testing framework APIs or matcher behavior)*.
+- `sequentialthinking` — from `sequential-thinking` MCP server *(optional, for ambiguous unit vs integration strategy choices)*.
 
-Fallbacks follow the global MCP rules. Without Serena, use Glob/Grep/Read for test discovery. Without sequential-thinking, choose the test strategy inline.
+Fallbacks follow the global MCP rules. Without Serena, discover tests with native tools and edit carefully with `apply_patch`. Without Context7 or `sequentialthinking`, keep the same flow and note the limitation only if it affects confidence.
 
-Graceful degradation: ✅ Possible — core test debugging works with bash + read + `apply_patch`.
+Graceful degradation: ✅ Possible — the core workflow still works with native file tools, `bash`, and `apply_patch`.
 
 ## Steps
 
-### Step 1 — Discover test structure
+### Step 1 — Discover framework and scope
 
-Find test files and understand the test setup:
+1. Locate the relevant test files and the project-specific test commands from manifests or CI config.
+2. If the user named a failing test, start from the narrowest runnable target for that test.
+3. If symbol-aware inspection is useful, call `check_onboarding_performed`; if false, call `onboarding` once.
+4. Use Serena to map the relationship between test and source code:
+   - `find_symbol` for the named test or source symbol.
+   - `find_declaration` when the test points to a helper, import, or usage rather than the owning definition.
+   - `find_implementations` when the target behavior sits behind an interface or polymorphic boundary.
+   - `get_symbols_overview` on the test file when setup, fixtures, or grouped cases matter.
 
-1. Use Glob to locate test files and small manifest reads to identify the testing framework:
-   - JavaScript/TypeScript: `**/*.{test,spec}.{js,jsx,ts,tsx}`, then read `package.json` test scripts.
-   - Python: `tests/**/*.py`, `**/test_*.py`, then read `pytest.ini`, `pyproject.toml`, or `tox.ini` if present.
-   - Go: `**/*_test.go`, then read the closest `go.mod`.
-   - Rust: `**/*.rs` with test modules or `tests/**/*.rs`, then read `Cargo.toml`.
+Goal: know the framework, the narrowest command to run, and the exact behavior under test.
 
-2. Call `check_onboarding_performed`. If false, call `onboarding`.
+### Step 2 — Choose the lane
 
-3. Call `get_symbols_overview` on relevant test files to see test structure
-   (describe blocks, test functions, setup/teardown, shared fixtures).
+Pick one lane and stay in it:
 
-4. Call `find_symbol` on the test name or describe block if the user mentioned a specific test.
+- **Failing test** — fix the test, fixture, setup, or clearly confirmed production bug.
+- **Write tests** — add new regression, unit, or integration coverage for known behavior.
+- **Coverage review** — identify the highest-value missing tests and optionally add the top ones.
 
-5. If the user mentions "missing test" or "write tests for X": call `find_symbol`
-   on the source code symbol that needs tests, then `find_referencing_symbols`
-   to see if it already has tests.
+If the failure might reflect a real product bug and the correct behavior is not already confirmed, switch to **b-debug** instead of guessing from test output alone.
 
-6. Use `find_declaration` to jump from test helpers or call sites to the owning source definition, and `find_implementations` when tests target an interface, abstract method, or polymorphic contract.
+### Step 3 — Fix or add tests
 
-**Goal**: know the framework, the test file structure, and the relationship between tests and source code.
+For a failing test:
 
----
+1. Run the narrowest test command.
+2. If output is large, capture it under `/tmp/opencode/b-skills/b-test/` and inspect the failure section instead of truncating it.
+3. Read the failing test and the source behavior it exercises.
+4. Classify the issue:
+   - wrong assertion after behavior confirmation
+   - missing mock or stub
+   - leaked shared state or fixture drift
+   - async timing or missing await
+   - environment/setup problem
+   - snapshot or golden drift after intentional behavior change
+   - real product bug -> switch to **b-debug** unless the root cause is already confirmed and the fix is minimal
 
-### Step 2 — Identify task type
+For new tests:
 
-Pick the branch that matches the work:
+1. Identify the behavior, branches, and edge cases that matter.
+2. Choose unit or integration scope; hand browser-driven flows to **b-e2e**.
+3. Cover happy path, edge cases, error handling, and the regression that would catch an accidental revert.
+4. Prefer local fixtures unless the repo already has a shared fixture that fits the scenario.
 
-- **Branch A — Failing test**: a test is red and the user wants it green.
-- **Branch B — write tests**: TDD or filling a coverage gap with new tests.
-- **Branch C — Evaluate coverage**: report on what is and isn't covered, then recommend (and optionally write) the highest-value missing tests.
+For coverage review:
 
-Use `sequentialthinking` for branch selection only if the user's request is genuinely ambiguous (e.g. "make my tests better"). Otherwise pick from `$ARGUMENTS` directly.
+1. Discover the project's existing coverage command before inventing one.
+2. Rank gaps by requirement coverage, service boundaries, and widely referenced symbols.
+3. Optionally add the top 1-3 missing tests when the user wants implementation, not just analysis.
 
----
+Prefer Serena insertions for existing test bodies. Use `apply_patch` when creating a new test file or when a small non-symbol edit is clearer.
 
-### Step 3 — Branch A: Fix failing test
+### Step 4 — Verify
 
-1. Read the exact failing test output via bash. If the user provided a command, run that command. Otherwise run the narrowest discoverable test target. Capture full output under `/tmp/opencode/b-skills/b-test/`; if it exceeds tool limits, read the captured output around the failure location instead of truncating with `tail`:
-    ```bash
-    mkdir -p /tmp/opencode/b-skills/b-test
-    npm test -- --testNamePattern="test name" 2>&1 | tee /tmp/opencode/b-skills/b-test/test-output.log
-    # or
-    mkdir -p /tmp/opencode/b-skills/b-test
-    pytest path/to/test.py::test_function -x 2>&1 | tee /tmp/opencode/b-skills/b-test/test-output.log
-    ```
-2. Read the failing test code with `read` (narrow section, not full file).
-3. Read the source code under test (the function/class being tested).
-4. Identify the gap between expected and actual:
-
-| Symptom | Fix |
-|---|---|
-| Wrong expected value | Update the assertion only after confirming the source behavior is correct from requirements, docs, or existing behavior |
-| Missing mock | Add mock/stub for the dependency |
-| Leaking state | Reset state in `beforeEach` or `afterEach` |
-| Async timing | Add `await`, return promise, or use `waitFor` |
-| Wrong test data | Provide realistic input matching the scenario |
-| Snapshot/golden drift | Regenerate only after confirming the rendered/output behavior is intentionally changed |
-| Fixture drift | Update shared fixtures only when all consumers still represent valid scenarios |
-| Real bug in production code | Hand off to **b-debug** unless the root cause is already confirmed and the production fix is minimal |
-
-Apply the minimal fix. Prefer `replace_symbol_body` for whole test functions over line-level `apply_patch`.
-
----
-
-### Step 4 — Branch B: write tests
-
-1. Identify what behavior needs testing:
-   - From a plan file → read the acceptance criteria.
-   - From `$ARGUMENTS` → parse the behavior description.
-   - From source code → read the source symbol, list its branches and edge cases.
-2. Use `sequentialthinking` to choose strategy *only if ambiguous*:
-   - Pure function → unit test
-   - DB interaction → integration test
-   - User workflow → e2e (delegate to /b-e2e) or integration test
-3. Cover:
-    - **Happy path** (normal input → expected output)
-    - **Edge cases** (empty input, boundary values, null/undefined)
-    - **Error path** (invalid input → error thrown/rejected)
-    - **Regression prevention** (would catch a revert of the current change)
-    - **Fixtures/golden data** when the project uses them — keep fixtures minimal and local to the behavior unless a shared fixture already exists for the scenario
-4. Insert tests using Serena where possible:
-   - `insert_after_symbol` / `insert_before_symbol` — add tests within an existing describe block.
-   - `apply_patch` — only when no suitable test file exists in the conventional location or a small insertion is clearer than a symbol-level edit.
-
-**Framework-specific conventions**:
-- Jest/Vitest: `describe/it`, `beforeEach`, `mock()`
-- Pytest: `def test_*`, fixtures, `monkeypatch`
-- Go: `Test*` with `t.Run`, `assert.Equal`
-- Rust: `#[test]`, `assert_eq!`
-
----
-
-### Step 5 — Branch C: Evaluate coverage
-
-1. Discover the project's coverage command before running anything:
-   - Prefer package scripts (`package.json`, `pyproject.toml`, `tox.ini`, `Makefile`, `justfile`, CI config) that already mention coverage.
-   - If no coverage command exists, derive the narrowest conventional command for the detected framework and label it as inferred.
-   - Do not install tools or assume optional tools such as `cargo tarpaulin` are available unless the project already uses them.
-2. Identify uncovered branches/lines, prioritized by:
-   - Symbols implementing explicit requirements
-   - Symbols at service boundaries
-   - Symbols with the broadest references (`find_referencing_symbols`)
-3. Report the gap: file → uncovered branch → why it matters.
-4. Optionally write the top 1–3 missing tests using the Branch B flow. Ask the user before committing to a long batch.
-
----
-
-### Step 6 — Run and verify
-
-1. Run the specific test(s) via bash. Prefer the exact command from the failure, project scripts, or the narrowest framework target over the full suite during the fix loop:
-   ```bash
-   npm test -- --testNamePattern="test name"
-   pytest path/to/test.py::test_function
-   go test -run TestFunction ./pkg
-    cargo test test_function
-    ```
-2. When test or source files are in a language with diagnostics support, call `get_diagnostics_for_file` on touched files before rerunning so syntax/type errors are caught early.
-3. Confirm the test passes.
-4. For new tests: run the narrow test first, then run the broader suite only when the change touches shared fixtures/helpers, public behavior, or the project has a fast standard suite. If skipped, state why.
-5. If tests fail: go back to the relevant branch. Maximum 3 iterations.
-
----
+1. Run `get_diagnostics_for_file` on touched files when the language supports it.
+2. Re-run the narrowest relevant tests.
+3. Widen to a broader suite only when the change touches shared fixtures/helpers, public contracts, or the repo's normal test workflow requires it.
+4. Use a maximum of 3 local fix/verify loops before reporting what still fails.
 
 ## Output format
 
 ```
 ### b-test: [test task]
 
-**Type**: [write tests / fix failing test / evaluate coverage]
-**Framework**: [jest / vitest / pytest / go test / cargo test]
-**Test scope**: [unit / integration / e2e]
+**Type**: [failing test / write tests / coverage review]
+**Framework**: [jest / vitest / pytest / go test / cargo test / other]
+**Scope**: [unit / integration / mixed]
 
-#### Test structure
-- [test file path] — [describe blocks or test functions found]
+#### Findings
+- `[path]` — [what was wrong or what behavior needed coverage]
 
-#### Issue / Requirements
-[what was wrong or what behavior needs testing]
-
-#### Fix / Implementation
-[code change — exact assertion, mock, or test added]
+#### Changes
+- `[path:line]` — [test fix or test added]
 
 #### Verification
-\`\`\`bash
-[test command and result]
-\`\`\`
-✅ Test passes / ❌ Test still failing — [next step]
-
----
-
-#### Coverage *(only when Branch C)*
-- Before: [X%] lines
-- After: [Y%] lines
-- Gaps: [what is still not covered, ranked by priority]
+```bash
+[command]
 ```
+[result]
 
----
+#### Remaining gaps
+- [none / uncovered case / follow-up suggestion]
+```
 
 ## Rules
 
-- Never modify production code to make a test pass unless the production code is actually buggy.
-- A failing test often reveals a bug in production code → if root cause is not already confirmed, hand off to **b-debug** rather than patching production code from test output alone.
-- Never update an assertion just because it is red. First confirm the expected behavior from requirements, existing contracts, or source behavior.
-- Keep test fixes minimal — if one assertion is wrong, fix that assertion; do not rewrite the entire test suite.
-- Write behavior tests (assert on output), not implementation tests (assert on internal state).
-- Use `sequentialthinking` for test strategy decisions only if the choice is genuinely ambiguous.
-- If test output exceeds tool limits: capture full output under `/tmp/opencode/b-skills/b-test/`, then read around the failure location instead of truncating with `tail`.
-- Prefer running specific tests over the full suite during debugging — faster feedback loop.
+- Never change production code just because a test is red.
+- If production behavior is uncertain, switch to **b-debug** before patching source.
+- Never update an assertion, snapshot, or golden file without confirming the intended behavior first.
+- Browser-driven user flows belong to **b-e2e**; keep `b-test` focused on code-level tests.
+- Prefer behavior assertions over implementation-detail assertions.
+- Keep fixture, mock, and setup changes as local as practical.
+- State when broader suite coverage was skipped and why the narrower check was sufficient.

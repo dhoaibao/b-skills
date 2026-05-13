@@ -27,14 +27,14 @@ You can inspect and maintain the suite from this source repository, which contai
 
 | Skill | Phase | When to use |
 |---|---|---|
-| `/b-plan` | Decide | Think before coding — quick/full planning, task decomposition, approach evaluation, plan file when needed |
-| `/b-research` | Decide | All external knowledge — quick lookup vs full research with source-quality gating |
-| `/b-implement` | Build | Approved/scoped-plan execution — apply scoped steps one at a time, verify each step, stop for new decisions |
-| `/b-refactor` | Build | Code refactoring — impact analysis, safe mechanical transformation, verify |
-| `/b-debug` | Validate | Full-loop debugging — trace, confirm root cause, fix, verify |
-| `/b-test` | Validate | TDD — write tests, fix failing tests, evaluate coverage with full failure-output capture |
-| `/b-e2e` | Validate | Browser-based UI testing — manage state, navigate, verify responsive UI, and author Playwright E2E tests |
-| `/b-review` | Validate | Pre-PR changed-code review — logic, requirements, edge cases, security, test adequacy |
+| `/b-plan` | Decide | Clarify scope, choose an approach, and produce an execution-ready plan when the work is broad, unclear, or risky |
+| `/b-research` | Decide | External knowledge only — quick lookup, source-backed answer, or deep research with citation discipline |
+| `/b-implement` | Build | Execute approved or clearly scoped work one step at a time, verify each step, and stop for new decisions |
+| `/b-refactor` | Build | Concrete behavior-preserving transforms such as rename, extract, move, inline, or delete dead code |
+| `/b-debug` | Validate | Runtime bug ownership — trace, confirm root cause, fix minimally, and verify |
+| `/b-test` | Validate | Code-level tests — write tests, fix test-only failures, or review coverage gaps without confusing them with runtime bugs |
+| `/b-e2e` | Validate | Live browser verification and browser-test authoring, while respecting the repo's existing E2E framework |
+| `/b-review` | Validate | Pre-PR changed-code review focused on blockers, regressions, security, and missing coverage |
 
 ### Typical Flows
 
@@ -47,21 +47,23 @@ You can inspect and maintain the suite from this source repository, which contai
 /b-e2e [flow]           (browser UI verification)
 ```
 
-`/b-plan` supports **quick mode** for scoped daily tasks and **full mode** for unclear, high-risk, or multi-layer work. It owns broad or unclear refactors until they reduce to concrete mechanical steps, at which point `/b-refactor` becomes the safer executor. After the user approves a plan, `/b-implement` is the default executor.
+`/b-plan` supports **quick mode** for scoped daily tasks and **full mode** for unclear, high-risk, or multi-layer work. It owns broad or unclear refactors until they reduce to concrete mechanical steps, at which point `/b-refactor` becomes the safer executor. After the user approves a plan, `/b-implement` is the default executor for multi-step work.
 
 ### Runtime conventions
 
 - Plans are saved to `.opencode/b-plans/<task-slug>.md`.
 - Skill artifacts are saved to `.opencode/b-skills/<skill>/<run-id>/`; E2E artifacts use `.opencode/b-skills/b-e2e/<run-id>/`, where `run-id` is `<YYYYMMDD-HHMMSS>-<slug>`.
 - Temporary command output uses `/tmp/opencode/b-skills/<skill>/<slug>.log`.
-- Skills that create multiple artifacts report or maintain a manifest with artifact paths, generated files, command logs, and cleanup status.
-- Cross-skill handoffs use a compact payload: `source`, `scope`, `files`, `commands`, `blockers`, and `next skill`.
-- Keep one active skill until its stop condition is hit; do not bounce across skills for optional enrichment or minor lookups that the current skill can finish inline.
+- Multi-artifact runs report or maintain a manifest with `artifacts`, `commands`, `generated_files`, `cleanup`, and `notes`.
+- Cross-skill handoffs use: `source`, `goal`, `decisions`, `assumptions`, `files`, `verification`, `blockers`, and `next skill`.
+- Keep one active skill until its stop condition is hit; do not bounce across skills for optional enrichment.
+- Trigger precedence is strict: browser flow -> `/b-e2e`; likely product bug -> `/b-debug`; named behavior-preserving transform -> `/b-refactor`; unclear scope -> `/b-plan`; external-knowledge blocker -> `/b-research`.
+- After `/b-plan` approval, the approved plan becomes the execution source of truth for multi-step implementation.
 - Approval is required before installs, dev servers, migrations, production-like/staging writes, broad refactors, commits, or destructive commands.
 - Manual edits use `apply_patch`; skill instructions should not rely on unavailable native `edit` or `write` tools.
+- Public web tools must not receive private stack traces, internal URLs, customer data, secrets, or proprietary code without explicit approval.
 - Use the lightest capable tool for the evidence needed. Native tools stay first for exact strings, manifests, prose, configs, and small reads; MCPs are for semantic or external tasks that materially reduce ambiguity.
-- Verification commands are discovered from project scripts/CI first. The default ladder is narrow check → broader affected-area check → full check only when scope/risk justifies it.
-- Full research ranks sources as official docs/changelogs, source repos/releases, vendor engineering posts, reputable community sources, then snippets/SEO content.
+- Verification follows the ladder: narrow check -> broader affected-area check -> full check only when scope or risk justifies it.
 - GitNexus is optional radar; Serena is primary hands. GitNexus scopes graph risk, while Serena confirms exact symbols and performs symbol-aware edits.
 
 See [REFERENCE.md](REFERENCE.md) for detailed skill contracts and maintenance conventions.
@@ -117,7 +119,7 @@ When you open this repo in OpenCode, the checked-in `AGENTS.md` provides maintai
 | `context7` | Live, version-accurate library docs |
 | `brave-search` | Real web search, news lookups, and optional visual-reference discovery |
 | `firecrawl` | Full page scraping, local document parsing, structured extraction, JS follow-up interaction, and deep research fallback |
-| `playwright` | Browser automation, DOM snapshots, advanced UI interaction, network/console inspection, and Playwright E2E authoring |
+| `playwright` | Browser automation, DOM snapshots, advanced UI interaction, network/console inspection, and browser-test authoring support |
 | `sequential-thinking` | Structured reasoning for multi-hypothesis decisions |
 | `gitnexus` *(optional)* | Radar for graph-level repo intelligence: cross-file impact, architecture context, execution-flow discovery, route/API consumers, response-shape checks, tool maps, and multi-repo mapping — only useful when indexed and fresh |
 
@@ -151,7 +153,7 @@ OpenCode integration:
 - GitNexus guidance now includes API-aware tools such as `api_impact`, `shape_check`, `route_map`, and `tool_map` where route or tool contracts are the real risk surface.
 - GitNexus augments Serena for graph-level intelligence only when indexed, fresh, and target-aware.
 
-**Evidence model:** GitNexus evidence scopes graph risk; Serena evidence confirms exact symbols and references; text search confirms strings/config/prose; runtime checks verify behavior.
+**Evidence model:** runtime evidence outranks graph evidence; Serena confirms exact symbols and references; text search confirms strings, config, and prose; web/search snippets are weakest and must be backed by fetched sources when confidence matters.
 
 ---
 

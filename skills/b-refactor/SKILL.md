@@ -11,166 +11,106 @@ metadata:
 
 $ARGUMENTS
 
-Refactor code with impact analysis and safe mechanical transformation. Owns the full
-workflow: map references → plan transformation → apply symbol-aware edits → verify
-nothing broke.
+Handle behavior-preserving mechanical code changes: lock the exact target, map the
+impact radius, apply the smallest safe transformation, and verify that references still
+hold.
 
-If `$ARGUMENTS` is provided, treat it as the refactoring instruction. Proceed directly.
+If `$ARGUMENTS` is provided, treat it as the refactoring instruction and proceed directly.
 
 ## When to use
 
-- User asks to refactor, rename, extract method, move a function, inline a variable, or clean up a named target with concrete behavior-preserving scope.
-- User says: "refactor", "tái cấu trúc", "extract method", "rename", "move", "inline",
-  "simplify", "clean up", "tách hàm", "đổi tên".
-- Mechanical code transformation that preserves behavior.
-- Improving code structure without changing functionality.
-- Best when the target change is already concrete: rename, extract, move, inline, or delete with a known scope.
+- User asks to rename, extract, move, inline, delete dead code, or simplify a named target.
+- The requested transformation is meant to preserve behavior.
+- The scope is concrete enough to execute without re-deciding product behavior.
 
 ## When NOT to use
 
-- New feature, broad refactor, or unclear scope → use **b-plan** first
-- Vague cleanup request without a specific target or behavior-preserving transformation → use **b-plan** first
-- Runtime bug or test failure → use **b-debug**
-- Review after implementation → use **b-review**
-- Tests fail after refactor → use **b-test** (test-specific) or **b-debug** (real regression)
-- Quick library API lookup → use **b-research**
+- The request is broad, vague, or partly a feature change -> use **b-plan** first.
+- The work is mainly implementing new behavior -> use **b-implement**.
+- The task is a runtime bug fix -> use **b-debug**.
+- The task is a test-only failure or test rewrite -> use **b-test**.
+- The request is only an external API lookup -> use **b-research**.
 
 ## Tools required
 
-- `bash` — run tests, check compilation, inspect git diff.
-- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `find_declaration`, `find_implementations`, `search_for_pattern`, `get_diagnostics_for_file`, `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol`, `rename_symbol`, `safe_delete_symbol` — from `serena` MCP server *(required for impact analysis and safe symbol-level edits)*
-- `sequentialthinking` — from `sequential-thinking` MCP server *(optional, for evaluating trade-offs on large refactors)*
-- `gitnexus` — from `gitnexus` MCP server *(optional radar for broad blast-radius discovery before exported/shared mechanical edits — only when indexed and fresh)*
+- `bash` — inspect git state and run project-specific checks.
+- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `find_declaration`, `find_implementations`, `search_for_pattern`, `get_diagnostics_for_file`, `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol`, `rename_symbol`, `safe_delete_symbol` — from `serena` MCP server *(preferred for exact target locking, reference mapping, and symbol-aware edits)*.
+- `sequentialthinking` — from `sequential-thinking` MCP server *(optional, for multi-phase or high-risk refactor ordering)*.
+- `gitnexus` — from `gitnexus` MCP server *(optional radar for broad exported/shared impact when indexed and fresh)*.
 
-Fallbacks follow the global MCP rules. Without Serena, manual refactors require native search plus extra reference verification. Without sequential-thinking, evaluate large-refactor trade-offs inline.
+Fallbacks follow the global MCP rules. Without Serena, continue only when native search plus careful `apply_patch` edits are still safe enough for the requested scope.
 
-Graceful degradation: ⚠️ Partial — mechanical refactoring still possible with `apply_patch`, but cross-file renames and safe deletes require manual impact checks.
+Graceful degradation: ⚠️ Partial — small local refactors remain possible, but cross-file renames and safe deletes are riskier without symbol-aware tooling.
 
 ## Steps
 
-### Step 1 — Impact analysis
+### Step 1 — Lock the target
 
-1. Call `check_onboarding_performed`. If false, call `onboarding`.
+1. Resolve the exact symbol or file to change.
+2. If the request starts from a usage site, helper import, interface, or repeated code shape, use `find_declaration`, `find_implementations`, or `search_for_pattern` before editing.
+3. If symbol-aware work is needed, call `check_onboarding_performed`; if false, call `onboarding` once.
+4. If the request is still vague after a short inspection, ask the smallest question needed to make the target concrete.
 
-2. Identify the target symbol:
-   - User names a function/class → `find_symbol` with that name.
-   - User references a file → `get_symbols_overview` to inspect top-level symbols.
-   - Vague instruction ("clean up the auth module") → `get_symbols_overview` on the file, then ask the user for a specific target.
-   - User describes a repeated code shape or behavior but not a symbol → `search_for_pattern` first, then resolve to the owning symbol.
+### Step 2 — Assess impact and verification depth
 
-   If the request points at a call site or imported helper rather than the owner, use `find_declaration` to resolve the exact symbol first. If the target is an interface or abstract method, use `find_implementations` before locking scope.
+1. Use `find_referencing_symbols` to map call sites and usages.
+2. Treat **trivial local refactors** as a fast path when all of these are true:
+   - one file
+   - no exported/public contract change
+   - few or no external references
+   - behavior clearly preserved
+3. For shared, exported, multi-file, route/tool, or package-boundary refactors, optionally use GitNexus to scope the blast radius before editing.
+4. For medium or high-risk refactors, discover the baseline verification command from project scripts or CI config. If baseline checks are already failing, stop and ask before proceeding.
 
-3. **Broad blast-radius discovery** *(only when the target is exported/shared, crosses packages, or affects >2 files and GitNexus passes the global gate)*: call `gitnexus impact` or `gitnexus context`, then confirm with Serena references. If the target is an API route/handler, prefer `gitnexus_api_impact`; if it is an MCP/RPC tool handler, use `gitnexus_tool_map`. Record hidden callers, event boundaries, or architecture constraints, then stop the GitNexus pass and let Serena own the exact refactor target and edit plan.
+### Step 3 — Apply the mechanical transform
 
-4. Call `find_referencing_symbols` on the target to map every call site and usage.
-   Record: how many files reference it, whether it's exported/public, whether any references are in tests.
+Choose the smallest matching transformation:
 
-5. Choose a baseline check based on risk:
-   - **Low risk**: local rename/extract/inline inside one file, no exported API, no behavior change -> baseline may be skipped; record why.
-   - **Medium/high risk**: exported symbol, move across files, delete code, package boundary, or >2 files -> run tests or typecheck before refactoring.
+- rename symbol -> `rename_symbol`
+- delete dead code -> `safe_delete_symbol`
+- extract or split function -> insert helper, then update caller
+- inline local logic -> update caller, then remove old symbol safely
+- move code between files -> add destination first, then update imports and remove origin
 
-   Discover baseline commands from project scripts and CI config first: `package.json`, `Makefile`, `justfile`, `pyproject.toml`, `tox.ini`, `go.mod`, `Cargo.toml`, or workflow files. Do not use generic chained commands as authoritative verification.
-   If baseline checks fail before a medium/high-risk refactor: warn the user and ask whether to proceed.
+Use `apply_patch` only for import updates, config, prose, or non-symbol glue.
 
-**Goal**: know the full impact radius before touching any code.
-
----
-
-### Step 2 — Plan transformation
-
-Choose the mechanical transformation pattern that matches the request:
-
-- **Rename symbol** → `rename_symbol`, then verify.
-- **Rename file** → use `apply_patch` move operations when practical, then use Serena reference checks plus import verification before proceeding.
-- **Rename directory** → move files individually when the scope is small; for broad directory moves, stop and ask for confirmation because many imports, docs, and tooling paths can change.
-- **Extract method** → add the new helper with `insert_before_symbol`, then update the caller with `replace_symbol_body`.
-- **Inline variable** → substitute the expression with `replace_symbol_body`, then remove the symbol with `safe_delete_symbol`.
-- **Move to new file** → insert or replace the declaration in the destination, update imports, then delete from the old location.
-- **Delete dead code** → confirm zero usages, then `safe_delete_symbol`.
-- **Split large function** → insert helpers first, then update the original function to call them.
-
-If the refactor affects >3 files or crosses package boundaries:
-- Use `sequentialthinking` to evaluate rollback risk and choose the safest order.
-- Consider splitting into phases such as rename → move → extract.
-
----
-
-### Step 3 — Execute safely
-
-Apply edits in dependency order. Prefer Serena's symbol-aware tools over `apply_patch`:
-
-1. **`rename_symbol`** — for renaming functions, classes, and variables. Safest when the refactor is a real symbol rename across references.
-2. **`safe_delete_symbol`** — for removing dead code. Returns remaining usages; address them before retrying.
-3. **`replace_symbol_body`** — for changing the full body of a function or method while keeping the signature.
-4. **`insert_before_symbol` / `insert_after_symbol`** — for adding new functions or moving declarations.
-5. **`apply_patch`** — only for line-level import updates, config changes, or prose modifications that are not symbol-relative.
-
-**Execution order rule**: apply changes from the inside out — inner helpers first, then outer callers. This prevents broken references during intermediate states.
-
-**Import update rule**: if the refactor moves code across files, update imports manually via `apply_patch` after the symbol-level changes are done.
-
-**Public API compatibility rule**: if the target is exported, documented, used across package boundaries, or part of a CLI/HTTP/RPC contract, verify call sites, docs/types, and compatibility expectations before changing its signature or path. If compatibility behavior is unclear, stop and ask instead of preserving or breaking it by guesswork.
-
----
+If the work turns into a behavioral redesign instead of a mechanical transform, stop and hand it back to **b-plan**.
 
 ### Step 4 — Verify
 
-After every mechanical step:
-
-1. **Local diagnostics check** *(when supported)*: call `get_diagnostics_for_file` on touched files to catch syntax or type breakage introduced by the mechanical edit.
-
-2. **Compilation/type check** *(when applicable)*: run the project-specific command discovered from manifests or CI. Examples include `npm run typecheck`, `npx tsc --noEmit`, `go build ./...`, or `cargo check`, but only use commands that match the project.
-
-3. **Test check**: run the project-specific narrow test first, then the broader suite after the final step when the refactor touches shared/exported behavior, package boundaries, fixtures, or many call sites. Examples include `npm test -- <target>`, `pytest path/to/test.py`, `go test ./pkg/...`, or `cargo test`, but derive the command from project conventions.
-
-4. **Git diff inspection**: `git diff` to confirm only intended changes. Look for accidental deletions, wrong import paths, unintended formatting.
-
-5. **Impact re-check**: if the refactor changed a public/exported symbol, re-run `find_referencing_symbols` and any relevant import/text searches to confirm references resolve.
-
-**Iteration rule**: if tests or compilation fail, fix before proceeding. Maximum 2 fix iterations per step. If a failure looks like a real bug introduced by the refactor → handoff to /b-debug. If it's a test-mechanic failure (assertion drift, snapshot, mock) → handoff to /b-test.
-
----
+1. Run `get_diagnostics_for_file` on touched files when supported.
+2. Run the narrowest typecheck, build, or test command that matches the risk level.
+3. Re-check references when the target is shared or exported.
+4. Inspect `git diff` to confirm the change stayed within intended scope.
+5. If failures indicate a real regression, use **b-debug**. If they indicate test-mechanic drift, use **b-test**.
 
 ## Output format
 
 ```
-### b-refactor: [transformation name]
+### b-refactor: [transformation]
 
-**Target**: `[symbol name]` in `[file]`
-**Impact**: [N references across M files]
-**Risk**: [low / medium / high]
-
-#### Transformation plan
-- [Step 1 description]
-- [Step 2 description]
-- ...
+**Target**: [symbol or file]
+**Risk**: [trivial / low / medium / high]
+**Impact**: [key references or boundaries]
 
 #### Changes
-- `[file:line]` — [what changed]
+- `[path:line]` — [what changed]
 
 #### Verification
-\`\`\`bash
-[test command and result]
-\`\`\`
-✅ Tests pass / ❌ [N failures] — [fix status]
-
-#### Next steps
-- [any remaining cleanup, import fixes, or follow-up refactors]
+```bash
+[command]
 ```
+[result]
 
----
+#### Follow-up
+- [none / remaining step / user decision needed]
+```
 
 ## Rules
 
-- Never perform a medium/high-risk refactor without a green baseline check — warn and ask if checks are already failing. Low-risk single-file mechanical edits may skip baseline with an explicit note.
-- Always use `find_referencing_symbols` before renaming or deleting — cross-file impact is the most common source of refactoring bugs.
-- Prefer `rename_symbol` over manual `apply_patch` for symbol renames — it updates all references atomically.
-- Prefer `safe_delete_symbol` over manual deletion — it prevents accidental removal of still-used code.
-- Apply edits from the inside out — inner helpers first, then outer callers.
-- If code moves across files, update imports after the symbol-level changes are done.
-- Do not refactor and add new features in the same session — split into two tasks.
-- If the refactor affects >3 files: use `sequentialthinking` to evaluate rollback strategy.
-- Run compilation check after every mechanical step — do not wait until the end.
-- Run the full test suite after the last step when the refactor scope warrants it; otherwise state which narrower checks were enough and why.
-- Keep changes commit-ready and separated by logical transformation.
-- If too large to verify in one session: stop after a safe checkpoint, run tests, and tell the user: "Safe checkpoint reached. Remaining transformations: [list]."
+- Keep the task behavior-preserving; do not quietly add features while refactoring.
+- Use the trivial-local fast path only when the risk is genuinely small and the contract is untouched.
+- Use symbol-aware rename/delete tools whenever they fit the requested transformation.
+- Ask before broad directory moves or other changes that can cascade through tooling, docs, and imports.
+- Do not keep going through failing medium/high-risk verification without surfacing the blocker.
+- Do not commit unless the user explicitly asks.

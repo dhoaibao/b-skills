@@ -1,7 +1,7 @@
 ---
 name: b-implement
 description: >
-  Execute approved plans safely. ALWAYS invoke when the user says "implement", "execute plan", "thực hiện", "làm theo plan", or after /b-plan approval with a scoped plan. Reads `.opencode/b-plans/` or an approved chat plan, applies steps one at a time, verifies each step, and stops for new decisions. Unlike b-plan (decide), b-implement changes code.
+  Execute approved plans safely. ALWAYS invoke when the user says "implement", "execute plan", "thực hiện", "làm theo plan", or after /b-plan approval with scoped work. Reads `.opencode/b-plans/` or an approved chat plan, applies the next small step, verifies it, and stops for new decisions. Unlike b-plan, b-implement changes code.
 compatibility: opencode
 metadata:
   suite: b-skills
@@ -11,176 +11,110 @@ metadata:
 
 $ARGUMENTS
 
-Execute an approved plan with discipline: read the source of truth, apply the next
-small step, verify it, update progress, and stop when a new decision is required.
+Execute approved or clearly scoped work with discipline: load the source of truth, change the next smallest step, verify it, and stop when a new decision appears.
 
-If `$ARGUMENTS` is provided, treat it as the plan file path, task slug, or explicitly
-approved chat-plan description. Do not ask the user to restate the plan unless the
-referenced plan cannot be found, approval is unclear, or the implementation target is
-ambiguous.
+If `$ARGUMENTS` is present, treat it as the plan path, plan slug, approved chat plan, or small direct implementation request.
 
 ## When to use
 
-- A `/b-plan` chat plan or saved `.opencode/b-plans/[task-slug].md` has been approved.
-- User says: "implement", "execute plan", "carry out the plan", "thực hiện", "làm theo plan" with an approved or clearly scoped implementation source.
-- The task is already scoped and accepted, and the next action is to modify code or docs.
-- You need a disciplined step-by-step executor that verifies each completed step.
+- The user approved a saved plan or chat plan.
+- The task is already scoped and the next action is to edit code or docs.
+- The request is small and concrete enough to implement directly without a planning pass.
 
 ## When NOT to use
 
-- Scope, acceptance criteria, or implementation approach is still unclear -> use **b-plan**.
-- Broad "build this" or feature requests without an approved/scoped plan -> use **b-plan**.
-- Something is broken at runtime -> use **b-debug**.
-- The requested change is a concrete rename/extract/move/inline/delete -> use **b-refactor**.
-- The task is only to write or fix tests -> use **b-test**.
-- The task is only external docs or API lookup -> use **b-research**.
+- Scope or acceptance criteria are still unclear -> use **b-plan**.
+- The request is a named rename, extract, move, inline, or delete -> use **b-refactor**.
+- The task is only external lookup -> use **b-research**.
+- The task is only tests -> use **b-test**.
+- Something is broken and root cause is not confirmed -> use **b-debug**.
 
 ## Tools required
 
-- `bash` — inspect git status/diff and run verification commands.
-- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `find_declaration`, `find_implementations`, `search_for_pattern`, `get_diagnostics_for_file`, `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol`, `rename_symbol`, `safe_delete_symbol` — from `serena` MCP server *(preferred for symbol discovery and code edits)*.
-- `resolve-library-id`, `query-docs` — from `context7` MCP server *(optional, for narrow library/API checks discovered during implementation)*.
-- `sequentialthinking` — from `sequential-thinking` MCP server *(optional, for resolving step-order ambiguity or failure triage)*.
-- `gitnexus` — from `gitnexus` MCP server *(optional radar for high-risk shared/exported symbol checks and post-change scope validation — only when indexed and fresh)*.
+- `bash` — inspect status, diff, and run verification commands.
+- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `find_declaration`, `find_implementations`, `search_for_pattern`, `get_diagnostics_for_file`, `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol`, `rename_symbol`, `safe_delete_symbol` — from `serena` MCP server *(preferred for symbol-aware edits)*.
+- `resolve-library-id`, `query-docs` — from `context7` MCP server *(optional, for a narrow API uncertainty discovered mid-step)*.
+- `sequentialthinking` — from `sequential-thinking` MCP server *(optional, for failure triage or step-order ambiguity)*.
+- `gitnexus` — from `gitnexus` MCP server *(optional radar for shared route, tool, or exported-boundary changes when indexed and fresh)*.
 
-Fallbacks follow the global MCP rules. If context7 cannot resolve a library/API uncertainty, use `/b-research`; if GitNexus fails its gate, skip it and continue with Serena/native checks.
+Fallbacks follow the global MCP rules. If execution reveals a new research blocker, stop and use **b-research**.
 
-Graceful degradation: ✅ Possible — implementation can proceed with native file tools, but broad symbol changes are riskier without Serena.
+Graceful degradation: ✅ Possible — native tools can still implement, but broad symbol changes are riskier without Serena.
 
 ## Steps
 
 ### Step 1 — Load the source of truth
 
-Resolve the implementation source in this order:
+Resolve scope in this order:
+1. a saved plan path
+2. a plan slug under `.opencode/b-plans/`
+3. an explicitly approved chat plan
+4. a small clearly scoped direct request
 
-1. `$ARGUMENTS` points to a `.md` file -> read that plan.
-2. `$ARGUMENTS` names a slug -> read `.opencode/b-plans/[slug].md`.
-3. `$ARGUMENTS` contains a complete chat plan and explicitly says it is approved -> use that text directly.
-4. `$ARGUMENTS` contains a small, clearly scoped direct implementation request -> proceed, but record the interpreted scope before editing.
-5. No usable source -> if the request is broad, multi-file, or unclear, switch to **b-plan**. Otherwise ask: "Which approved plan should I implement? Provide a `.opencode/b-plans/...` path, task slug, or paste the approved chat plan."
+If the request is broad, multi-file, or still ambiguous, stop and use **b-plan** instead of improvising.
 
-Extract:
-- Confirmed decisions.
-- Planned touch points.
-- Ordered steps and dependencies.
-- Each step's `Done when` verification.
-- Unknowns that must be resolved before coding.
+Extract only what execution needs:
+- confirmed decisions
+- planned touch points
+- ordered steps or the single scoped request
+- verification expectations
+- unresolved blockers
 
-If the plan contains unresolved `Need decision` items, ask the user before editing.
-
----
-
-### Step 2 — Check working state
+### Step 2 — Check the working state
 
 Run `git status --short` and inspect only the files relevant to the current step.
 
-- If unrelated files are dirty: leave them alone.
-- If a planned file already has unrelated edits: read the affected section carefully and preserve those edits.
-- If user edits directly conflict with the planned change: stop and ask how to proceed.
+- Leave unrelated changes alone.
+- If the target file already has unrelated edits, patch around them.
+- If user changes directly conflict with the approved scope, stop and ask.
 
-Choose the next unchecked or unimplemented step whose dependencies are complete. Work on one step at a time.
+If the plan is multi-step, choose the next dependency-ready step. If the request is a tiny direct task, treat it as a one-step implementation and do not invent extra ceremony.
 
----
+### Step 3 — Implement the next smallest step
 
-### Step 3 — Implement one step
+For code changes, initialize Serena once, then work in this order:
+1. locate the owner with `find_symbol` or `search_for_pattern`
+2. inspect structure with `get_symbols_overview`
+3. use `find_declaration` or `find_implementations` when the plan starts from usage or an abstract boundary
+4. use `find_referencing_symbols` for shared or exported behavior
+5. use GitNexus only when the step changes a route, tool contract, or shared boundary and the graph question is still unresolved
+6. apply the smallest edit that satisfies the step
 
-For code changes, initialize Serena project knowledge first: call `check_onboarding_performed`; if onboarding has not been performed, call `onboarding` once.
+If the step turns into an unplanned rename, move, extract, inline, or delete, stop and hand off to **b-refactor**.
 
-Follow this order:
+If a new behavioral or product decision appears, stop and ask.
 
-1. Locate the named symbol or file from the plan.
-2. Use `get_symbols_overview` before opening large source files.
-3. Use `search_for_pattern` when the plan describes behavior, log text, or a config/code shape rather than a stable symbol name.
-4. Use `find_declaration` when the plan names a call site, imported helper, or method usage but not the owning definition.
-5. Use `find_implementations` when the step targets an interface, abstract method, or polymorphic boundary.
-6. Use `find_referencing_symbols` when the step changes exported/shared behavior.
-7. If the step changes an API route/handler or response contract, optionally call `gitnexus_api_impact`; if it changes an MCP/RPC tool handler, optionally call `gitnexus_tool_map`.
-8. Optionally call `gitnexus_impact` when GitNexus passes the global gate and the step changes a shared/exported boundary; confirm with Serena references.
-9. Apply the smallest edit that satisfies the step.
-10. Do not add unplanned abstractions, features, cleanup, or compatibility code.
+### Step 4 — Verify before moving on
 
-When GitNexus is used in this step, stop after it answers the graph or contract question; Serena remains the source of truth for the exact symbol read and the edit itself.
+Run the exact plan verification when available. Otherwise run the narrowest relevant check for the touched area.
 
-Use `rename_symbol`, `safe_delete_symbol`, and other refactor-oriented tools only when the approved plan explicitly calls for that mechanical transformation. If implementation reveals an unplanned rename, move, extract, inline, or delete, switch to **b-refactor** instead of folding it into the feature step.
-
-If implementation reveals a new behavioral/product decision, stop and ask. Do not self-infer.
-
----
-
-### Step 4 — Verify the step
-
-Run the exact `Done when` command from the plan when available. If the plan lacks a command, run the narrowest relevant check for the touched area.
-
-Before broader commands, call `get_diagnostics_for_file` on touched source files when the language tooling supports it. Fix obvious syntax or type issues locally first.
+Use `get_diagnostics_for_file` before broader commands when the language supports it.
 
 Classify failures:
-- Implementation mistake -> fix within the current step and rerun the check.
-- Test setup/assertion/mocking issue -> use **b-test**.
-- Runtime/root-cause uncertainty -> use **b-debug**.
-- Library/API uncertainty -> use `context7`; if unresolved, use **b-research**.
+- implementation mistake -> fix and rerun
+- test harness problem -> **b-test**
+- runtime/root-cause uncertainty -> **b-debug**
+- unresolved library/API behavior -> Context7, then **b-research** if still unclear
 
-Use the global 3-iteration fix/verify cap per step. After that, report what passed, what failed, and the remaining evidence.
+Use the global 3-iteration limit per step.
 
----
+### Step 5 — Record progress and finish cleanly
 
-### Step 5 — Record progress
+After a step passes verification:
+- update saved-plan checkboxes when a saved plan exists
+- keep the diff limited to approved scope
+- continue to the next step only if there is one
 
-After verification passes:
-
-- If using a saved plan file, mark the completed checkbox for that step.
-- Note any verification command and result in the final response.
-- Keep the git diff limited to the current plan scope.
-
-Then continue to the next dependency-ready step until all planned steps are complete or a blocker appears.
-
----
-
-### Step 6 — Final pass
-
-Before reporting completion:
-
-1. Inspect `git diff` to confirm only planned files changed.
-2. Run the final verification command from the plan, if present.
-3. If the implementation is non-trivial, recommend `/b-review` before commit or PR.
-4. If the implementation changed an API route or consumer-facing response shape, optionally call `gitnexus_api_impact` or `gitnexus_shape_check` before the final handoff.
-5. **Optional changed-scope validation** *(only when GitNexus passes the global gate and the implementation touched shared/exported boundaries or broad flows)*: call `gitnexus_detect_changes`; otherwise rely on diff inspection and Serena references.
-
-Do not commit unless the user explicitly requested a commit.
-
----
-
-## Output format
-
-````
-### b-implement: [task name]
-
-**Plan source**: [path / chat plan / slug]
-**Step progress**: [completed N/M, blocked at step X if applicable]
-
-#### Changes
-- `[file:line]` — [what changed and which plan step it satisfies]
-
-#### Verification
-```bash
-[command]
-```
-[result]
-
-#### Blockers / Decisions
-- [none / question for user / unresolved failure]
-
-#### Next
-- [run /b-review, continue next step, or user decision needed]
-````
-
----
+At the end:
+- inspect `git diff`
+- run the final relevant verification
+- recommend **b-review** for non-trivial changes
 
 ## Rules
 
-- Implement only approved scope. If scope is unclear, go back to `/b-plan`.
-- Broad work needs a saved plan, approved chat plan, or explicit approval statement. Do not treat a loose feature description as implementation-ready.
-- Work one plan step at a time and verify before moving on.
-- Never overwrite unrelated user changes.
-- Never invent missing requirements or product decisions.
-- Prefer symbol-aware edits for code and minimal apply_patch-style edits for prose/config.
-- Do not refactor opportunistically while implementing a feature step.
+- Implement only approved or clearly scoped work.
+- Preserve unrelated user changes.
+- Do not add opportunistic refactors, compatibility code, or side cleanup.
+- Stop for new decisions instead of guessing.
+- Small direct implementation requests may stay lightweight, but they still need a real verification step.
+- Do not commit unless explicitly asked.

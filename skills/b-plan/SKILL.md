@@ -1,7 +1,7 @@
 ---
 name: b-plan
 description: >
-  Think before coding. ALWAYS invoke when the user says "plan", "thiết kế", "how should I approach", "lên kế hoạch", "nên bắt đầu từ đâu", or the task spans more than 2 files or has unclear scope. Decomposes work, evaluates approaches, and writes plans. Unlike b-implement, b-plan decides what to build; it does not execute approved steps.
+  Think before coding. ALWAYS invoke when the user says "plan", "thiết kế", "how should I approach", "lên kế hoạch", "nên bắt đầu từ đâu", or the task spans more than 2 files or has unclear scope. Decomposes work, chooses an approach, and writes execution-ready plans. Unlike b-implement, b-plan decides what to build; it does not execute approved steps.
 compatibility: opencode
 metadata:
   suite: b-skills
@@ -11,259 +11,124 @@ metadata:
 
 $ARGUMENTS
 
-Think before coding. Lock scope, evaluate approaches, decompose into ordered steps,
-surface risks and unknowns, then produce a clear plan file before any implementation.
+Think before coding. Lock scope, choose the smallest viable approach, and produce a plan that a fresh agent can execute without re-deciding the work.
 
-If `$ARGUMENTS` is provided, treat it as the task description — skip asking "what do you want to build?" and proceed directly with the stated task. Ask only for missing context (constraints, greenfield vs existing, issue URL).
+If `$ARGUMENTS` is present, treat it as the task description and proceed. Ask only for missing context that blocks safe planning.
 
 ## When to use
 
-- Task involves more than 2 files or multiple layers (API, DB, service, UI).
-- Task has unclear scope or multiple valid approaches — need a decision.
-- User is about to implement something non-trivial and hasn't thought through the order.
-- Refactoring, architecture changes, or new feature integration.
-- User says: "plan", "thiết kế", "how should I approach X", "lên kế hoạch", "nên bắt đầu từ đâu".
+- The task is broad, unclear, or likely spans more than 2 files.
+- There are multiple valid approaches and the choice matters.
+- The user wants a plan, architecture direction, or ordered implementation steps.
+- A refactor is still vague and not yet a concrete rename, extract, move, inline, or delete.
 
 ## When NOT to use
 
-- Simple single-file edit or ≤2-step task → do it directly.
-- Something is broken → use **b-debug**.
-- An approved plan is ready to execute → use **b-implement**.
-- Quick fact or library lookup → use **b-research**.
-- Mechanical refactoring with a clear target already defined → use **b-refactor**.
+- The task is a trivial local edit and can be done directly.
+- The user already approved a clear plan or gave a small clearly scoped implementation request -> use **b-implement**.
+- The request is a concrete behavior-preserving mechanical transformation -> use **b-refactor**.
+- The blocker is external docs or library behavior -> use **b-research**.
+- Something is broken -> use **b-debug**.
 
 ## Tools required
 
-- `sequentialthinking` — from `sequential-thinking` MCP server *(optional, for approach evaluation and decomposition when available)*.
-- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `find_declaration`, `find_implementations`, `search_for_pattern` — from `serena` MCP server *(required for symbol-aware modify-existing-code tasks; optional for greenfield)*.
-- `resolve-library-id`, `query-docs` — from `context7` MCP server *(optional, for inline library verification — simple lookups only)*.
-- `brave_web_search` — from `brave-search` MCP server *(optional, for tool/approach comparison — simple lookups only)*.
-- `firecrawl_scrape` — from `firecrawl` MCP server *(optional, for scraping issue/ticket URL when present)*.
-- `gitnexus` — from `gitnexus` MCP server *(optional radar for graph-shaped repo discovery: architecture, cross-file impact, multi-repo mapping — only when indexed and fresh)*.
+- `sequentialthinking` — from `sequential-thinking` MCP server *(optional, for real approach trade-offs or decomposition ambiguity)*.
+- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `find_declaration`, `find_implementations`, `search_for_pattern` — from `serena` MCP server *(preferred for planning against existing code)*.
+- `resolve-library-id`, `query-docs` — from `context7` MCP server *(optional, for a narrow library/API check discovered during planning)*.
+- `firecrawl_scrape` — from `firecrawl` MCP server *(optional, for an issue or ticket URL the user already provided)*.
+- `gitnexus` — from `gitnexus` MCP server *(optional radar for graph-shaped planning when indexed and fresh)*.
 
-Fallbacks follow the global MCP rules. If context7 or brave-search cannot answer a required tech lookup, delegate to `/b-research`. If firecrawl is unavailable, keep issue/ticket URLs as plain references.
+Fallbacks follow the global MCP rules. If the task depends on broader external research, stop and use **b-research** instead of stretching planning into research.
 
-Graceful degradation: ✅ Possible — core planning works without MCPs using inline reasoning plus bash/read.
-
-## Steps
-
-### Step 0 — Mode select
-
-Choose the lightest mode that fits the task before any other work.
-
-- **Quick mode** — scoped daily tasks: clear end state, low risk, usually ≤2 files, no DB/schema migration, no public API contract change, no security-sensitive behavior. Output a concise 2–5 step chat plan with a verification step. After approval, hand off to **b-implement** unless the user explicitly asks to continue in the same session.
-- **Full mode** — unclear, high-risk, multi-layer, or >2-file work. Run all steps below and write a plan file to `.opencode/b-plans/`.
-
-**Selection rule**: choose yourself from task complexity; do not ask the user. Announce the chosen mode in one sentence and why. Ask only when both modes are genuinely valid and preference matters.
-
-**Escalate quick → full** when discovery reveals broad references, unclear requirements, a structural decision, external API uncertainty, or deployment risk.
-
-Broad or unclear refactors stay with `b-plan` until reduced to concrete mechanical transformations that can be handed off to `b-refactor`.
-
-In quick mode: skip Steps 2–6 unless escalation triggers; produce the chat plan, ask for approval, then hand off to **b-implement** or proceed only when the user explicitly asks to continue.
-
----
-
-### Step 1 — Scope lock
-
-Confirm what is being built before scanning any code.
-
-**If the task is clearly scoped** (user already described the full feature, no ambiguity):
-- State the interpreted scope in one sentence and proceed. Use the final plan approval in Step 6 as the confirmation gate.
-- Note greenfield vs existing — if existing → continue to Step 2; if greenfield → skip Step 2.
-
-**If the task has unclear scope**:
-- Ask the three scope questions:
-  - **What is the end state?** What does "done" look like exactly?
-  - **What are the hard constraints?** Performance, compatibility, deadlines, must-not-break areas.
-  - **What does success look like?** 2–4 concrete, verifiable criteria.
-- Ask once. If still unclear, ask one focused follow-up. Don't loop.
-
-**Unknown-handling rule** *(enforced throughout all steps)*: ask immediately for behavioral, product, priority, integration-contract, or naming decisions that the codebase cannot answer. For low-risk engineering details with one conventional answer, proceed only if you record the assumption explicitly and it does not change user-visible behavior. Never hide assumptions.
-
-**Decision accumulation** *(running record across all steps)*: each time a user answer, codebase finding, or approach choice settles a behavioral or design question, record it as a numbered confirmed decision. Compile into `## Confirmed decisions` in the plan. Format each entry as a single, unambiguous, implementation-actionable statement — no hedging, no "consider", no "may". Example: `"Realtime update must update the existing VoiceCall matched by VendorCallKey; if soft-deleted, insert a new row instead."`
-
-**Feasibility check** *(inline when scope is non-trivial)*:
-- Does the current architecture support this? Use Serena symbol discovery and reference tracing where supported; native read/bash for prose, config, and exact strings.
-- Any blockers? (Missing infrastructure, incompatible dependencies, architectural gaps.)
-- Effort estimate: S (hours) / M (1–2 days) / L (3–5 days) / XL (1–2 weeks) / XXL (weeks+).
-- If blockers found: state clearly. If no workaround exists, do not proceed until resolved.
-- If the task looks XL–XXL and depends on an unfamiliar pattern or unverified library, stop and run /b-research first when the answer affects feasibility, architecture, external contracts, security, or migration order.
-
----
-
-### Step 2 — Scan existing code *(existing-code tasks only)*
-
-Use GitNexus only for graph-shaped discovery under the global freshness/target gate; skip it for known-file, known-symbol, or local-only planning. Then follow this order:
-
-1. **Graph-level discovery first** *(only when GitNexus applies)* — use repo context/query to understand architecture or cross-module boundaries, then confirm exact symbols with Serena. If the plan changes an API route or consumer contract, prefer `gitnexus_api_impact` or `gitnexus_route_map`. If it changes an MCP/RPC tool handler, use `gitnexus_tool_map`. Stop the GitNexus leg once the subsystem/route/contract surface is clear; do not keep using GitNexus for symbol bodies that Serena can inspect directly.
-2. **Initialize project knowledge** — call `check_onboarding_performed`. If false, call `onboarding` once.
-3. **Discover symbols** — `find_symbol` on the main function, class, command, handler, or module involved in the change.
-4. **Pattern-search code when names are fuzzy** — use `search_for_pattern` when the task is described by behavior, code shape, or log text rather than a stable symbol name.
-5. **Inspect structure** — `get_symbols_overview` on each relevant file to see which symbols are worth reading.
-6. **Resolve owners** — use `find_declaration` when the task description or code path points at a call site, imported helper, or usage rather than the owning definition.
-7. **Trace polymorphic boundaries** — use `find_implementations` when the change hangs off an interface, abstract class, or protocol.
-8. **Trace references** — `find_referencing_symbols` on key exported/shared symbols to confirm callers and dependents.
-9. **Read narrowly** — only if the above leaves ambiguity: native `read` on the exact section needed; native bash search for exact strings.
-
-**Issue/ticket** *(optional context source — only when the user provides or explicitly mentions one)*:
-- If a URL is provided: `firecrawl_scrape` with `formats: ["markdown"], onlyMainContent: true`. Trim to 800 words; use as **requirements context** for Steps 3–5. If <200 chars or 403: store the URL as a plain reference.
-- If a ticket ID (not URL) is provided: store as-is; no fetch.
-- Do not interrupt ordinary planning just to ask for an issue URL.
-
-**Goal**: reference real paths and symbols. A plan that names wrong files or non-existent functions fails at execution. Never paste full file contents into the plan — only names and line references that matter.
-
----
-
-### Step 3 — Evaluate approaches *(conditional)*
-
-Run if the task has a structural decision: new module vs extending existing, sync vs async, REST vs event-driven, library A vs B.
-
-1. List 2–3 viable approaches with key trade-offs (complexity, performance, coupling, reversibility).
-2. Use `sequentialthinking` to evaluate them against the current constraints.
-3. Make the reasoning useful for execution: chosen approach, alternatives rejected, the assumption that could flip the decision, the first implementation step.
-4. Pick one and document in `## Decision`.
-5. Add the approach choice and structural trade-offs to the running confirmed decisions list.
-
-Skip this step if the approach is already obvious — do not invent choices where none exist.
-
----
-
-### Step 4 — Decompose
-
-Use `sequentialthinking` to break the chosen approach into atomic, ordered steps:
-
-- Each step: independently executable, independently verifiable.
-- Ordered by dependency — not by what's easiest.
-- Usually 4–8 steps. Split into phases if >10.
-- Each step answers: *what*, *why now*, *done when* — and must include:
-  - **Exact file paths** and **symbol names** (e.g. `src/auth/middleware.ts:validateToken()`).
-  - **Current state** of anything being changed.
-  - **Concrete done-when** verifiable independently (test command, observable output, specific assertion).
-  - Any **API signatures**, **config keys**, or **contract details** needed to implement without further lookup.
-  - **`Exact [X]:`** sub-bullets for any implementation choices that must be locked in to prevent implementor drift — e.g. `Exact insertion points:`, `Exact helper responsibilities:`, `Exact fields to create:`. Add whenever the step would otherwise leave a structural decision open.
-- **Full-mode handoff standard: 90%+** — if a fresh agent with zero prior context would need to ask a follow-up question to implement the step, the step is not detailed enough. Add the missing detail now. Do not apply this level of detail to quick-mode chat plans.
-- Ask sequentialthinking for output in this shape: `Goal`, `Constraints`, `Ordered steps`, `Dependencies`, `Open questions`, `First action`.
-
-**Impact checkpoint** *(modify-existing-code only)*:
-- `find_referencing_symbols` on the main symbol/module being changed.
-- If GitNexus applies under the global gate, use `gitnexus impact` or `gitnexus context` to estimate broad blast radius before narrowing with Serena references. Use `gitnexus_api_impact` for planned API route changes and `gitnexus_tool_map` for planned tool-handler changes.
-- If the plan explicitly includes renaming an exported/public symbol, call out broad references as migration risk and leave the actual rename to `b-implement` or `b-refactor`.
-- Wide downstream impact → split into smaller phases or add rollback steps.
-
-**Deploy safety** — annotate any step that matches:
-- New routes/endpoints → `⚠️ consider feature flag`
-- DB schema changes → `⚠️ deploy order: [before / after] app deploy`
-- New external service calls → `⚠️ verify availability in target environment`
-
-**Planned touch points** — after decomposing, compile `## Planned touch points`: one bullet per file/class that will change, with the exact path and what is added/changed/removed at method or field level.
-
-**Mapping/contract table** *(conditional — only when the task involves field mapping, data transformation, or protocol contracts)*: produce `## Mapping outline` listing every source → target mapping with repo field names, types, and normalization notes.
-
----
-
-### Step 5 — Identify unknowns
-
-Flag anything unresolved before handing off:
-
-| Type | Action |
-|---|---|
-| **User decision** — behavioral choice, priority, integration contract, naming, or anything the codebase can't answer | ⛔ Stop. Ask the user immediately. Do NOT write the plan until resolved. |
-| **Tech lookup** — library API behavior, yes/no capability, 2-option comparison | Resolve inline: `query-docs` (context7) or `brave_web_search`. Append `→ Confirmed: [finding]`. |
-| **Complex research that affects feasibility/architecture/contracts/security/migration order** | ⛔ Stop. Use /b-research first, then resume planning with the confirmed result. |
-| **Complex research that is informational only** | Mark as `Follow-up — optional /b-research: [topic]`. Do not block the plan. |
-
-**Clarification gate** — before Step 6, batch all outstanding blocking user decisions and blocking research needs into one message and wait for answers/results. Only write the plan after every blocking unknown is resolved.
-
----
-
-### Step 6 — write plan
-
-**Quick mode**: keep the plan in chat unless the user asks for a saved plan. Present the step list, ask for approval. After approval, hand off to **b-implement** unless the user explicitly asks to continue in the same session.
-
-**Full mode**: write to `.opencode/b-plans/[task-slug].md` in the **current project root only**.
-
-- `task-slug` = kebab-case, e.g. `add-retry-logic`, `refactor-auth-module`.
-- Create `.opencode/b-plans/` if it doesn't exist.
-- Show the exact saved path after writing.
-
-Present a short summary (scope + step count) and ask for confirmation. Update and re-confirm if the user requests changes. After approval, hand off to **b-implement** unless the user explicitly asks to continue in the same session.
-
----
-
-## Output format
-
-Saved plan files are always English. Chat responses follow the global language rule.
-
-```markdown
-# Plan: [task name]
-
-**Scope**: [one sentence]
-**End state**: [what "done" looks like]
-**Created**: [date]
-**Issue**: [URL, ticket ID, or omit entirely]
-
-## Feasibility *(only if assessed in Step 1)*
-**Effort**: [S/M/L/XL/XXL]
-**Blockers**: [none / description]
-**Assumptions confirmed**: [list]
-
-## Decision *(only if multiple approaches were evaluated)*
-**Chosen approach**: [what was selected]
-**Alternatives rejected**: [option — reason]; [option — reason]
-**Why**: [1–2 sentence rationale]
-
-## Confirmed decisions
-1. [Unambiguous, implementation-actionable statement.]
-2. ...
-
-## Mapping outline *(only if task involves field mapping or protocol contracts)*
-- `[source field]` → `[target field]` — [normalization notes]
-...
-
-## Planned touch points
-- `[exact/path/to/File.ext]` — [what is added / changed / removed, at method or field level]
-...
-
----
+Graceful degradation: ✅ Possible — planning still works with native reads plus inline reasoning.
 
 ## Steps
 
-- [ ] 1. [Step name]
-  - What: ... *(exact file path + symbol name)*
-  - Current state: ... *(what exists today that will change)*
-  - Why now: ...
-  - Done when: ... *(verifiable by a fresh agent — test command, output, assertion)*
-  - Exact [X]: ... *(optional — lock in implementation choices)*
+### Step 1 — Pick the lightest planning mode
 
-- [ ] 2. [Step name]
-  ...
+Choose the lightest mode that still removes ambiguity:
+- **Quick mode**: clear scoped work, low risk, usually local, no schema change, no public contract change. Return a concise 2–5 step chat plan with a verification step.
+- **Full mode**: unclear, multi-layer, high-risk, or more than 2 files. Write a saved plan to `.opencode/b-plans/`.
 
-## Dependencies
-- Step 3 requires Step 1 to be complete
-- Steps 4 and 5 can run in parallel
+Choose the mode yourself. Only ask the user when both modes are genuinely valid and their preference changes the output.
 
-## Risks
-- [Risk]: [mitigation or fallback]
+Escalate quick -> full if discovery reveals broad references, unclear requirements, public contract risk, security-sensitive behavior, or deployment risk.
 
-## Unknowns *(resolve before starting)*
-- Need /b-research before implementation: [topic] — [what to verify]
-- Need decision: [question for user]
-- Assuming: [assumption that may not hold]
-```
+### Step 2 — Lock scope and decisions
 
----
+State the interpreted scope in one sentence.
+
+If the task is still ambiguous, ask the smallest set of questions that blocks safe planning:
+- end state
+- hard constraints
+- success criteria
+
+Record confirmed decisions as short implementation-ready statements. If a decision is behavioral, contractual, or naming-related and the codebase cannot answer it, ask the user instead of inferring it.
+
+If the task depends on unresolved external research that affects feasibility, architecture, contracts, security, or migration order, stop and use **b-research** before finishing the plan.
+
+### Step 3 — Scan existing code when relevant
+
+Skip this step for greenfield work.
+
+Use GitNexus only when the task is graph-shaped or the area is unfamiliar. Stop once the subsystem, route, consumer set, or boundary is clear.
+
+Then use Serena in this order:
+1. `check_onboarding_performed` -> `onboarding` if needed.
+2. `find_symbol` for the main owner.
+3. `search_for_pattern` when the task is described by behavior or code shape instead of a stable symbol.
+4. `get_symbols_overview` on the relevant files.
+5. `find_declaration` when the task points to a call site or helper usage.
+6. `find_implementations` for interfaces or abstract contracts.
+7. `find_referencing_symbols` on shared symbols.
+8. Native `read` only for the exact section still needed.
+
+If the user already provided an issue URL, you may scrape it as planning context. Do not pause the workflow just to ask for a ticket link.
+
+### Step 4 — Choose the approach only if it matters
+
+If there is a real structural choice, list 2–3 viable approaches, compare them against the current constraints, choose one, and record why.
+
+If the approach is obvious, skip this step. Do not invent fake alternatives.
+
+### Step 5 — Decompose into execution steps
+
+Produce 3–8 dependency-ordered steps. Each step should say:
+- what changes
+- exact file paths or symbol names when known
+- why now
+- how to verify `Done when`
+
+For full-mode plans, also include:
+- `## Confirmed decisions`
+- `## Planned touch points`
+- `## Dependencies`
+- `## Risks`
+- `## Unknowns`
+
+Add deployment notes only when they are real: feature flags, migration order, external dependency readiness, or rollback risk.
+
+If the task involves field mapping or protocol translation, add a small mapping outline instead of burying it in prose.
+
+### Step 6 — Deliver the plan
+
+Quick mode:
+- keep the plan in chat
+- ask for approval
+- hand approved execution to **b-implement** unless the user explicitly asks to continue in the same session
+
+Full mode:
+- write an English plan to `.opencode/b-plans/<task-slug>.md`
+- show the saved path
+- ask for approval
+
+The plan is complete only when a fresh agent could execute it without re-deriving the design.
 
 ## Rules
 
-- Full mode must write to `.opencode/b-plans/` — never leave full-mode plans only in chat.
-- Quick mode may stay in chat unless the user asks for a saved plan.
-- Always write saved plan files in English.
-- Do not implement until the user approves the plan. After approval, use **b-implement** unless the user explicitly asks to continue in the same session.
-- Do not over-plan scoped quick tasks — keep them to the smallest useful step list and verification gate.
-- Steps must be ordered by dependency — wrong order causes cascading failures.
-- Keep steps atomic — one clear action per step.
-- Surface risks and assumptions proactively.
-- Split into phases if 10+ steps.
-- **Never self-infer ambiguous requirements** — ask the user immediately. Low-risk implementation assumptions are allowed only when recorded and non-behavioral.
-- **Handoff standard: 90%+** — every step must be detailed enough that a fresh agent with zero prior context can implement it without asking a follow-up question.
+- Do not implement while planning.
+- Keep quick plans lean; do not turn every small task into a full document.
+- Save only full-mode plans to `.opencode/b-plans/`.
+- Surface blocking unknowns instead of hiding them in vague prose.
+- Broad or unclear refactors stay in **b-plan** until they reduce to concrete mechanical steps for **b-refactor**.
+- After approval, treat the approved plan as the execution source of truth.

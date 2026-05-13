@@ -11,240 +11,122 @@ metadata:
 
 $ARGUMENTS
 
-One entry point for external knowledge. Detect whether the question is a quick lookup or full research, answer in the lightest mode that fits, and escalate automatically when the first pass is not enough.
+Handle external knowledge with the lightest mode that can answer correctly. Start with
+direct lookup when possible, move to source-backed synthesis only when the question or
+evidence quality requires it.
 
-If `$ARGUMENTS` is provided, treat it as the research question — proceed directly to Step 1. Do not ask the user to restate it.
+If `$ARGUMENTS` is provided, treat it as the research question and proceed directly.
 
 ## When to use
 
-- Single-fact lookup: method signature, config key, yes/no capability, minimal example.
-- Library/framework/SDK docs, setup, configuration, migration, feature support.
-- Comparisons, deep dives, multi-source synthesis, or cited reports.
-- User says: "tìm hiểu", "research", "deep dive", "so sánh", "tổng hợp", "lookup", "tra cứu nhanh", "what's the API for", "method signature of X", "config key for Y".
+- Library, framework, SDK, or API questions.
+- Config keys, method signatures, setup details, capability checks, or migration facts.
+- Comparisons, deep dives, cited reports, recency-sensitive topics, or multi-source synthesis.
+- Questions about known URLs, local docs, PDFs, spreadsheets, or other source material.
 
 ## When NOT to use
 
-- Runtime bug or failure → use **b-debug**
-- Need to decide what to build or sequence work → use **b-plan**
-- Pre-PR correctness review → use **b-review**
+- Runtime bug tracing or root-cause analysis -> use **b-debug**.
+- Deciding what to build or how to sequence work -> use **b-plan**.
+- Pre-PR review of changed code -> use **b-review**.
 
 ## Tools required
 
-- **Quick mode primary**: `resolve-library-id`, `query-docs` — from `context7` MCP server for library/framework API questions
-- **Search**: `brave_web_search` — from `brave-search` MCP server; `firecrawl_search` as fallback when Brave is unavailable or too sparse
-- **NEWS full mode**: `brave_news_search` — from `brave-search` MCP server
-- **Visual/reference lookups**: `brave_image_search` *(optional, for UI/design/screenshot questions)*; `brave_summarizer` *(optional triage aid only when the connected Brave plan supports it)*
-- **Full-mode page reads**: `firecrawl_scrape`, `firecrawl_parse` — from `firecrawl` MCP server
-- **Full-mode fallbacks**: `firecrawl_map`, `firecrawl_extract`, `firecrawl_interact`, `firecrawl_interact_stop`
-- **Deep research fallback**: `firecrawl_agent`, `firecrawl_agent_status` *(optional, only after search + scrape/map/interact are insufficient)*
-- **Bounded known-site crawl**: `firecrawl_crawl`, `firecrawl_check_crawl_status` *(optional, only when the user asks for comprehensive coverage of a known site section)*
-- **Conflict resolution**: `sequentialthinking` — from `sequential-thinking` MCP server *(optional)*
+- `resolve-library-id`, `query-docs` — from `context7` MCP server *(primary for library/framework API lookups)*.
+- `brave_web_search`, `brave_news_search`, `brave_image_search` — from `brave-search` MCP server *(search, news, and visual-reference discovery as needed)*.
+- `firecrawl_search`, `firecrawl_scrape`, `firecrawl_parse` — from `firecrawl` MCP server *(source-backed page and local-document reading)*.
+- `firecrawl_map`, `firecrawl_interact`, `firecrawl_interact_stop`, `firecrawl_extract` — from `firecrawl` MCP server *(optional, for JS-heavy pages or structured extraction)*.
+- `firecrawl_agent`, `firecrawl_agent_status` — from `firecrawl` MCP server *(last resort for deep autonomous research only after simpler paths fail)*.
+- `sequentialthinking` — from `sequential-thinking` MCP server *(optional, for resolving materially conflicting sources)*.
 
-If context7 is unavailable: continue with Brave for library questions.
-If brave-search is unavailable:
-- quick mode with a clear Context7 answer may still complete;
-- use `firecrawl_search` for full-mode search fallback;
-- otherwise stop only when neither Brave nor Firecrawl search is available.
-If `brave_image_search` or `brave_summarizer` is unavailable or unsupported by the connected Brave plan: skip those branches and continue with ordinary Brave/Firecrawl search.
-If firecrawl is unavailable:
-- quick mode may still complete without scraping;
-- full mode may continue only when official docs, changelogs, source repos, or Context7 provide enough evidence without page scraping; label the result as limited;
-- stop only when the question requires page extraction or multiple source reads that cannot be performed without Firecrawl.
-If `firecrawl_parse`, `firecrawl_interact`, or `firecrawl_agent` is unavailable: continue with the simpler `scrape`/`map`/manual synthesis path and label the limitation when it affects confidence.
-If sequential-thinking is unavailable: summarize conflicts inline as `Source A says X / Source B says Y / Best fit: Z`.
+Fallbacks follow the global MCP rules. If Context7 is unavailable, use official docs via search. If Firecrawl is unavailable, continue only when search results or known official sources are enough and label the answer as limited when confidence drops.
 
-Graceful degradation: ⚠️ Partial — quick mode works with Context7 and/or Brave; full mode prefers live search plus Firecrawl, but can produce a clearly limited answer from official/search evidence when scraping is unavailable.
+Graceful degradation: ⚠️ Partial — quick lookup remains strong with Context7 or authoritative search; deep source-backed work is weaker without page tools.
 
 ## Steps
 
-### Step 1 — Detect mode
+### Step 1 — Classify the mode
 
-Choose the lightest mode that can answer correctly.
+Choose the lightest mode that can answer correctly:
 
-If the user provides a known URL, local file path, or document attachment, prefer direct extraction from that source over open-ended web search.
+- **Quick lookup** — one fact, one API detail, one config key, a yes/no capability, or a tiny example.
+- **Source-backed answer** — one or more concrete sources must be read before answering confidently.
+- **Deep research** — comparison, report, multi-source synthesis, recency-sensitive topic, or user-requested deep dive.
 
-Use **quick mode** when the question is likely answerable in 1–3 sentences or a tiny code snippet:
-- method signature
-- config key or flag
-- yes/no capability
-- minimal example
-- one specific API behavior
+If the user already provided a URL, local file path, or document, go directly to extraction instead of doing open-ended search.
 
-Use **full mode** when the question needs:
-- comparisons
-- multiple sources
-- citations or report output
-- recency or news
-- reading full pages or extracting structured details from pages
-- extracting content from a local PDF/Doc/Sheet/HTML file
-- screenshot, image, or visual-reference collection
+### Step 2 — Gather evidence
 
-If uncertain, start in quick mode and escalate automatically to full mode if the answer needs more than 2 tool calls, more than 1 source, or any page scraping.
+For quick lookup:
 
-### Step 2 — Quick mode
+1. Use Context7 first for library or framework APIs.
+2. Otherwise run one focused web search.
+3. Answer immediately only when the result is authoritative and directly responsive.
+4. Cap quick mode at 2 tool calls and do not scrape in quick mode.
 
-1. Classify the question:
-   - **Library API / SDK / framework** → Context7 first
-   - **General tool / config / web fact** → Brave first
-2. For library questions:
-   - Call `resolve-library-id`
-   - Call `query-docs` with the exact feature/question
-   - If Context7 gives a clear answer, stop and return the quick output format
-3. If Context7 has no clear answer, or the question is not library-specific:
-   - Run one `brave_web_search` with the exact question
-   - Return the answer directly only when one official or otherwise high-authority result directly answers the question in the result content/snippet
-   - If the result is a low-context snippet, SEO page, forum guess, or ambiguous community answer, escalate to full mode instead of over-trusting it
-4. Do not scrape, crawl, or synthesize in quick mode.
-5. If a confident direct answer is still not possible, continue to Step 3 instead of telling the user to switch skills.
+For source-backed or deep research:
 
-### Step 3 — Full-mode type classification
+1. Prefer official docs, release notes, source repos, and vendor materials first.
+2. Use news search for recency-sensitive topics and image search only for genuinely visual questions.
+3. Scrape or parse only the highest-signal pages or local documents.
+4. Use structured extraction when the user needs fields, params, prices, or other structured data.
+5. If a page is JS-heavy, try `firecrawl_map` or `firecrawl_interact` before escalating further.
+6. Use `firecrawl_agent` only after search plus scrape/map/interact are insufficient, or when the user explicitly asks for deep autonomous research.
 
-Classify the query into one of six full-mode types:
+### Step 3 — Synthesize
 
-| Type | Signals | Strategy |
-|---|---|---|
-| **VERSION** | "latest version", "what's new", "changelog", "release notes", "current version of X" | Official docs/changelog first, then community context |
-| **COMPARE** | "vs", "so sánh", "which is better", "A or B", "compare X and Y" | Balanced coverage for both sides |
-| **NEWS** | "recent", "2025/2026", "mới nhất", "latest news", time-sensitive topics | `brave_news_search` with freshness |
-| **HOWTO / API** | "how to", "cách dùng", "tutorial", "setup", "configure", API usage | Context7 first, then official/community sources |
-| **VISUAL** | "what does it look like", "UI inspiration", "screenshot", "logo", "design reference" | `brave_image_search`, then scrape source pages if provenance matters |
-| **LOCALDOC** | local `.pdf`, `.docx`, `.xlsx`, `.xls`, `.html`, `.htm`, attachment paths | `firecrawl_parse` directly, then synthesize |
-
-If the topic is library/framework API, also run Step 4 before Step 5.
-
-### Step 4 — Context7 lookup *(HOWTO/API full mode only)*
-
-- Detect the installed version from manifests/lockfiles when possible.
-- Use `resolve-library-id` to find the right docs target.
-- Use `query-docs` for the specific API/feature.
-- If Context7 has no match, continue with web search.
-- If Context7 returns a different major version than the project, flag the mismatch.
-- Use Context7 for API accuracy, but do not rely on it as the only source in full mode.
-
-### Step 5 — Search
-
-Apply the search strategy for the full-mode type:
-
-**VERSION**
-- Prefer the official changelog or release notes page first.
-- Then search for community context.
-
-**COMPARE**
-- Run two balanced Brave searches, one per option.
-- Include at least one neutral source.
-
-**NEWS**
-- Use `brave_news_search`.
-- Start with `freshness: "pd"`, widen to `"pw"`, then `"pm"` when the topic is not breaking news. Use `"py"` only for annual/long-running topics.
-- Include the current year in the query.
-
-**HOWTO / API**
-- After Context7, search for official docs, examples, and high-quality community explanations.
-
-**VISUAL**
-- Use `brave_image_search` first.
-- If an image result needs provenance, pricing, or implementation context, scrape the originating page before making claims.
-
-**LOCALDOC**
-- Skip open-ended web search.
-- Go directly to `firecrawl_parse` in Step 6.
-
-Universal rules:
-- Use English queries unless the topic is Vietnamese-specific.
-- Prefer 3 high-quality sources over 5 mixed ones.
-- Rank sources in this order: official docs/changelogs, source repository or release artifacts, vendor engineering posts, reputable community references, then low-context snippets/SEO content.
-- If Brave is unavailable or returns fewer than 3 relevant results, retry with `firecrawl_search`.
-- If the connected Brave plan supports summarization and the query is broad, you may run `brave_web_search` with summary enabled and use `brave_summarizer` only as a triage aid. Do not cite the summarizer output as a primary source.
-
-### Step 6 — Scrape or extract
-
-- Scrape only high-signal pages.
-- Use `firecrawl_scrape` with `formats: ["markdown"]` and `onlyMainContent: true`.
-- For local documents, use `firecrawl_parse` instead of hosting or scraping them indirectly. Choose `markdown` for full reading and structured extraction for targeted fields.
-- For structured fields, params, prices, or specs, prefer structured extraction. Ask for or infer the exact output fields first, then use `firecrawl_extract` or `firecrawl_scrape` with JSON options when supported.
-- Default cap: 3 URLs; 5 for COMPARE queries.
-- If JS-rendered pages return empty content, retry once with `waitFor: 5000`, then fall back to `firecrawl_map` if needed.
-- If `waitFor` plus `firecrawl_map` still cannot expose the relevant content on a known page, use `firecrawl_interact` for the smallest needed click/search/expand flow, then call `firecrawl_interact_stop` when done.
-- Use `firecrawl_agent` only as a last resort for multi-source or heavily dynamic research where search + scrape/map/interact still cannot reach the content. Poll with `firecrawl_agent_status` patiently until completion or failure.
-- Use `firecrawl_crawl` only when the user asks for comprehensive coverage of a known site section; set `limit <= 10` and `maxDiscoveryDepth <= 2`, then poll with `firecrawl_check_crawl_status`.
-- If fewer than 2 usable sources remain after quality filtering, stop unless a single official source is sufficient for the specific fact. Label single-source answers clearly.
-
-### Step 7 — Synthesize
-
-- Answer only from fetched sources.
-- Note freshness/date when available.
-- If sources materially disagree, use `sequentialthinking` when available.
-- Discard sources that are AI-generated, content-farm-like, stale without a date, or only restate search snippets unless no better source exists; if used, label the limitation.
-- Choose the output format that matches the mode:
-  - quick output for resolved quick questions
-  - full report for all full-mode work
+1. Answer only from gathered evidence.
+2. For quick lookup, stay concise and direct.
+3. For source-backed or deep research, cite the sources that support the answer.
+4. Note freshness or limitations when the answer depends on recent information or incomplete access.
+5. If authoritative sources materially disagree, use `sequentialthinking` when available to explain the best fit.
 
 ## Output format
 
 ### Quick lookup
 
 ```
-### `[Library or Topic]` — `[question]`
+### [topic]
 
-[1–3 sentence direct answer]
+[1-3 sentence direct answer]
 
-**Example:**
+**Example:** *(optional)*
 ```[lang]
-// minimal working example
+[minimal example when it helps]
 ```
 
-**Source**: Context7 (`library-id`) / Brave Search
+**Source**: [Context7 or authoritative URL]
 ```
 
-Keep it short. No citations list, no report structure, no recommendations unless the question explicitly asks.
-
-### Full research report
+### Source-backed or deep research
 
 ```
-## [Topic / Research Question]
+## [research question]
 
-> 📅 Research date: [today's date] | Sources: [N scraped] | Freshness: [Official/Community/Mixed]
+### Answer
+[direct answer]
 
-### Summary
-[2–4 sentence direct answer]
-
-### Key Findings
-- **[Finding 1]**: ... *(Source: [Official] / [Community])*
-- **[Finding 2]**: ...
-- **[Finding 3]**: ...
-
-### [Optional: Comparison Table or Deep Dive Section]
-...
-
-### ⚖️ Conflicting findings *(optional)*
-[structured reasoning]
+### Key findings
+- [finding]
+- [finding]
 
 ### Limitations
-- [Unanswered gap]
-- [Discarded or failed sources]
-- [Potential staleness]
+- [gap, staleness, or unavailable source]
 
 ### Sources
-- [Official] [Page Title](URL) — [what it contributed]
-- [Community] [Page Title](URL) — [what it contributed]
-- Context7 (`library-name`) — versioned API reference for [feature]
-
-### Recommended next steps *(optional)*
-- [What to do now]
+- [title](URL)
+- Context7 (`library-id`) for [feature]
 ```
 
 ## Rules
 
-- Never ask the user to choose between lookup vs research — b-research decides or escalates itself.
-- Start with quick mode when it plausibly fits, then escalate automatically if the answer needs more than 2 tool calls, more than 1 source, or any page scraping.
-- Quick mode caps at 2 tool calls before escalating or answering.
+- Never ask the user to choose between lookup and research; `b-research` decides and escalates itself.
+- Use the lightest mode that can answer correctly.
+- Do not send private stack traces, internal URLs, customer data, secrets, or proprietary code to public web tools without explicit approval; sanitize queries when possible.
 - Never scrape in quick mode.
-- Always attempt Context7 first for library/framework API questions.
-- Prefer `firecrawl_parse` for local docs and `firecrawl_interact` for known JS-heavy pages before jumping to autonomous research.
-- Do not use `firecrawl_agent` before trying search + scrape/map, unless the user explicitly asks for deep autonomous research.
-- Use `brave_image_search` only for genuinely visual/reference queries; ordinary factual questions stay on web/news/docs search.
-- In full mode, scrape or extract before making factual claims from web results when page tools are available. If scraping is unavailable, use only official/high-authority search evidence and label the limitation.
-- Prefer authoritative sources over aggregators.
-- Do not answer quick-mode web questions from weak snippets; escalate to full mode when authority or context is unclear.
-- Cite every full-mode claim with its source URL or `Context7 (library-name)`.
-- Never fill factual gaps from training data in full mode; use `Limitations` instead.
+- Use Context7 first for library and framework API questions.
+- Prefer 2-4 authoritative sources over a wide pile of weak ones.
+- Do not force an example block for fact-only quick answers.
+- If only one authoritative source supports the answer, label it as single-source rather than pretending broader confirmation exists.
+- Do not use `firecrawl_agent` before the simpler search + scrape/map/interact path unless the user explicitly wants deep autonomous research.
+- Use a `Limitations` section instead of filling factual gaps from prior model knowledge.
