@@ -38,7 +38,7 @@ ambiguous.
 ## Tools required
 
 - `bash` — inspect git status/diff and run verification commands.
-- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol`, `rename_symbol`, `safe_delete_symbol` — from `serena` MCP server *(preferred for symbol discovery and code edits)*.
+- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `find_declaration`, `find_implementations`, `get_diagnostics_for_file`, `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol`, `rename_symbol`, `safe_delete_symbol` — from `serena` MCP server *(preferred for symbol discovery and code edits)*.
 - `resolve-library-id`, `query-docs` — from `context7` MCP server *(optional, for narrow library/API checks discovered during implementation)*.
 - `sequentialthinking` — from `sequential-thinking` MCP server *(optional, for resolving step-order ambiguity or failure triage)*.
 - `gitnexus` — from `gitnexus` MCP server *(optional radar for high-risk shared/exported symbol checks and post-change scope validation — only when indexed and fresh)*.
@@ -90,10 +90,12 @@ Follow this order:
 
 1. Locate the named symbol or file from the plan.
 2. Use `get_symbols_overview` before opening large source files.
-3. Use `find_referencing_symbols` when the step changes exported/shared behavior.
-4. Optionally call `gitnexus_impact` when GitNexus passes the global gate and the step changes a shared/exported boundary; confirm with Serena references.
-5. Apply the smallest edit that satisfies the step.
-6. Do not add unplanned abstractions, features, cleanup, or compatibility code.
+3. Use `find_declaration` when the plan names a call site, imported helper, or method usage but not the owning definition.
+4. Use `find_implementations` when the step targets an interface, abstract method, or polymorphic boundary.
+5. Use `find_referencing_symbols` when the step changes exported/shared behavior.
+6. Optionally call `gitnexus_impact` when GitNexus passes the global gate and the step changes a shared/exported boundary; confirm with Serena references.
+7. Apply the smallest edit that satisfies the step.
+8. Do not add unplanned abstractions, features, cleanup, or compatibility code.
 
 Use `rename_symbol`, `safe_delete_symbol`, and other refactor-oriented tools only when the approved plan explicitly calls for that mechanical transformation. If implementation reveals an unplanned rename, move, extract, inline, or delete, switch to **b-refactor** instead of folding it into the feature step.
 
@@ -104,6 +106,8 @@ If implementation reveals a new behavioral/product decision, stop and ask. Do no
 ### Step 4 — Verify the step
 
 Run the exact `Done when` command from the plan when available. If the plan lacks a command, run the narrowest relevant check for the touched area.
+
+Before broader commands, call `get_diagnostics_for_file` on touched source files when the language tooling supports it. Fix obvious syntax or type issues locally first.
 
 Classify failures:
 - Implementation mistake -> fix within the current step and rerun the check.

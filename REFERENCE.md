@@ -21,6 +21,7 @@ Think before coding. Decompose tasks into ordered steps, evaluate competing appr
 - Hands approved implementation work to `b-implement` by default so planning and execution stay distinct.
 - Uses `sequentialthinking` for approach selection and ordered execution steps when available; otherwise reasons inline with the same structure.
 - For existing-code tasks, follows a strict supported-Serena read-order in Step 2: onboarding check → symbol discovery → overview → references → narrow native reads only when needed.
+- Uses `find_declaration` and `find_implementations` during Step 2 when planning starts from a call site/import usage or an interface boundary instead of an owning definition.
 - Issue/ticket scrape (when user-provided) lives in Step 2 as a context source for the scan; ordinary planning does not pause just to ask for a ticket link.
 - Evaluates multiple approaches and documents the chosen one in `## Decision`.
 - Includes a feasibility gate for uncertain or large-scope tasks.
@@ -103,8 +104,9 @@ Approved/scoped-plan execution: read the source of truth, apply one step at a ti
 - Routes broad "build this" requests without approved scope back to `b-plan` instead of treating them as implementation-ready.
 - Extracts confirmed decisions, planned touch points, ordered steps, dependencies, and `Done when` checks before editing.
 - Checks `git status --short` and preserves unrelated user changes.
-- Uses Serena for symbol-aware code changes: onboarding check -> symbol/file discovery -> overview -> references -> minimal edit.
+- Uses Serena for symbol-aware code changes: onboarding check -> symbol/file discovery -> overview -> declaration/implementation resolution when needed -> references -> minimal edit.
 - Implements exactly one dependency-ready step at a time, then verifies with the plan's `Done when` command or the narrowest relevant check.
+- Uses `get_diagnostics_for_file` as a narrow local verification pass before broader commands when the touched language supports diagnostics.
 - Marks saved plan checkboxes complete only after verification passes.
 - Stops for new product/behavior decisions instead of self-inferring.
 - Hands unplanned mechanical transformations (rename/move/extract/inline/delete) to `b-refactor` unless the approved plan explicitly includes them.
@@ -141,12 +143,14 @@ Systematic, hypothesis-driven debugging with full-loop execution by default.
 
 **Core behavior**
 - Uses supported Serena tools to map execution path, references, suspicious symbols, and file structure (Step 2).
+- Uses `find_declaration` to jump from suspicious usages to owning definitions and `find_implementations` to trace polymorphic boundaries without widening reads too early.
 - If Serena is unavailable, falls back to bash/read with reduced cross-file confidence.
 - Initializes Serena project knowledge with onboarding check before tracing when needed.
 - **Step 3a** forms ranked hypotheses with evidence/verification per item, reports them as progress, then continues verification without waiting unless the user requested diagnosis-only mode.
 - **Step 3b** runs fast-path lookups (library-error shortcut + error-string codebase search) before verifying — these often eliminate wrong hypotheses.
 - Library error shortcut: web search → Firecrawl scrape (top 1–2 URLs) → Context7 verification.
 - Dynamic verification loop in Step 4 when static analysis is insufficient (try safe local reproduction first, then max 3 instrumentation rounds; remove added debug logging before stopping unconfirmed).
+- Uses `get_diagnostics_for_file` as an optional fast signal when editor/compiler diagnostics may explain the symptom faster than runtime reproduction.
 - Starts from a concrete symptom/error when available; asks only for missing context that blocks the next verification step.
 - Inspects the final diff/touched lines to confirm temporary debug logging or probes were removed.
 - After confirming root cause, implements the minimal fix using symbol-aware tools and states exact verification steps.
@@ -187,6 +191,7 @@ Human-judgment pre-PR changed-code review: correctness, requirements, edge cases
 - Defines fast-path threshold (`≤50 lines AND ≤2 files`) once at the top of the skill — referenced by Steps 2, 3, and 6, but never used to skip entry-point security checks.
 - Treats multiple plan-file candidates as ambiguous and asks which requirements source to use instead of guessing.
 - Uses supported Serena tools to prioritize review depth by changed symbols, references, and affected files.
+- Adds `find_declaration` / `find_implementations` when the diff highlights a usage or contract boundary more clearly than the owning definition, and may use `get_diagnostics_for_file` for narrow typed-language breakage checks.
 - Initializes Serena project knowledge with onboarding check before reviewing changed symbols when needed.
 - Follows a strict read-order: find symbol → find referencing symbols → overview → narrow reads. Never jumps straight from diff to full file reads.
 - Reviews changed files outline-first, then opens only high-risk symbols/source paths.
@@ -240,6 +245,7 @@ Test-driven development, test debugging, and test coverage evaluation.
   - **Branch B — Write tests**: map source symbol, list edge cases, add tests via Serena symbol tools or `apply_patch` for new files.
   - **Branch C — Evaluate coverage**: run coverage report, rank gaps, optionally write top 1–3 missing tests.
 - Runs the narrowest relevant tests via bash after every change, ensuring the temp output directory exists under `/tmp/opencode/b-skills/b-test/` and capturing full failure output instead of truncating with `tail`.
+- Uses `find_declaration` / `find_implementations` to map tests to the real source owner when helpers, imports, or interfaces obscure the target, and `get_diagnostics_for_file` before reruns when local syntax/type errors are likely.
 - Handles snapshot/golden and shared-fixture drift explicitly; regenerates or updates only after confirming behavior intentionally changed.
 - Runs broader/full suites for new tests only when shared behavior, fixtures, public contracts, or project conventions justify it.
 - Distinguishes test-specific failures from runtime bugs. Unconfirmed production behavior failures hand off to `b-debug` instead of patching production code from test output alone.
@@ -314,8 +320,10 @@ Code refactoring with impact analysis and safe mechanical transformation.
 
 **Core behavior**
 - Maps full impact radius with `find_referencing_symbols` before touching any code.
+- Uses `find_declaration` and `find_implementations` to lock the exact refactor target before renaming, moving, or deleting when the request starts from usage sites or abstract contracts.
 - Requires a green baseline check for medium/high-risk refactors; low-risk single-file mechanical edits may skip baseline with an explicit note.
 - Uses Serena's symbol-aware tools (`rename_symbol`, `safe_delete_symbol`, `replace_symbol_body`) for cross-file safe edits where symbol-level operations apply.
+- Uses `get_diagnostics_for_file` as a local post-edit guard before broader typecheck/test commands when supported.
 - Uses `apply_patch` for line-level import/config/prose edits where symbol tools do not apply.
 - Discovers project-specific typecheck/test commands from manifests or CI instead of using generic chained commands.
 - Assumes the target transformation is already concrete; broad, unclear, or vague cleanup requests should go through `b-plan` first.
@@ -396,6 +404,7 @@ This repository is the install-only source layout for the suite. OpenCode does n
 - `install.sh` configures Serena as `serena start-mcp-server --context=ide --project-from-cwd`.
 - The suite treats OpenCode as a generic Serena `ide` client, not as a custom Serena context with separate runtime semantics.
 - Serena is the semantic layer for symbol discovery, references, and structural edits.
+- The suite selectively uses Serena 1.3.0 additions: `find_declaration`, `find_implementations`, and `get_diagnostics_for_file` where they reduce broad reads or replace heavier verification.
 - OpenCode's native file and shell tools remain the default for overlapping basic operations that Serena's `ide` context assumes the harness already provides.
 - Manual line/prose/config edits use `apply_patch`; runtime skill instructions should not rely on unavailable native `edit` or `write` tools.
 - The activated Serena project is expected to follow the current working directory, so core skill guidance must stay single-project and must not depend on project-switching workflows.

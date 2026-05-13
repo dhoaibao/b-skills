@@ -38,7 +38,7 @@ Proceed directly. Do not ask "what test do you want to write?" unless `$ARGUMENT
 
 - `bash` — run test commands, inspect test output, locate test files.
 - Native file tools — Glob/Grep/Read for discovery and inspection; `apply_patch` for modifying or creating test files when no suitable file exists.
-- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol` — from `serena` MCP server *(required for discovering test files and mapping tests to source symbols)*
+- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `find_declaration`, `find_implementations`, `get_diagnostics_for_file`, `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol` — from `serena` MCP server *(required for discovering test files and mapping tests to source symbols)*
 - `resolve-library-id`, `query-docs` — from `context7` MCP server *(optional, for verifying testing framework API — jest, vitest, pytest, etc.)*
 - `sequentialthinking` — from `sequential-thinking` MCP server *(optional, for choosing test strategy: unit vs integration vs e2e)*
 
@@ -68,6 +68,8 @@ Find test files and understand the test setup:
 5. If the user mentions "missing test" or "write tests for X": call `find_symbol`
    on the source code symbol that needs tests, then `find_referencing_symbols`
    to see if it already has tests.
+
+6. Use `find_declaration` to jump from test helpers or call sites to the owning source definition, and `find_implementations` when tests target an interface, abstract method, or polymorphic contract.
 
 **Goal**: know the framework, the test file structure, and the relationship between tests and source code.
 
@@ -164,11 +166,12 @@ Apply the minimal fix. Prefer `replace_symbol_body` for whole test functions ove
    npm test -- --testNamePattern="test name"
    pytest path/to/test.py::test_function
    go test -run TestFunction ./pkg
-   cargo test test_function
-   ```
-2. Confirm the test passes.
-3. For new tests: run the narrow test first, then run the broader suite only when the change touches shared fixtures/helpers, public behavior, or the project has a fast standard suite. If skipped, state why.
-4. If tests fail: go back to the relevant branch. Maximum 3 iterations.
+    cargo test test_function
+    ```
+2. When test or source files are in a language with diagnostics support, call `get_diagnostics_for_file` on touched files before rerunning so syntax/type errors are caught early.
+3. Confirm the test passes.
+4. For new tests: run the narrow test first, then run the broader suite only when the change touches shared fixtures/helpers, public behavior, or the project has a fast standard suite. If skipped, state why.
+5. If tests fail: go back to the relevant branch. Maximum 3 iterations.
 
 ---
 

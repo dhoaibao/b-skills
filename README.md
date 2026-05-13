@@ -111,7 +111,7 @@ When you open this repo in OpenCode, the checked-in `AGENTS.md` provides maintai
 
 | MCP | Role |
 |---|---|
-| `serena` | Symbol discovery, structure overview, reference tracing, symbol-level edits, and memory — the primary semantic code layer where supported |
+| `serena` | Symbol discovery, declaration/implementation lookup, file diagnostics, reference tracing, symbol-level edits, and memory — the primary semantic code layer where supported |
 | `context7` | Live, version-accurate library docs |
 | `brave-search` | Real web search |
 | `firecrawl` | Full page scraping, structured data extraction |
@@ -136,6 +136,7 @@ Verify the **6 core MCPs** are connected in OpenCode before relying on the full 
 OpenCode integration:
 - Serena runs as `serena start-mcp-server --context=ide --project-from-cwd`.
 - Serena owns symbol discovery, references, and structural edits; native tools handle files, strings, manifests, commands, prose, and configs.
+- Serena 1.3.0 tools adopted in this suite: `find_declaration` and `find_implementations` for tighter symbol navigation, plus `get_diagnostics_for_file` for narrow local verification in implement/debug/review/test/refactor flows.
 - GitNexus augments Serena for graph-level intelligence only when indexed, fresh, and target-aware.
 
 **Evidence model:** GitNexus evidence scopes graph risk; Serena evidence confirms exact symbols and references; text search confirms strings/config/prose; runtime checks verify behavior.

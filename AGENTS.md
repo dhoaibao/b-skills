@@ -169,11 +169,12 @@ When deciding which MCPs a skill should use:
 
 **GitNexus-specific criteria:**
 - GitNexus is always **optional radar** for this suite. It is never a primary dependency of any skill and never acts as the editing layer.
-- Serena is the primary **hands** layer for exact symbol discovery, source inspection, references, and symbol-aware edits.
-- Add GitNexus to a skill only when graph-level intelligence (cross-file impact, architecture context, execution-flow discovery, stale-index detection, route/API consumers, multi-repo mapping) materially improves the workflow. GitNexus should be the preferred first step for graph-shaped tasks only when the repo is indexed, fresh, and the target file/symbol is represented; Serena then handles exact symbol inspection and edits.
+- Serena is primary hands for exact symbol discovery, source inspection, references, and symbol-aware edits.
+- Add GitNexus to a skill only when graph-level intelligence (cross-file impact, architecture context, execution-flow discovery, stale-index detection, route/API consumers, multi-repo mapping) materially improves the workflow. GitNexus should be the preferred first step for graph-shaped tasks only when the repo is indexed, fresh, and target-aware; Serena then handles exact symbol inspection and edits.
 - If the target symbol or file is already known, or the task is local to a single file/module, skip GitNexus and go straight to Serena. Use GitNexus only when cross-file, architectural, execution-flow, or blast-radius context is needed.
 - Every skill that uses GitNexus must use the global indexing/freshness/target gate and fall back to Serena/native tools when the gate fails.
 - GitNexus must never replace Serena for precise symbol-level edits (`rename_symbol`, `safe_delete_symbol`, `replace_symbol_body`, etc.).
+- Before maintainers suggest `gitnexus analyze` or add indexing guidance to a skill, verify it is only when indexing is safe.
 
 ---
 

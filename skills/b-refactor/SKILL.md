@@ -38,7 +38,7 @@ If `$ARGUMENTS` is provided, treat it as the refactoring instruction. Proceed di
 ## Tools required
 
 - `bash` — run tests, check compilation, inspect git diff.
-- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol`, `rename_symbol`, `safe_delete_symbol` — from `serena` MCP server *(required for impact analysis and safe symbol-level edits)*
+- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `find_declaration`, `find_implementations`, `get_diagnostics_for_file`, `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol`, `rename_symbol`, `safe_delete_symbol` — from `serena` MCP server *(required for impact analysis and safe symbol-level edits)*
 - `sequentialthinking` — from `sequential-thinking` MCP server *(optional, for evaluating trade-offs on large refactors)*
 - `gitnexus` — from `gitnexus` MCP server *(optional radar for broad blast-radius discovery before exported/shared mechanical edits — only when indexed and fresh)*
 
@@ -56,6 +56,8 @@ Graceful degradation: ⚠️ Partial — mechanical refactoring still possible w
    - User names a function/class → `find_symbol` with that name.
    - User references a file → `get_symbols_overview` to inspect top-level symbols.
    - Vague instruction ("clean up the auth module") → `get_symbols_overview` on the file, then ask the user for a specific target.
+
+   If the request points at a call site or imported helper rather than the owner, use `find_declaration` to resolve the exact symbol first. If the target is an interface or abstract method, use `find_implementations` before locking scope.
 
 3. **Broad blast-radius discovery** *(only when the target is exported/shared, crosses packages, or affects >2 files and GitNexus passes the global gate)*: call `gitnexus impact` or `gitnexus context`, then confirm with Serena references. Record hidden callers, event boundaries, or architecture constraints.
 
@@ -114,13 +116,15 @@ Apply edits in dependency order. Prefer Serena's symbol-aware tools over `apply_
 
 After every mechanical step:
 
-1. **Compilation/type check** *(when applicable)*: run the project-specific command discovered from manifests or CI. Examples include `npm run typecheck`, `npx tsc --noEmit`, `go build ./...`, or `cargo check`, but only use commands that match the project.
+1. **Local diagnostics check** *(when supported)*: call `get_diagnostics_for_file` on touched files to catch syntax or type breakage introduced by the mechanical edit.
 
-2. **Test check**: run the project-specific narrow test first, then the broader suite after the final step when the refactor touches shared/exported behavior, package boundaries, fixtures, or many call sites. Examples include `npm test -- <target>`, `pytest path/to/test.py`, `go test ./pkg/...`, or `cargo test`, but derive the command from project conventions.
+2. **Compilation/type check** *(when applicable)*: run the project-specific command discovered from manifests or CI. Examples include `npm run typecheck`, `npx tsc --noEmit`, `go build ./...`, or `cargo check`, but only use commands that match the project.
 
-3. **Git diff inspection**: `git diff` to confirm only intended changes. Look for accidental deletions, wrong import paths, unintended formatting.
+3. **Test check**: run the project-specific narrow test first, then the broader suite after the final step when the refactor touches shared/exported behavior, package boundaries, fixtures, or many call sites. Examples include `npm test -- <target>`, `pytest path/to/test.py`, `go test ./pkg/...`, or `cargo test`, but derive the command from project conventions.
 
-4. **Impact re-check**: if the refactor changed a public/exported symbol, re-run `find_referencing_symbols` and any relevant import/text searches to confirm references resolve.
+4. **Git diff inspection**: `git diff` to confirm only intended changes. Look for accidental deletions, wrong import paths, unintended formatting.
+
+5. **Impact re-check**: if the refactor changed a public/exported symbol, re-run `find_referencing_symbols` and any relevant import/text searches to confirm references resolve.
 
 **Iteration rule**: if tests or compilation fail, fix before proceeding. Maximum 2 fix iterations per step. If a failure looks like a real bug introduced by the refactor → handoff to /b-debug. If it's a test-mechanic failure (assertion drift, snapshot, mock) → handoff to /b-test.
 

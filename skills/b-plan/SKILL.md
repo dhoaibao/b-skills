@@ -35,7 +35,7 @@ If `$ARGUMENTS` is provided, treat it as the task description — skip asking "w
 ## Tools required
 
 - `sequentialthinking` — from `sequential-thinking` MCP server *(optional, for approach evaluation and decomposition when available)*.
-- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols` — from `serena` MCP server *(required for symbol-aware modify-existing-code tasks; optional for greenfield)*.
+- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `find_declaration`, `find_implementations` — from `serena` MCP server *(required for symbol-aware modify-existing-code tasks; optional for greenfield)*.
 - `resolve-library-id`, `query-docs` — from `context7` MCP server *(optional, for inline library verification — simple lookups only)*.
 - `brave_web_search` — from `brave-search` MCP server *(optional, for tool/approach comparison — simple lookups only)*.
 - `firecrawl_scrape` — from `firecrawl` MCP server *(optional, for scraping issue/ticket URL when present)*.
@@ -100,8 +100,10 @@ Use GitNexus only for graph-shaped discovery under the global freshness/target g
 2. **Initialize project knowledge** — call `check_onboarding_performed`. If false, call `onboarding` once.
 3. **Discover symbols** — `find_symbol` on the main function, class, command, handler, or module involved in the change.
 4. **Inspect structure** — `get_symbols_overview` on each relevant file to see which symbols are worth reading.
-5. **Trace references** — `find_referencing_symbols` on key exported/shared symbols to confirm callers and dependents.
-6. **Read narrowly** — only if the above leaves ambiguity: native `read` on the exact section needed; native bash search for exact strings.
+5. **Resolve owners** — use `find_declaration` when the task description or code path points at a call site, imported helper, or usage rather than the owning definition.
+6. **Trace polymorphic boundaries** — use `find_implementations` when the change hangs off an interface, abstract class, or protocol.
+7. **Trace references** — `find_referencing_symbols` on key exported/shared symbols to confirm callers and dependents.
+8. **Read narrowly** — only if the above leaves ambiguity: native `read` on the exact section needed; native bash search for exact strings.
 
 **Issue/ticket** *(optional context source — only when the user provides or explicitly mentions one)*:
 - If a URL is provided: `firecrawl_scrape` with `formats: ["markdown"], onlyMainContent: true`. Trim to 800 words; use as **requirements context** for Steps 3–5. If <200 chars or 403: store the URL as a plain reference.

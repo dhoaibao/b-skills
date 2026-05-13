@@ -39,7 +39,7 @@ A diff that is **≤50 lines AND ≤2 files** is treated as a small change. The 
 
 - `bash` — to read git diff and changed file list.
 - `sequentialthinking` — from `sequential-thinking` MCP server — structured review reasoning.
-- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols` — from `serena` MCP server *(preferred for symbol-aware review; use native read/bash search for unsupported file and exact-string operations)*
+- `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `find_declaration`, `find_implementations`, `get_diagnostics_for_file` — from `serena` MCP server *(preferred for symbol-aware review; use native read/bash search for unsupported file and exact-string operations)*
 - `firecrawl_scrape` — from `firecrawl` MCP server *(optional, for fetching issue/ticket URL content when an `**Issue**:` URL is present in the plan file)*
 - `resolve-library-id` + `query-docs` — from `context7` MCP server *(optional, for verifying library API calls in changed code)*
 - `brave_web_search` — from `brave-search` MCP server *(optional, for CVE/known-vulnerability lookup when a risky security pattern is found)*
@@ -110,12 +110,16 @@ If GitNexus passes the global gate and is relevant to the diff scope, run blast-
 Initialize Serena project knowledge next: call `check_onboarding_performed`; if onboarding has not been performed, run `onboarding`. Then follow this exact read-order:
 
 1. `find_symbol` on changed names — map them to real symbols.
-2. `find_referencing_symbols` on top changed symbols — understand downstream impact.
-3. `get_symbols_overview` on changed files before opening source.
-4. Native `read` only for the highest-risk symbol bodies or file sections.
-5. Native bash search when the diff changes a shared helper, exported boundary, exact string, config key, or repeated pattern.
+2. `find_declaration` when the diff highlights a call site, import, or usage more clearly than the owning definition.
+3. `find_implementations` when the change touches an interface, abstract method, or polymorphic contract.
+4. `find_referencing_symbols` on top changed symbols — understand downstream impact.
+5. `get_symbols_overview` on changed files before opening source.
+6. Native `read` only for the highest-risk symbol bodies or file sections.
+7. Native bash search when the diff changes a shared helper, exported boundary, exact string, config key, or repeated pattern.
 
 **Impact-first review rule**: prioritize review depth on (a) symbols with the broadest references, (b) symbols at service boundaries, and (c) symbols implementing explicit requirements from Step 2. Raw line-count alone should not determine review depth.
+
+When a changed file sits in a typed or compiled language and the diff suggests unresolved breakage, call `get_diagnostics_for_file` on that file before escalating to broader build or test evidence.
 
 Read the changed code and check:
 
