@@ -103,10 +103,10 @@ Use GitNexus only for graph-shaped discovery under the global freshness/target g
 5. **Trace references** — `find_referencing_symbols` on key exported/shared symbols to confirm callers and dependents.
 6. **Read narrowly** — only if the above leaves ambiguity: native `read` on the exact section needed; native bash search for exact strings.
 
-**Issue/ticket** *(optional context source — runs here if relevant)*:
-- Ask once: "Issue/ticket URL or ID? (Leave blank to skip.)"
+**Issue/ticket** *(optional context source — only when the user provides or explicitly mentions one)*:
 - If a URL is provided: `firecrawl_scrape` with `formats: ["markdown"], onlyMainContent: true`. Trim to 800 words; use as **requirements context** for Steps 3–5. If <200 chars or 403: store the URL as a plain reference.
-- If a ticket ID (not URL): store as-is; no fetch.
+- If a ticket ID (not URL) is provided: store as-is; no fetch.
+- Do not interrupt ordinary planning just to ask for an issue URL.
 
 **Goal**: reference real paths and symbols. A plan that names wrong files or non-existent functions fails at execution. Never paste full file contents into the plan — only names and line references that matter.
 
@@ -139,7 +139,7 @@ Use `sequentialthinking` to break the chosen approach into atomic, ordered steps
   - **Concrete done-when** verifiable independently (test command, observable output, specific assertion).
   - Any **API signatures**, **config keys**, or **contract details** needed to implement without further lookup.
   - **`Exact [X]:`** sub-bullets for any implementation choices that must be locked in to prevent implementor drift — e.g. `Exact insertion points:`, `Exact helper responsibilities:`, `Exact fields to create:`. Add whenever the step would otherwise leave a structural decision open.
-- **Handoff standard: 90%+** — if a fresh agent with zero prior context would need to ask a follow-up question to implement the step, the step is not detailed enough. Add the missing detail now.
+- **Full-mode handoff standard: 90%+** — if a fresh agent with zero prior context would need to ask a follow-up question to implement the step, the step is not detailed enough. Add the missing detail now. Do not apply this level of detail to quick-mode chat plans.
 - Ask sequentialthinking for output in this shape: `Goal`, `Constraints`, `Ordered steps`, `Dependencies`, `Open questions`, `First action`.
 
 **Impact checkpoint** *(modify-existing-code only)*:
@@ -257,6 +257,7 @@ Saved plan files are always English. Chat responses follow the global language r
 - Quick mode may stay in chat unless the user asks for a saved plan.
 - Always write saved plan files in English.
 - Do not implement until the user approves the plan. After approval, use **b-implement** unless the user explicitly asks to continue in the same session.
+- Do not over-plan scoped quick tasks — keep them to the smallest useful step list and verification gate.
 - Steps must be ordered by dependency — wrong order causes cascading failures.
 - Keep steps atomic — one clear action per step.
 - Surface risks and assumptions proactively.

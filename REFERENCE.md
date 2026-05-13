@@ -21,7 +21,7 @@ Think before coding. Decompose tasks into ordered steps, evaluate competing appr
 - Hands approved implementation work to `b-implement` by default so planning and execution stay distinct.
 - Uses `sequentialthinking` for approach selection and ordered execution steps when available; otherwise reasons inline with the same structure.
 - For existing-code tasks, follows a strict supported-Serena read-order in Step 2: onboarding check → symbol discovery → overview → references → narrow native reads only when needed.
-- Issue/ticket scrape (when present) lives in Step 2 as a context source for the scan.
+- Issue/ticket scrape (when user-provided) lives in Step 2 as a context source for the scan; ordinary planning does not pause just to ask for a ticket link.
 - Evaluates multiple approaches and documents the chosen one in `## Decision`.
 - Includes a feasibility gate for uncertain or large-scope tasks.
 - Adds deploy-safety annotations (feature flags, migration ordering, external dependencies).
@@ -45,7 +45,7 @@ how should I approach refactoring the auth module?
 - Full mode must write to `.opencode/b-plans/`; quick mode may stay in chat unless the user asks for a saved plan.
 - The feasibility gate only confirms blockers and scope; it does not replace `/b-research` for deep unknowns.
 - All unresolved unknowns must be surfaced. Blocking decisions/research stop planning; non-blocking assumptions must be recorded explicitly.
-- **Handoff standard: 90%+** — every step must be detailed enough that a fresh agent with zero prior context can implement it without asking a follow-up question.
+- **Full-mode handoff standard: 90%+** — every saved-plan step must be detailed enough that a fresh agent with zero prior context can implement it without asking a follow-up question; quick plans stay concise.
 
 **GitNexus use**
 - Use only for graph-shaped planning: unfamiliar architecture, broad impact, route/API consumers, process flows, multi-repo or package boundaries.
@@ -62,7 +62,10 @@ All external knowledge in one skill: auto-detects quick lookup vs full multi-sou
 - For library/framework API questions: Context7 first.
 - In quick mode: answers in 1–3 sentences with a minimal example, capped at 2 tool calls, never scrapes, and only trusts web snippets when the source is official or high-authority.
 - Starts with quick mode when plausible, then escalates automatically when the answer needs more than 2 tool calls, more than 1 source, or any page scraping.
-- In full mode: classifies query into VERSION / COMPARE / NEWS / HOWTO/API → Brave Search with `firecrawl_search` fallback → Firecrawl scrape/extract → quality gate → synthesis report.
+- In full mode: classifies query into VERSION / COMPARE / NEWS / HOWTO/API → Brave Search with `firecrawl_search` fallback → Firecrawl scrape/extract when available → quality gate → synthesis report.
+- If Firecrawl is unavailable, full mode may continue only from official/high-authority search, source, changelog, or Context7 evidence and must label the limitation.
+- NEWS mode widens freshness from daily to weekly to monthly when the topic is not breaking news.
+- Structured extraction first locks the exact output fields, then uses Firecrawl extract or JSON scraping when supported.
 - Applies source-quality ranking: official docs/changelogs, source repos/releases, vendor engineering posts, reputable community sources, then low-context snippets/SEO content.
 - Uses `sequentialthinking` only when conflicting sources materially change the recommendation.
 - Prefers 3 high-quality sources over 5 mixed-quality ones.
@@ -85,6 +88,7 @@ tra cứu cách dùng thư viện Prisma
 - Default scrape cap in full mode: 3 URLs per session; 5 for COMPARE queries.
 - `firecrawl_crawl` is only for user-requested comprehensive coverage of a known site section, capped at `limit <= 10` and `maxDiscoveryDepth <= 2`.
 - Never fill factual gaps from training data in full mode when sources do not support them.
+- If scraping is unavailable in full mode, answer only from official/high-authority evidence and label the result as limited.
 - Escalate quick web lookups to full mode when source authority or context is unclear.
 
 ---
@@ -94,7 +98,8 @@ tra cứu cách dùng thư viện Prisma
 Approved/scoped-plan execution: read the source of truth, apply one step at a time, verify each step, and stop when new decisions appear.
 
 **Core behavior**
-- Resolves implementation source from `$ARGUMENTS`, `.opencode/b-plans/[slug].md`, or an approved chat plan.
+- Resolves implementation source from `$ARGUMENTS`, `.opencode/b-plans/[slug].md`, an explicitly approved chat plan, or a small clearly scoped direct request.
+- Broad work requires a saved plan, explicitly approved chat plan, or explicit approval statement; loose feature descriptions are not treated as implementation-ready.
 - Routes broad "build this" requests without approved scope back to `b-plan` instead of treating them as implementation-ready.
 - Extracts confirmed decisions, planned touch points, ordered steps, dependencies, and `Done when` checks before editing.
 - Checks `git status --short` and preserves unrelated user changes.
@@ -141,13 +146,13 @@ Systematic, hypothesis-driven debugging with full-loop execution by default.
 - **Step 3a** forms ranked hypotheses with evidence/verification per item, reports them as progress, then continues verification without waiting unless the user requested diagnosis-only mode.
 - **Step 3b** runs fast-path lookups (library-error shortcut + error-string codebase search) before verifying — these often eliminate wrong hypotheses.
 - Library error shortcut: web search → Firecrawl scrape (top 1–2 URLs) → Context7 verification.
-- Dynamic verification loop in Step 4 when static analysis is insufficient (max 3 instrumentation rounds; remove added debug logging before stopping unconfirmed).
+- Dynamic verification loop in Step 4 when static analysis is insufficient (try safe local reproduction first, then max 3 instrumentation rounds; remove added debug logging before stopping unconfirmed).
 - Starts from a concrete symptom/error when available; asks only for missing context that blocks the next verification step.
 - Inspects the final diff/touched lines to confirm temporary debug logging or probes were removed.
 - After confirming root cause, implements the minimal fix using symbol-aware tools and states exact verification steps.
 
 **Default contract**: `trace → confirm root cause → fix → verify`
-Diagnosis-only is allowed only when the caller explicitly requests it.
+Diagnosis-only is used when the caller asks only for explanation/root cause or explicitly requests investigation-only output.
 
 **Good triggers**
 ```text
@@ -176,7 +181,7 @@ Symptoms → Code path → Ranked hypotheses → Fast-path findings → Root cau
 Human-judgment pre-PR changed-code review: correctness, requirements, edge cases, tests, and minimum observability on new entry points.
 
 **Core behavior**
-- Reads git diff and builds requirements baseline from plan file, `$ARGUMENTS`, or user clarification.
+- Reads git diff plus `git status --short`, includes related untracked non-sensitive files, and builds requirements baseline from plan file, `$ARGUMENTS`, or user clarification.
 - If no requirements baseline is available after bounded clarification, continues as a clearly labeled diff-only risk review and skips strict requirements coverage.
 - Does not silently review `HEAD~1` when no diff exists; asks for a commit, branch, or comparison range.
 - Defines fast-path threshold (`≤50 lines AND ≤2 files`) once at the top of the skill — referenced by Steps 2, 3, and 6, but never used to skip entry-point security checks.
@@ -187,7 +192,8 @@ Human-judgment pre-PR changed-code review: correctness, requirements, edge cases
 - Reviews changed files outline-first, then opens only high-risk symbols/source paths.
 - Uses `sequentialthinking` only when blocker/suggestion classification is genuinely ambiguous.
 - Always checks **injection vectors** and new/changed entry-point security, even on very small diffs.
-- Runs observability check (Step 6) only for newly added endpoints/handlers/jobs/consumers.
+- Runs observability check (Step 6) only for newly added endpoints/handlers/jobs/consumers; fast-path does not skip tiny diffs that add or change entry points.
+- Avoids routine lint/test reruns, but may run a narrow command when reviewer confidence depends on runtime or type evidence.
 - Skips test-adequacy + observability when `$ARGUMENTS` contains `skip test adequacy`.
 
 **Step layout**
@@ -196,7 +202,7 @@ Human-judgment pre-PR changed-code review: correctness, requirements, edge cases
 3. Logic correctness (fast-path may skip expanded checks, but injection and entry-point security ALWAYS run)
 4. Requirements coverage check
 5. Edge case + test adequacy check
-6. Observability check (skipped if fast-path or no new entry points)
+6. Observability check (skipped if no new entry points, or fast-path with no entry-point changes)
 7. Consolidate findings
 
 **Good triggers**
@@ -233,7 +239,9 @@ Test-driven development, test debugging, and test coverage evaluation.
   - **Branch A — Failing test**: read test + source, identify assertion/mock/setup/async issue, apply minimal fix.
   - **Branch B — Write tests**: map source symbol, list edge cases, add tests via Serena symbol tools or `apply_patch` for new files.
   - **Branch C — Evaluate coverage**: run coverage report, rank gaps, optionally write top 1–3 missing tests.
-- Runs the narrowest relevant tests via bash after every change, ensuring the temp output directory exists and capturing full failure output instead of truncating with `tail`.
+- Runs the narrowest relevant tests via bash after every change, ensuring the temp output directory exists under `/tmp/opencode/b-skills/b-test/` and capturing full failure output instead of truncating with `tail`.
+- Handles snapshot/golden and shared-fixture drift explicitly; regenerates or updates only after confirming behavior intentionally changed.
+- Runs broader/full suites for new tests only when shared behavior, fixtures, public contracts, or project conventions justify it.
 - Distinguishes test-specific failures from runtime bugs. Unconfirmed production behavior failures hand off to `b-debug` instead of patching production code from test output alone.
 - Requires behavior confirmation before changing assertions; a red assertion alone is not proof the expected value is wrong.
 - Uses `sequentialthinking` for test strategy only when unit vs integration is ambiguous.
@@ -266,12 +274,14 @@ Browser-based frontend testing and Playwright E2E script authoring.
 **Core behavior**
 - Uses Playwright MCP (`playwright_browser_*` tools) to navigate to the target web application.
 - Before navigating to `localhost`, verifies the dev server is reachable via a bash health check; asks the user to start it or approve a discovered project-specific start command if not responding.
-- Creates a session-specific directory under `.opencode/b-skills/b-e2e/[run]/` for native notes and generated test files; Playwright MCP artifacts use supported filenames or returned artifact paths.
+- Creates a session-specific directory under `.opencode/b-skills/b-e2e/[run-id]/` for native notes, manifest, and generated test files; Playwright MCP artifacts use supported filenames or returned artifact paths.
 - Clarifies auth/session, seed data, cleanup expectations, and environment safety before executing stateful flows.
+- Prefers disposable accounts, seeded state, or pre-authenticated local sessions; it must not ask for real production credentials in chat.
 - Relies on accessibility tree snapshots (`playwright_browser_snapshot`) to map the UI and get precise target references.
 - Performs sequential user interactions (clicks, typing, form fills).
 - Verifies UI state changes via updated snapshots, console checks, responsive desktop/mobile passes when relevant, and optional network assertions.
 - Translates successful manual interactions into Playwright test code via Serena symbol tools when an existing spec exists, or `apply_patch` when no spec file exists.
+- Reads Playwright config and package scripts before authoring tests to preserve test directory, base URL, project, and command conventions.
 - Uses stable waits/assertions and reruns generated tests once when manual and scripted results conflict to detect flakiness.
 - Closes the browser session when the flow finishes and keeps artifacts unless the user asks to delete this run's directory.
 
@@ -291,7 +301,7 @@ Target URL → UI Snapshot → Interactions → Assertions → [Optional] Test C
 - Inherently requires the `playwright` MCP to function.
 - Never guess element selectors; always read the `playwright_browser_snapshot` first.
 - For `localhost` targets, run a bash health check before calling `playwright_browser_navigate`.
-- Native notes and generated test files go into `.opencode/b-skills/b-e2e/[run]/`; Playwright MCP artifacts use supported filenames or returned artifact paths.
+- Native notes, manifest, and generated test files go into `.opencode/b-skills/b-e2e/[run-id]/`; Playwright MCP artifacts use supported filenames or returned artifact paths.
 - Do not start a dev server without user approval, and never mutate production-like data without explicit confirmation.
 - Always close the browser at cleanup; do not delete artifacts by default.
 - Distinct from `b-test`, which handles code-level unit testing without a live browser.
@@ -312,13 +322,15 @@ Code refactoring with impact analysis and safe mechanical transformation.
 - Executes in dependency order (inner helpers first, outer callers last).
 - Verifies after every step: compilation → tests → git diff.
 - Checks public/exported API compatibility before changing signatures or paths.
+- Renames files with `apply_patch` move operations when practical; broad directory moves require explicit confirmation because imports, docs, and tooling paths may change.
+- Runs full-suite verification only when the refactor scope warrants it; otherwise reports why narrower checks were sufficient.
 - For large refactors (>3 files or crossing package boundaries): uses `sequentialthinking` to plan phases.
 - Vague cleanup requests without a specific target or behavior-preserving transformation go to `b-plan` first.
 - Hands off post-refactor failures: real regression → `/b-debug`; test-mechanic drift → `/b-test`.
 
 **Transformations supported**
 - Rename symbol
-- Rename file/directory with native move/rename plus Serena impact checks
+- Rename file with `apply_patch` move operations plus Serena impact checks; broad directory rename only after explicit confirmation
 - Extract method/function
 - Inline variable/function
 - Move code between files
@@ -343,6 +355,7 @@ Target → Impact → Risk → Transformation plan → Changes → Verification
 - Prefer `rename_symbol` over manual `apply_patch` for symbol renames — it updates all references atomically.
 - Prefer `safe_delete_symbol` over manual deletion — it prevents accidental removal of still-used code.
 - Run compilation check after every mechanical step.
+- Run the full test suite after the last step only when scope/risk warrants it; otherwise document the narrower verification.
 - Keep changes separated by logical transformation, but do not commit unless explicitly asked.
 
 **GitNexus use**
@@ -367,9 +380,17 @@ This repository is the install-only source layout for the suite. OpenCode does n
 - `~/.config/opencode/commands/` — installed command destination created by `install.sh`.
 - `~/.config/opencode/AGENTS.md` — installed runtime rules file created by `install.sh`.
 - `.opencode/b-plans/` — saved plan files created by `/b-plan`.
-- `.opencode/b-skills/<skill>/<run>/` — skill run artifacts.
-- `.opencode/b-skills/b-e2e/[run]/` — browser snapshots, screenshots, notes, and generated E2E artifacts created by `/b-e2e`.
+- `.opencode/b-skills/<skill>/<run-id>/` — skill run artifacts, where `run-id` is `<YYYYMMDD-HHMMSS>-<slug>`.
+- `.opencode/b-skills/b-e2e/[run-id]/` — browser snapshots, screenshots, notes, manifest, and generated E2E artifacts created by `/b-e2e`.
 - `/tmp/opencode/b-skills/<skill>/<slug>.log` — temporary command output and full failure logs.
+- Multi-artifact runs should report or maintain a manifest with artifact paths, generated files, command logs, cleanup status, and external artifact references.
+
+### Runtime global conventions
+- Cross-skill handoffs include `source`, `scope`, `files`, `commands`, `blockers`, and `next skill`.
+- Approval is required before package installs, dev-server starts, migrations, destructive commands, production-like/staging writes, broad refactors, or commits.
+- Verification follows the ladder: narrow check → broader affected-area check → full check only when scope/risk justifies it.
+- Worktree checks include relevant untracked non-sensitive files; sensitive-looking files are never read without explicit permission.
+- Final implementation/debug/test/refactor/review responses include changes or findings, verification evidence, blockers or skipped checks, and the natural next action.
 
 ### Serena/OpenCode contract
 - `install.sh` configures Serena as `serena start-mcp-server --context=ide --project-from-cwd`.

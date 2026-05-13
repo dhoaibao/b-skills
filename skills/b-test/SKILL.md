@@ -87,14 +87,14 @@ Use `sequentialthinking` for branch selection only if the user's request is genu
 
 ### Step 3 — Branch A: Fix failing test
 
-1. Read the exact failing test output via bash. If the user provided a command, run that command. Otherwise run the narrowest discoverable test target. Capture full output; if it exceeds tool limits, read the captured output around the failure location instead of truncating with `tail`:
-   ```bash
-   mkdir -p /tmp/opencode
-   npm test -- --testNamePattern="test name" 2>&1 | tee /tmp/opencode/b-test-output.log
-   # or
-   mkdir -p /tmp/opencode
-   pytest path/to/test.py::test_function -x 2>&1 | tee /tmp/opencode/b-test-output.log
-   ```
+1. Read the exact failing test output via bash. If the user provided a command, run that command. Otherwise run the narrowest discoverable test target. Capture full output under `/tmp/opencode/b-skills/b-test/`; if it exceeds tool limits, read the captured output around the failure location instead of truncating with `tail`:
+    ```bash
+    mkdir -p /tmp/opencode/b-skills/b-test
+    npm test -- --testNamePattern="test name" 2>&1 | tee /tmp/opencode/b-skills/b-test/test-output.log
+    # or
+    mkdir -p /tmp/opencode/b-skills/b-test
+    pytest path/to/test.py::test_function -x 2>&1 | tee /tmp/opencode/b-skills/b-test/test-output.log
+    ```
 2. Read the failing test code with `read` (narrow section, not full file).
 3. Read the source code under test (the function/class being tested).
 4. Identify the gap between expected and actual:
@@ -106,6 +106,8 @@ Use `sequentialthinking` for branch selection only if the user's request is genu
 | Leaking state | Reset state in `beforeEach` or `afterEach` |
 | Async timing | Add `await`, return promise, or use `waitFor` |
 | Wrong test data | Provide realistic input matching the scenario |
+| Snapshot/golden drift | Regenerate only after confirming the rendered/output behavior is intentionally changed |
+| Fixture drift | Update shared fixtures only when all consumers still represent valid scenarios |
 | Real bug in production code | Hand off to **b-debug** unless the root cause is already confirmed and the production fix is minimal |
 
 Apply the minimal fix. Prefer `replace_symbol_body` for whole test functions over line-level `apply_patch`.
@@ -123,10 +125,11 @@ Apply the minimal fix. Prefer `replace_symbol_body` for whole test functions ove
    - DB interaction → integration test
    - User workflow → e2e (delegate to /b-e2e) or integration test
 3. Cover:
-   - **Happy path** (normal input → expected output)
-   - **Edge cases** (empty input, boundary values, null/undefined)
-   - **Error path** (invalid input → error thrown/rejected)
-   - **Regression prevention** (would catch a revert of the current change)
+    - **Happy path** (normal input → expected output)
+    - **Edge cases** (empty input, boundary values, null/undefined)
+    - **Error path** (invalid input → error thrown/rejected)
+    - **Regression prevention** (would catch a revert of the current change)
+    - **Fixtures/golden data** when the project uses them — keep fixtures minimal and local to the behavior unless a shared fixture already exists for the scenario
 4. Insert tests using Serena where possible:
    - `insert_after_symbol` / `insert_before_symbol` — add tests within an existing describe block.
    - `apply_patch` — only when no suitable test file exists in the conventional location or a small insertion is clearer than a symbol-level edit.
@@ -164,7 +167,7 @@ Apply the minimal fix. Prefer `replace_symbol_body` for whole test functions ove
    cargo test test_function
    ```
 2. Confirm the test passes.
-3. For new tests: run the full suite to confirm no regressions.
+3. For new tests: run the narrow test first, then run the broader suite only when the change touches shared fixtures/helpers, public behavior, or the project has a fast standard suite. If skipped, state why.
 4. If tests fail: go back to the relevant branch. Maximum 3 iterations.
 
 ---
@@ -211,5 +214,5 @@ Apply the minimal fix. Prefer `replace_symbol_body` for whole test functions ove
 - Keep test fixes minimal — if one assertion is wrong, fix that assertion; do not rewrite the entire test suite.
 - Write behavior tests (assert on output), not implementation tests (assert on internal state).
 - Use `sequentialthinking` for test strategy decisions only if the choice is genuinely ambiguous.
-- If test output exceeds tool limits: capture full output to a temp file, then read around the failure location instead of truncating with `tail`.
+- If test output exceeds tool limits: capture full output under `/tmp/opencode/b-skills/b-test/`, then read around the failure location instead of truncating with `tail`.
 - Prefer running specific tests over the full suite during debugging — faster feedback loop.

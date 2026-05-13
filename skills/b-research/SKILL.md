@@ -45,10 +45,11 @@ If brave-search is unavailable:
 - otherwise stop only when neither Brave nor Firecrawl search is available.
 If firecrawl is unavailable:
 - quick mode may still complete without scraping;
-- full mode is blocked — tell the user: `❌ firecrawl MCP is not connected. Please check your MCP configuration.`
+- full mode may continue only when official docs, changelogs, source repos, or Context7 provide enough evidence without page scraping; label the result as limited;
+- stop only when the question requires page extraction or multiple source reads that cannot be performed without Firecrawl.
 If sequential-thinking is unavailable: summarize conflicts inline as `Source A says X / Source B says Y / Best fit: Z`.
 
-Graceful degradation: ⚠️ Partial — quick mode works with Context7 and/or Brave; full mode requires live search plus Firecrawl.
+Graceful degradation: ⚠️ Partial — quick mode works with Context7 and/or Brave; full mode prefers live search plus Firecrawl, but can produce a clearly limited answer from official/search evidence when scraping is unavailable.
 
 ## Steps
 
@@ -124,7 +125,7 @@ Apply the search strategy for the full-mode type:
 
 **NEWS**
 - Use `brave_news_search`.
-- Start with `freshness: "pd"`, widen to `"pw"` if needed.
+- Start with `freshness: "pd"`, widen to `"pw"`, then `"pm"` when the topic is not breaking news. Use `"py"` only for annual/long-running topics.
 - Include the current year in the query.
 
 **HOWTO / API**
@@ -140,11 +141,11 @@ Universal rules:
 
 - Scrape only high-signal pages.
 - Use `firecrawl_scrape` with `formats: ["markdown"]` and `onlyMainContent: true`.
-- For structured fields, params, prices, or specs, prefer `firecrawl_extract`.
+- For structured fields, params, prices, or specs, prefer structured extraction. Ask for or infer the exact output fields first, then use `firecrawl_extract` or `firecrawl_scrape` with JSON options when supported.
 - Default cap: 3 URLs; 5 for COMPARE queries.
 - If JS-rendered pages return empty content, retry once with `waitFor: 5000`, then fall back to `firecrawl_map` if needed.
 - Use `firecrawl_crawl` only when the user asks for comprehensive coverage of a known site section; set `limit <= 10` and `maxDiscoveryDepth <= 2`, then poll with `firecrawl_check_crawl_status`.
-- If fewer than 2 usable sources remain after quality filtering, stop and tell the user there are not enough reliable sources.
+- If fewer than 2 usable sources remain after quality filtering, stop unless a single official source is sufficient for the specific fact. Label single-source answers clearly.
 
 ### Step 7 — Synthesize
 
@@ -217,7 +218,7 @@ Keep it short. No citations list, no report structure, no recommendations unless
 - Quick mode caps at 2 tool calls before escalating or answering.
 - Never scrape in quick mode.
 - Always attempt Context7 first for library/framework API questions.
-- In full mode, always scrape or extract before making factual claims from web results.
+- In full mode, scrape or extract before making factual claims from web results when page tools are available. If scraping is unavailable, use only official/high-authority search evidence and label the limitation.
 - Prefer authoritative sources over aggregators.
 - Do not answer quick-mode web questions from weak snippets; escalate to full mode when authority or context is unclear.
 - Cite every full-mode claim with its source URL or `Context7 (library-name)`.

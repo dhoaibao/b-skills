@@ -15,7 +15,7 @@ Systematic, hypothesis-driven bug tracing: understand code structure first, form
 ranked hypotheses, locate root cause, then fix and verify. Never jump straight to patching.
 
 Default behavior is the full loop: **trace → confirm root cause → fix → verify**.
-Only stop earlier when the user explicitly asks for diagnosis-only, root-cause-only, or investigation-only output. Do not stop after reporting the cause if a safe, minimal fix is available.
+If the user asks only "why" or requests diagnosis/root-cause/investigation output, stop after Step 4 with the confirmed cause and proposed fix. Do not edit until asked. Otherwise, do not stop after reporting the cause if a safe, minimal fix is available.
 
 If `$ARGUMENTS` is provided, treat it as the error message or symptom — skip asking for symptoms in Step 1 and proceed directly with what was given.
 If `$ARGUMENTS` explicitly limits scope to investigation-only, honor that limit and stop after Step 4.
@@ -139,12 +139,13 @@ Test hypotheses starting from the most likely:
 
 **Dynamic verification** — if static analysis is insufficient to confirm root cause:
 
-1. Add one or two targeted log statements at the suspected choke point — not scattered across files.
-2. Instruct the user to run the failing scenario and paste the output.
-3. Analyze the output: does it confirm or eliminate the hypothesis?
-4. If confirmed → proceed to Step 5. If eliminated → mark hypothesis as ruled out, advance to the next ranked hypothesis, restart from sub-step 1.
-5. After root cause is confirmed, remove all debug logging added during this loop.
-6. Inspect the diff or touched lines to confirm all temporary instrumentation was removed before writing the fix or reporting completion.
+1. First try to reproduce locally with the narrowest safe command, script, or test target already present in the project. Do not start servers, install packages, or mutate remote data without approval.
+2. If local reproduction is unavailable or insufficient, add one or two targeted log statements at the suspected choke point — not scattered across files.
+3. Instruct the user to run the failing scenario and paste the output.
+4. Analyze the output: does it confirm or eliminate the hypothesis?
+5. If confirmed → proceed to Step 5. If eliminated → mark hypothesis as ruled out, advance to the next ranked hypothesis, restart from sub-step 1.
+6. After root cause is confirmed, remove all debug logging added during this loop.
+7. Inspect the diff or touched lines to confirm all temporary instrumentation was removed before writing the fix or reporting completion.
 
 Cap at **3 iterations** — if root cause is not confirmed after 3 instrumentation rounds, remove any debug logging added during the loop, then surface evidence to the user:
 
@@ -216,7 +217,7 @@ Note any silent catch blocks or unexpected stops in the path.
 ## Rules
 
 - Never patch before confirming root cause — a wrong fix wastes time and introduces new bugs.
-- Default to full execution: trace → confirm root cause → fix → verify. Only stop at diagnosis when the caller explicitly requests that narrower scope.
+- Default to full execution: trace → confirm root cause → fix → verify. Stop at diagnosis when the caller asks only for explanation/root cause or explicitly requests that narrower scope.
 - Always map the full execution path first — the bug is often not where it surfaces.
 - If 2+ hypotheses seem equally likely, verify the cheaper one first.
 - Silent failure points (swallowed exceptions, missing logs) are the most common cause of "no error but not working" bugs — check these first.

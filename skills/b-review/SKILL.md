@@ -56,6 +56,7 @@ Graceful degradation: ✅ Possible — core review works with bash + read. Each 
 Run:
 ```bash
 git diff HEAD
+git status --short
 ```
 
 If the output is empty: try `git diff --staged` (staged but not committed). If still empty, ask the user — "No uncommitted or staged changes found. Which changes should I review? Provide a commit hash, branch name, or comparison range." Do not silently review `HEAD~1`; the last commit may be unrelated.
@@ -64,6 +65,8 @@ Extract:
 - **Files changed**: list of modified, added, deleted files.
 - **Changed lines**: what was added (+) and removed (-).
 - **Scope**: how wide is the change?
+
+If `git status --short` shows untracked non-sensitive files that appear related to the change, include them in scope by reading the relevant sections or asking the user if ambiguous. Do not read untracked files that may contain secrets.
 
 If the diff is large (>500 lines changed), ask the user which area to focus on first rather than reviewing everything at once.
 
@@ -199,7 +202,7 @@ If tests are missing for a requirement or critical edge case: flag as a finding,
 
 ### Step 6 — Observability check *(conditional)*
 
-**Skip entirely if**: `skip test adequacy` was passed; the diff is fast-path eligible; or the diff does not add new endpoints, route handlers, background jobs, or queue consumers.
+**Skip entirely if**: `skip test adequacy` was passed; the diff does not add new endpoints, route handlers, background jobs, or queue consumers; or the diff is fast-path eligible **and** does not add/change an entry point.
 
 **When triggered** — check *changed code only* for minimum instrumentation:
 
@@ -250,7 +253,7 @@ Use the output to produce the final report.
 - Prefer a requirements baseline. If none is available after a bounded clarification attempt, proceed only as a clearly labeled diff-only risk review and do not claim requirements coverage.
 - Blocker = anything that would cause a reviewer to request changes before merge.
 - Suggestion = improvement that does not block correctness or requirement fulfillment.
-- Do not re-run automated checks (lint, tests) — those are the user's responsibility; b-review owns human judgment.
+- Do not routinely re-run automated checks (lint, tests) — those are normally the user's responsibility. Run a narrow command only when review confidence depends on runtime/type evidence, and label it as reviewer verification.
 - If logic is too complex to understand without running it, say so — do not guess.
 - Keep diff scope in mind: a 3-line fix needs a lighter review than a 200-line feature.
 - If requirements are not fulfillable with the current implementation, state clearly: "Requirement X is not met — the implementation does Y instead of Z".

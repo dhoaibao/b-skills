@@ -78,7 +78,8 @@ Graceful degradation: ⚠️ Partial — mechanical refactoring still possible w
 Choose the mechanical transformation pattern that matches the request:
 
 - **Rename symbol** → `rename_symbol`, then verify.
-- **Rename file/directory** → use native rename/move operations, then use Serena reference checks plus import verification before proceeding.
+- **Rename file** → use `apply_patch` move operations when practical, then use Serena reference checks plus import verification before proceeding.
+- **Rename directory** → move files individually when the scope is small; for broad directory moves, stop and ask for confirmation because many imports, docs, and tooling paths can change.
 - **Extract method** → add the new helper with `insert_before_symbol`, then update the caller with `replace_symbol_body`.
 - **Inline variable** → substitute the expression with `replace_symbol_body`, then remove the symbol with `safe_delete_symbol`.
 - **Move to new file** → insert or replace the declaration in the destination, update imports, then delete from the old location.
@@ -115,7 +116,7 @@ After every mechanical step:
 
 1. **Compilation/type check** *(when applicable)*: run the project-specific command discovered from manifests or CI. Examples include `npm run typecheck`, `npx tsc --noEmit`, `go build ./...`, or `cargo check`, but only use commands that match the project.
 
-2. **Test check**: run the project-specific narrow test first, then the broader suite after the final step when the refactor scope warrants it. Examples include `npm test -- <target>`, `pytest path/to/test.py`, `go test ./pkg/...`, or `cargo test`, but derive the command from project conventions.
+2. **Test check**: run the project-specific narrow test first, then the broader suite after the final step when the refactor touches shared/exported behavior, package boundaries, fixtures, or many call sites. Examples include `npm test -- <target>`, `pytest path/to/test.py`, `go test ./pkg/...`, or `cargo test`, but derive the command from project conventions.
 
 3. **Git diff inspection**: `git diff` to confirm only intended changes. Look for accidental deletions, wrong import paths, unintended formatting.
 
@@ -165,6 +166,6 @@ After every mechanical step:
 - Do not refactor and add new features in the same session — split into two tasks.
 - If the refactor affects >3 files: use `sequentialthinking` to evaluate rollback strategy.
 - Run compilation check after every mechanical step — do not wait until the end.
-- Run the full test suite after the last step, not just the unit test for the changed function.
+- Run the full test suite after the last step when the refactor scope warrants it; otherwise state which narrower checks were enough and why.
 - Keep changes commit-ready and separated by logical transformation.
 - If too large to verify in one session: stop after a safe checkpoint, run tests, and tell the user: "Safe checkpoint reached. Remaining transformations: [list]."

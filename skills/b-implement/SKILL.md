@@ -14,9 +14,10 @@ $ARGUMENTS
 Execute an approved plan with discipline: read the source of truth, apply the next
 small step, verify it, update progress, and stop when a new decision is required.
 
-If `$ARGUMENTS` is provided, treat it as the plan file path, task slug, or approved
-chat-plan description. Do not ask the user to restate the plan unless the referenced
-plan cannot be found or the implementation target is ambiguous.
+If `$ARGUMENTS` is provided, treat it as the plan file path, task slug, or explicitly
+approved chat-plan description. Do not ask the user to restate the plan unless the
+referenced plan cannot be found, approval is unclear, or the implementation target is
+ambiguous.
 
 ## When to use
 
@@ -54,8 +55,9 @@ Resolve the implementation source in this order:
 
 1. `$ARGUMENTS` points to a `.md` file -> read that plan.
 2. `$ARGUMENTS` names a slug -> read `.opencode/b-plans/[slug].md`.
-3. `$ARGUMENTS` contains a complete approved chat plan -> use that text directly.
-4. No usable source -> if the request is broad, multi-file, or unclear, switch to **b-plan**. Otherwise ask: "Which approved plan should I implement? Provide a `.opencode/b-plans/...` path, task slug, or paste the approved chat plan."
+3. `$ARGUMENTS` contains a complete chat plan and explicitly says it is approved -> use that text directly.
+4. `$ARGUMENTS` contains a small, clearly scoped direct implementation request -> proceed, but record the interpreted scope before editing.
+5. No usable source -> if the request is broad, multi-file, or unclear, switch to **b-plan**. Otherwise ask: "Which approved plan should I implement? Provide a `.opencode/b-plans/...` path, task slug, or paste the approved chat plan."
 
 Extract:
 - Confirmed decisions.
@@ -109,7 +111,7 @@ Classify failures:
 - Runtime/root-cause uncertainty -> use **b-debug**.
 - Library/API uncertainty -> use `context7`; if unresolved, use **b-research**.
 
-Maximum 3 fix iterations per step. After that, report what passed, what failed, and the remaining evidence.
+Use the global 3-iteration fix/verify cap per step. After that, report what passed, what failed, and the remaining evidence.
 
 ---
 
@@ -167,6 +169,7 @@ Do not commit unless the user explicitly requested a commit.
 ## Rules
 
 - Implement only approved scope. If scope is unclear, go back to `/b-plan`.
+- Broad work needs a saved plan, approved chat plan, or explicit approval statement. Do not treat a loose feature description as implementation-ready.
 - Work one plan step at a time and verify before moving on.
 - Never overwrite unrelated user changes.
 - Never invent missing requirements or product decisions.

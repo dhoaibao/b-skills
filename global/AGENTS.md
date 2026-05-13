@@ -21,6 +21,8 @@ Match the user's intent to one active skill before answering inline. If a reques
 
 Switch skills only at a documented handoff condition. Ask the smallest concrete question when a user decision blocks progress.
 
+When switching skills, include a compact handoff: `source`, `scope`, `files`, `commands`, `blockers`, and `next skill`. Do not rely on prior chat context when a saved plan or changed artifact is the source of truth.
+
 ---
 
 ## Tool Priority
@@ -48,6 +50,7 @@ For symbol-aware work, call `check_onboarding_performed`; if false, call `onboar
 - Known symbol edit: Serena first; GitNexus only for exported/shared or cross-boundary symbols.
 - Large unfamiliar area: GitNexus once to narrow, then Serena confirms.
 - Review/debug: GitNexus only for cross-file, flow, route/API, or changed-scope risk.
+- Tool names in skill prose describe MCP capabilities; actual calls must use the exact tool names exposed by the current OpenCode session.
 
 **Evidence standards**:
 - Graph evidence = GitNexus relationships/processes/routes/impact; use for prioritization, not proof.
@@ -67,13 +70,23 @@ For symbol-aware work, call `check_onboarding_performed`; if false, call `onboar
 
 ---
 
+## Approval Gates
+
+Ask before starting package installs, dev servers, migrations, destructive commands, production-like/staging data writes, broad refactors, or commits. For clearly scoped code edits, proceed without asking unless the edit changes user-visible behavior beyond the request.
+
+If a task says only "why" or asks for diagnosis/explanation, stop after confirmed root cause unless the user also asked for a fix. If a task asks to fix, debug, implement, or apply changes, continue through the relevant skill's edit and verification loop.
+
+---
+
 ## Artifact Paths
 
 - Plans: `.opencode/b-plans/<task-slug>.md`.
-- Skill artifacts: `.opencode/b-skills/<skill>/<run>/`.
-- E2E artifacts: `.opencode/b-skills/b-e2e/<run>/`.
+- Run IDs: `<YYYYMMDD-HHMMSS>-<slug>`.
+- Skill artifacts: `.opencode/b-skills/<skill>/<run-id>/`.
+- E2E artifacts: `.opencode/b-skills/b-e2e/<run-id>/`.
 - Temporary logs: `/tmp/opencode/b-skills/<skill>/<slug>.log`.
 - Do not write generated artifacts elsewhere unless editing project source files is the task.
+- If a skill creates more than one artifact, create or report a manifest listing artifact paths, command logs, cleanup status, and any generated source files.
 
 ---
 
@@ -81,10 +94,11 @@ For symbol-aware work, call `check_onboarding_performed`; if false, call `onboar
 
 - Prefer the exact command from the approved plan or user request.
 - If no command is given, discover project-specific scripts from manifests, task runners, or CI config.
-- Run the narrowest useful check first; escalate only when the change scope justifies it.
+- Use the verification ladder: narrow check -> broader affected-area check -> final full check only when scope/risk justifies it.
 - Do not treat generic chained commands as authoritative verification.
 - If output is truncated or a command times out, save full output under `/tmp/opencode/b-skills/<skill>/` and inspect the relevant failure section.
 - For flaky tests, rerun once; if results differ, report the flake with evidence.
+- Use a maximum of 3 local fix/verify iterations for implementation/debug/test work before reporting the remaining evidence and blocker.
 
 ---
 
@@ -98,12 +112,22 @@ For symbol-aware work, call `check_onboarding_performed`; if false, call `onboar
 
 ---
 
+## Worktree Safety
+
+- Check dirty state before non-trivial edits and preserve unrelated user changes.
+- Include relevant untracked non-sensitive files in review or implementation scope; if an untracked file may contain secrets or is unrelated, do not read it without permission.
+- If a planned file already contains unrelated edits, read the affected section and patch around those edits.
+- If user changes directly conflict with the task, stop and ask how to proceed.
+
+---
+
 ## Output Conventions
 
 - Respond in the user's language for chat output. Saved artifacts are English unless requested otherwise.
 - Be concise. Lead with the answer/action and reference code as `file_path:line_number`.
 - Never auto-add emojis to chat or files unless requested; template emojis are acceptable.
 - Use absolute paths in tool calls. Do not run `cd` unless the user asks.
+- For implementation, debug, test, refactor, and review tasks, final responses must include: changes/findings, verification evidence, blockers or skipped checks, and the natural next action.
 
 ---
 

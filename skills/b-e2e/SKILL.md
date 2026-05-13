@@ -39,7 +39,7 @@ Graceful degradation: ❌ Not possible — this skill inherently requires browse
 
 ### Step 1 — Setup environment and navigate
 
-Use `bash` to ensure a session-specific artifact directory exists: `.opencode/b-skills/b-e2e/[timestamp-or-flow-slug]/`. Never write screenshots or snapshots directly into the shared `.opencode/b-skills/b-e2e/` root.
+Use `bash` to ensure a session-specific artifact directory exists: `.opencode/b-skills/b-e2e/[run-id]/`, where `run-id` follows the global timestamp-slug convention. Create or report a manifest for screenshots, snapshots, console/network output, generated tests, and cleanup status. Never write screenshots or snapshots directly into the shared `.opencode/b-skills/b-e2e/` root.
 
 Determine the target URL (local dev server, preview URL, or staging). If the flow writes data on staging/production-like systems, ask for explicit confirmation and test-data guidance before interacting.
 
@@ -54,13 +54,15 @@ Before navigation, clarify only the state that blocks the flow:
 - Test data: seed records, disposable accounts, reset expectations, and cleanup responsibility.
 - Environment safety: whether writes are allowed against the target URL.
 
+Prefer disposable test accounts, seeded state, or an already-authenticated local session. Do not ask the user to paste real production credentials or secrets into chat.
+
 Once confirmed reachable (or for remote URLs), call `playwright_browser_navigate` to load the application.
 
 ---
 
 ### Step 2 — Map the UI and capture visuals
 
-Call `playwright_browser_snapshot` to capture the accessibility tree and `playwright_browser_take_screenshot` for visual evidence when needed. Save artifacts using each Playwright MCP tool's supported `filename` parameter when available; otherwise record the returned artifact path. Use the session-specific `.opencode/b-skills/b-e2e/[run]/` directory for native notes and generated test files. Always use the accessibility snapshot to find exact target references before attempting to click or type.
+Call `playwright_browser_snapshot` to capture the accessibility tree and `playwright_browser_take_screenshot` for visual evidence when needed. Save artifacts using each Playwright MCP tool's supported `filename` parameter when available; otherwise record the returned artifact path in the manifest. Use the session-specific `.opencode/b-skills/b-e2e/[run-id]/` directory for native notes, the manifest, and generated test files. Always use the accessibility snapshot to find exact target references before attempting to click or type.
 
 ---
 
@@ -89,8 +91,9 @@ Flake check:
 If the user asked to write or fix a test file:
 
 1. Locate the appropriate spec file:
-   - Use Glob to find existing specs (`**/*.spec.ts`, `**/*.e2e.ts`, or this repo's Playwright convention).
-   - Use `find_symbol` on existing describe blocks to identify the right insertion point.
+    - Use Glob to find existing specs (`**/*.spec.ts`, `**/*.e2e.ts`, or this repo's Playwright convention).
+    - Read Playwright config and package scripts when present (`playwright.config.*`, `package.json`) to confirm test directory, base URL, projects, and command conventions.
+    - Use `find_symbol` on existing describe blocks to identify the right insertion point.
 2. Map the successful manual interactions from Steps 3–4 into Playwright code:
    - Mirror selectors from the snapshot (prefer accessible roles/names over CSS).
    - Mirror assertions from Step 4 verification.
@@ -113,7 +116,8 @@ When testing, verification, and code generation are complete:
 
 1. Close the browser session: `playwright_browser_close`.
 2. Clean up only test data that this run created and that the user approved for cleanup. Do not mutate shared staging/prod data without explicit confirmation.
-3. Report the artifact directory path. Do not delete artifacts by default; they are useful evidence for failed UI checks. If the user asks to clean up artifacts, delete only the session-specific directory created by this run.
+3. Update or report the artifact manifest with created records, cleanup status, screenshots/snapshots, generated test files, and any external artifact paths returned by Playwright.
+4. Report the artifact directory path. Do not delete artifacts by default; they are useful evidence for failed UI checks. If the user asks to clean up artifacts, delete only the session-specific directory created by this run.
 
 ---
 
@@ -144,14 +148,14 @@ Saved to: `[path/to/test.spec.ts]`
 
 #### Cleanup
 ✅ Browser closed
-Artifacts: `.opencode/b-skills/b-e2e/[run]/`
+Artifacts: `.opencode/b-skills/b-e2e/[run-id]/`
 ```
 
 ---
 
 ## Rules
 - Always use `playwright_browser_snapshot` to get exact element targets before interacting; never guess selectors blindly.
-- Save Playwright MCP artifacts with the tool-supported `filename` parameter when available; otherwise record the returned path. Keep native notes and generated test files in the session-specific `.opencode/b-skills/b-e2e/[run]/` directory.
+- Save Playwright MCP artifacts with the tool-supported `filename` parameter when available; otherwise record the returned path. Keep native notes, manifest, and generated test files in the session-specific `.opencode/b-skills/b-e2e/[run-id]/` directory.
 - Always close the browser when the testing flow finishes. Do not delete artifacts unless the user asks, and only delete this run's directory.
 - Ensure the local dev server is running before attempting to navigate to `localhost`.
 - Do not start a dev server unless the user approves the discovered command.

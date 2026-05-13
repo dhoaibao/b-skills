@@ -52,10 +52,13 @@ You can inspect and maintain the suite from this source repository, which contai
 ### Runtime conventions
 
 - Plans are saved to `.opencode/b-plans/<task-slug>.md`.
-- Skill artifacts are saved to `.opencode/b-skills/<skill>/<run>/`; E2E artifacts use `.opencode/b-skills/b-e2e/<run>/`.
+- Skill artifacts are saved to `.opencode/b-skills/<skill>/<run-id>/`; E2E artifacts use `.opencode/b-skills/b-e2e/<run-id>/`, where `run-id` is `<YYYYMMDD-HHMMSS>-<slug>`.
 - Temporary command output uses `/tmp/opencode/b-skills/<skill>/<slug>.log`.
+- Skills that create multiple artifacts report or maintain a manifest with artifact paths, generated files, command logs, and cleanup status.
+- Cross-skill handoffs use a compact payload: `source`, `scope`, `files`, `commands`, `blockers`, and `next skill`.
+- Approval is required before installs, dev servers, migrations, production-like/staging writes, broad refactors, commits, or destructive commands.
 - Manual edits use `apply_patch`; skill instructions should not rely on unavailable native `edit` or `write` tools.
-- Verification commands are discovered from project scripts/CI first. Generic chained commands are not authoritative.
+- Verification commands are discovered from project scripts/CI first. The default ladder is narrow check → broader affected-area check → full check only when scope/risk justifies it.
 - Full research ranks sources as official docs/changelogs, source repos/releases, vendor engineering posts, reputable community sources, then snippets/SEO content.
 - GitNexus is optional radar; Serena is primary hands. GitNexus scopes graph risk, while Serena confirms exact symbols and performs symbol-aware edits.
 
