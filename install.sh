@@ -38,8 +38,8 @@ readonly TIMESTAMP="$(date +%Y%m%d%H%M%S)"
 log()     { printf '%s
 ' "$*"; }
 section() { printf '
-── %s %s
-' "$*" "$(printf '%.0s─' $(seq 1 $((60 - ${#1}))))"; }
+[%s]
+' "$*"; }
 warn()    { printf '⚠️  %s
 ' "$*" >&2; }
 die()     { printf '❌ %s
@@ -167,6 +167,13 @@ if diff:
 PYEOF
 }
 
+announce_write() {
+  local label="$1"
+  if dry_run_enabled; then
+    log "Preview for $label"
+  fi
+}
+
 backup_file_if_needed() {
   local file_path="$1"
   local backup_path="${file_path}.bak-${TIMESTAMP}"
@@ -209,8 +216,10 @@ write_file_from_source() {
   fi
   cp "$source_file" "$after_file"
 
-  log "Preview for $label"
-  show_diff "$before_file" "$after_file" "$label"
+  announce_write "$label"
+  if dry_run_enabled; then
+    show_diff "$before_file" "$after_file" "$label"
+  fi
 
   if dry_run_enabled; then
     log "[dry-run] write $target_file"
@@ -250,8 +259,10 @@ write_text_file() {
     return 0
   fi
 
-  log "Preview for $label"
-  show_diff "$before_file" "$after_file" "$label"
+  announce_write "$label"
+  if dry_run_enabled; then
+    show_diff "$before_file" "$after_file" "$label"
+  fi
 
   if dry_run_enabled; then
     log "[dry-run] write $target_file"
