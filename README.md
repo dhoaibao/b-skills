@@ -194,7 +194,7 @@ Verify the core MCPs are connected in OpenCode before relying on the full suite.
 - Go back to GitNexus only if Serena reveals a new graph question, such as an unexpected shared boundary or consumer contract.
 
 OpenCode integration:
-- Serena runs as `serena start-mcp-server --context=ide --project-from-cwd`.
+- Serena runs as `serena start-mcp-server --context=ide --project-from-cwd --open-web-dashboard False` so the dashboard does not auto-open on OpenCode startup.
 - Serena owns symbol discovery, references, and structural edits; native tools handle files, strings, manifests, commands, prose, and configs.
 - Serena preflight is a session-level concern owned by `global/AGENTS.md` §4 — it runs once when symbol-aware work first becomes necessary, not before every later Serena step in the same run.
 - GitNexus augments Serena for graph-level intelligence only when indexed, fresh, and target-aware. Bundle definition and freshness gate live in `global/AGENTS.md` §4.

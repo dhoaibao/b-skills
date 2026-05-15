@@ -1081,6 +1081,8 @@ mcp_defaults = {
             "start-mcp-server",
             "--context=ide",
             "--project-from-cwd",
+            "--open-web-dashboard",
+            "False",
         ],
     },
     "gitnexus": {
