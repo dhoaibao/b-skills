@@ -29,6 +29,11 @@ assert_contains() {
   grep -Fq "$needle" "$path" || fail "expected '$needle' in $path"
 }
 
+assert_not_contains() {
+  local path="$1" needle="$2"
+  ! grep -Fq "$needle" "$path" || fail "did not expect '$needle' in $path"
+}
+
 assert_equal_files() {
   local left="$1" right="$2"
   cmp -s "$left" "$right" || fail "expected files to match: $left vs $right"
@@ -110,6 +115,7 @@ main() {
   local sandbox_replace="$WORK_DIR/replace"
   local sandbox_dry_run="$WORK_DIR/dry-run"
   local sandbox_piped="$WORK_DIR/piped"
+  local sandbox_provider_delete="$WORK_DIR/provider-delete"
   local rc
 
   require_bin git
@@ -164,6 +170,35 @@ main() {
   assert_contains "$sandbox_piped/home/.config/opencode/b-skills-install.json" '"agentsAction": "replace"'
   assert_contains "$sandbox_piped/home/.config/opencode/b-skills-install.json" '"activationState": "active"'
   compgen -G "$sandbox_piped/home/.config/opencode/AGENTS.md.bak-*" >/dev/null || fail 'expected AGENTS backup after prompted replacement'
+
+  mkdir -p "$sandbox_provider_delete/home/.config/opencode"
+  cat > "$sandbox_provider_delete/home/.config/opencode/opencode.json" <<'EOF'
+{
+  "provider": {
+    "openrouter": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "OpenRouter",
+      "options": {
+        "baseURL": "https://openrouter.ai/api/v1",
+        "apiKey": "saved-key"
+      },
+      "models": {
+        "remove-me": {
+          "name": "Remove Me"
+        },
+        "keep-me": {
+          "name": "Keep Me"
+        }
+      }
+    }
+  }
+}
+EOF
+  rc="$(run_piped_install_with_tty_status "$sandbox_provider_delete" "$snapshot_repo" $'y\nopenrouter\n\n\n\ny\ny\nn\n\n')"
+  [ "$rc" -eq 0 ] || fail "expected provider-delete install exit 0, got $rc"
+  assert_contains "$sandbox_provider_delete/home/.config/opencode/opencode.json" '"keep-me"'
+  assert_not_contains "$sandbox_provider_delete/home/.config/opencode/opencode.json" '"remove-me"'
+  assert_contains "$sandbox_provider_delete/home/.config/opencode/b-skills-install.json" '"customProvider": "openrouter"'
 
   printf 'smoke-install.sh: PASS\n'
 }

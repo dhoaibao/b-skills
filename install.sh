@@ -77,6 +77,7 @@ CUSTOM_PROVIDER_NAME_VALUE=""
 CUSTOM_PROVIDER_BASE_URL_VALUE=""
 CUSTOM_PROVIDER_API_KEY_VALUE=""
 CUSTOM_PROVIDER_MODELS_VALUE=""
+CUSTOM_PROVIDER_DELETE_MODELS_VALUE=""
 AGENTS_INSTALL_ACTION="preserve"
 RUNTIME_ACTIVATION_STATE="active"
 RULES_BACKUP_PATH="none"
@@ -481,6 +482,44 @@ if isinstance(value, str):
 PYEOF
 }
 
+get_existing_provider_models() {
+  local provider_id="$1"
+  [ -f "$CONFIG_FILE" ] || return 0
+
+  env CONFIG_FILE="$CONFIG_FILE" PROVIDER_ID="$provider_id" python3 - <<'PYEOF'
+import json, os
+from pathlib import Path
+
+config_path = Path(os.environ["CONFIG_FILE"])
+provider_id = os.environ["PROVIDER_ID"]
+
+try:
+    config = json.loads(config_path.read_text())
+except (FileNotFoundError, json.JSONDecodeError, OSError):
+    raise SystemExit(0)
+
+provider = config.get("provider", {})
+if not isinstance(provider, dict):
+    raise SystemExit(0)
+
+value = provider.get(provider_id)
+if not isinstance(value, dict):
+    raise SystemExit(0)
+
+models = value.get("models", {})
+if not isinstance(models, dict):
+    raise SystemExit(0)
+
+for model_id, model_config in models.items():
+    model_name = ""
+    if isinstance(model_config, dict):
+        model_name = model_config.get("name", "")
+    if not isinstance(model_name, str) or not model_name:
+        model_name = model_id
+    print(f"{model_id}\t{model_name}")
+PYEOF
+}
+
 prompt_api_key_if_needed() {
   local var_name="$1" prompt_label="$2" existing_value="$3"
   local current_value="${!var_name:-}"
@@ -629,8 +668,65 @@ append_custom_provider_model() {
   CUSTOM_PROVIDER_MODELS_VALUE="${CUSTOM_PROVIDER_MODELS_VALUE}${model_id}"$'\t'"${model_name}"$'\t'"${reasoning}"
 }
 
+append_custom_provider_delete_model() {
+  local model_id="$1"
+
+  if [ -n "$CUSTOM_PROVIDER_DELETE_MODELS_VALUE" ]; then
+    CUSTOM_PROVIDER_DELETE_MODELS_VALUE="${CUSTOM_PROVIDER_DELETE_MODELS_VALUE}"$'\n'
+  fi
+
+  CUSTOM_PROVIDER_DELETE_MODELS_VALUE="${CUSTOM_PROVIDER_DELETE_MODELS_VALUE}${model_id}"
+}
+
+prompt_custom_provider_model_deletions() {
+  local existing_models="$1"
+  local entered_value model_id model_name model_number=0
+
+  [ -n "$existing_models" ] || return 0
+  prompt_available || return 0
+
+  printf 'Existing models for provider %s:\n' "$CUSTOM_PROVIDER_ID_VALUE" > /dev/tty
+  while IFS=$'\t' read -r model_id model_name; do
+    [ -n "$model_id" ] || continue
+    model_number=$((model_number + 1))
+    if [ "$model_name" = "$model_id" ] || [ -z "$model_name" ]; then
+      printf '  %d) %s\n' "$model_number" "$model_id" > /dev/tty
+    else
+      printf '  %d) %s (%s)\n' "$model_number" "$model_id" "$model_name" > /dev/tty
+    fi
+  done <<< "$existing_models"
+
+  printf 'Remove any existing models from this provider before adding new ones? [y/N]: ' > /dev/tty
+  if IFS= read -r entered_value < /dev/tty; then
+    :
+  else
+    entered_value=""
+  fi
+
+  wants_mcp_install "$entered_value" || return 0
+
+  while IFS=$'\t' read -r model_id model_name; do
+    [ -n "$model_id" ] || continue
+    if [ "$model_name" = "$model_id" ] || [ -z "$model_name" ]; then
+      printf 'Remove model %s? [y/N]: ' "$model_id" > /dev/tty
+    else
+      printf 'Remove model %s (%s)? [y/N]: ' "$model_id" "$model_name" > /dev/tty
+    fi
+
+    if IFS= read -r entered_value < /dev/tty; then
+      :
+    else
+      entered_value=""
+    fi
+
+    if wants_mcp_install "$entered_value"; then
+      append_custom_provider_delete_model "$model_id"
+    fi
+  done <<< "$existing_models"
+}
+
 collect_custom_provider_config() {
-  local entered_value model_id model_name existing_provider_name existing_provider_base_url existing_provider_api_key
+  local entered_value model_id model_name existing_provider_name existing_provider_base_url existing_provider_api_key existing_provider_models
 
   CUSTOM_PROVIDER_ENABLED_VALUE="N"
   CUSTOM_PROVIDER_ID_VALUE=""
@@ -638,6 +734,7 @@ collect_custom_provider_config() {
   CUSTOM_PROVIDER_BASE_URL_VALUE=""
   CUSTOM_PROVIDER_API_KEY_VALUE=""
   CUSTOM_PROVIDER_MODELS_VALUE=""
+  CUSTOM_PROVIDER_DELETE_MODELS_VALUE=""
 
   if ! prompt_available; then
     return 0
@@ -663,6 +760,7 @@ collect_custom_provider_config() {
   existing_provider_name=$(get_existing_provider_value "$CUSTOM_PROVIDER_ID_VALUE" "name")
   existing_provider_base_url=$(get_existing_provider_value "$CUSTOM_PROVIDER_ID_VALUE" "options.baseURL")
   existing_provider_api_key=$(get_existing_provider_value "$CUSTOM_PROVIDER_ID_VALUE" "options.apiKey")
+  existing_provider_models=$(get_existing_provider_models "$CUSTOM_PROVIDER_ID_VALUE")
 
   prompt_value_with_default CUSTOM_PROVIDER_NAME_VALUE "provider name" "${existing_provider_name:-$CUSTOM_PROVIDER_ID_VALUE}"
   [ -n "$CUSTOM_PROVIDER_NAME_VALUE" ] || CUSTOM_PROVIDER_NAME_VALUE="$CUSTOM_PROVIDER_ID_VALUE"
@@ -675,6 +773,8 @@ collect_custom_provider_config() {
 
   prompt_value_with_default CUSTOM_PROVIDER_API_KEY_VALUE "API key" "${existing_provider_api_key:-YOUR_API_KEY}" "Y"
   [ -n "$CUSTOM_PROVIDER_API_KEY_VALUE" ] || CUSTOM_PROVIDER_API_KEY_VALUE="YOUR_API_KEY"
+
+  prompt_custom_provider_model_deletions "$existing_provider_models"
 
   while :; do
     prompt_value_with_default model_id "model id (press Enter to finish)" ""
@@ -690,8 +790,8 @@ collect_custom_provider_config() {
     append_custom_provider_model "$model_id" "$model_name" "$model_reasoning"
   done
 
-  if [ -z "$CUSTOM_PROVIDER_MODELS_VALUE" ]; then
-    warn "Skipping custom provider: add at least one model to install it."
+  if [ -z "$CUSTOM_PROVIDER_MODELS_VALUE" ] && [ -z "$CUSTOM_PROVIDER_DELETE_MODELS_VALUE" ]; then
+    warn "Skipping custom provider: add or remove at least one model to update it."
     CUSTOM_PROVIDER_ID_VALUE=""
     CUSTOM_PROVIDER_NAME_VALUE=""
     CUSTOM_PROVIDER_BASE_URL_VALUE=""
@@ -722,6 +822,21 @@ count_custom_provider_models() {
   while IFS= read -r ignored_line; do
     count=$((count + 1))
   done <<< "$CUSTOM_PROVIDER_MODELS_VALUE"
+
+  printf '%s' "$count"
+}
+
+count_custom_provider_deleted_models() {
+  local count=0 ignored_line
+
+  if [ -z "$CUSTOM_PROVIDER_DELETE_MODELS_VALUE" ]; then
+    printf '0'
+    return 0
+  fi
+
+  while IFS= read -r ignored_line; do
+    count=$((count + 1))
+  done <<< "$CUSTOM_PROVIDER_DELETE_MODELS_VALUE"
 
   printf '%s' "$count"
 }
@@ -845,6 +960,7 @@ PYEOF
     CUSTOM_PROVIDER_BASE_URL_VALUE="$CUSTOM_PROVIDER_BASE_URL_VALUE" \
     CUSTOM_PROVIDER_API_KEY_VALUE="$CUSTOM_PROVIDER_API_KEY_VALUE" \
     CUSTOM_PROVIDER_MODELS_VALUE="$CUSTOM_PROVIDER_MODELS_VALUE" \
+    CUSTOM_PROVIDER_DELETE_MODELS_VALUE="$CUSTOM_PROVIDER_DELETE_MODELS_VALUE" \
     python3 - <<'PYEOF'
 import json, os
 
@@ -859,6 +975,7 @@ custom_provider_name = (os.environ.get("CUSTOM_PROVIDER_NAME_VALUE") or "").stri
 custom_provider_base_url = (os.environ.get("CUSTOM_PROVIDER_BASE_URL_VALUE") or "").strip()
 custom_provider_api_key = os.environ.get("CUSTOM_PROVIDER_API_KEY_VALUE") or "YOUR_API_KEY"
 custom_provider_models_raw = os.environ.get("CUSTOM_PROVIDER_MODELS_VALUE", "")
+custom_provider_delete_models_raw = os.environ.get("CUSTOM_PROVIDER_DELETE_MODELS_VALUE", "")
 
 
 def strip_jsonc_comments(text):
@@ -995,6 +1112,10 @@ def parse_custom_provider_models(raw_text):
     return models
 
 
+def parse_custom_provider_delete_models(raw_text):
+    return [line.strip() for line in raw_text.splitlines() if line.strip()]
+
+
 def deep_fill(target, defaults):
     for key, value in defaults.items():
         if key not in target:
@@ -1112,8 +1233,9 @@ if install_mcps:
     ensure_secret(mcp["firecrawl"].get("environment"), "FIRECRAWL_API_KEY", firecrawl_api_key)
 
 custom_provider_models = parse_custom_provider_models(custom_provider_models_raw)
+custom_provider_delete_models = parse_custom_provider_delete_models(custom_provider_delete_models_raw)
 
-if custom_provider_enabled and custom_provider_id and custom_provider_base_url and custom_provider_models:
+if custom_provider_enabled and custom_provider_id and custom_provider_base_url and (custom_provider_models or custom_provider_delete_models):
     provider = config.setdefault("provider", {})
     if not isinstance(provider, dict):
         provider = {}
@@ -1132,6 +1254,9 @@ if custom_provider_enabled and custom_provider_id and custom_provider_base_url a
     options["apiKey"] = custom_provider_api_key
 
     models = ensure_mapping(current_provider, "models")
+    for model_id in custom_provider_delete_models:
+        models.pop(model_id, None)
+
     for model_id, model_config in custom_provider_models.items():
         current_model = models.get(model_id)
         if not isinstance(current_model, dict):
@@ -1370,7 +1495,8 @@ if wants_mcp_install "$CUSTOM_PROVIDER_ENABLED_VALUE"; then
   log "✅ Custom provider merged"
   log "   provider: $CUSTOM_PROVIDER_ID_VALUE"
   log "   baseURL:  $CUSTOM_PROVIDER_BASE_URL_VALUE"
-  log "   models:   $(count_custom_provider_models)"
+  log "   models added/updated: $(count_custom_provider_models)"
+  log "   models removed:       $(count_custom_provider_deleted_models)"
   log "   apiKey:   $(api_key_status "$CUSTOM_PROVIDER_API_KEY_VALUE")"
 else
   log "⏭ Custom provider skipped."
