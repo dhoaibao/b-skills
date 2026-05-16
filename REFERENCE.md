@@ -15,7 +15,9 @@ Clarify what to build before planning. `b-spec` exists for rough, underspecified
 **Core behavior**
 - Stays active only while the end state is underdetermined.
 - Uses the smallest clarification loop needed to lock goal, constraints, success criteria, and non-goals.
+- Prefers one blocking question at a time when each answer changes the next question, and uses a concrete scenario or counterexample when that collapses ambiguity faster.
 - Checks local code context before asking the user to answer something the repo already answers.
+- Reuses canonical terminology from optional `CONTEXT.md` / `CONTEXT-MAP.md` files when the repo already has them, and surfaces glossary/code contradictions instead of silently picking one.
 - Hands off to `b-research` when the remaining blocker is real external feasibility or vendor/library behavior.
 - Keeps the output in chat by default instead of creating a second durable artifact.
 - Hands off to `b-implement` when the clarified request is now a small direct request, or to `b-plan` when the goal is clear but the work still needs sequencing.
@@ -26,7 +28,11 @@ Clarify what to build before planning. `b-spec` exists for rough, underspecified
 **Key rules**
 - Clarify the target outcome; do not drift into implementation planning.
 - Prefer repository evidence over extra user questions whenever the codebase already answers the ambiguity.
+- Prefer glossary terms over ad-hoc wording when the repo already carries domain docs.
 - Keep the clarification loop short; do not turn every rough ask into a long interview.
+
+**Shared reference**
+- `references/domain-glossary.md` — optional convention for `CONTEXT.md`, `CONTEXT-MAP.md`, and ADR usage when a repo wants a persistent project glossary.
 
 ---
 
@@ -340,7 +346,7 @@ This repository is the install-only source layout for the suite. OpenCode does n
 - `global/AGENTS.md` — source copy of the runtime global rules, installed as `AGENTS.b-skills.md` and optionally applied to OpenCode's main `AGENTS.md`; installed skill prose should cite `AGENTS.md`.
 - `skills/<name>/SKILL.md` — skill sources.
 - `commands/<name>.md` — thin slash-command wrappers.
-- `references/*.md` — reusable checklists shared by multiple skills, installed under `~/.config/opencode/references/b-skills/`.
+- `references/*.md` — reusable checklists and conventions shared by multiple skills, installed under `~/.config/opencode/references/b-skills/`.
 - `scripts/smoke-install.sh` — isolated installer smoke checks against a temp HOME and repo snapshot.
 - `scripts/validate-skills.sh` — suite validator for frontmatter, required sections, stale phrases, docs coverage, and global-rule guardrails.
 

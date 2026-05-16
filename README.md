@@ -38,7 +38,7 @@ You can inspect and maintain the suite from this source repository, which contai
 
 | Skill | Phase | When to use |
 |---|---|---|
-| `/b-spec` | Clarify | Clarify the end state, constraints, and acceptance criteria when the request is underspecified or still a rough idea |
+| `/b-spec` | Clarify | Clarify the end state, constraints, and acceptance criteria when the request is underspecified or still a rough idea, sharpening terminology from repo glossary docs when they exist |
 | `/b-plan` | Decide | Turn a clear goal into an execution-ready plan when the work is broad, dependency-heavy, or risky |
 | `/b-research` | Decide | External knowledge — lookup or research with citation discipline; auto-deepens, never asks the user to pick a mode |
 | `/b-implement` | Build | Execute approved or clearly scoped work one step at a time, verify each step, and stop for new decisions |
@@ -76,7 +76,7 @@ You can inspect and maintain the suite from this source repository, which contai
 
 In this source repo, shared runtime rules live in `global/AGENTS.md` and install to `~/.config/opencode/AGENTS.b-skills.md`; the installer replaces the active `AGENTS.md` only when missing or approved. Installed skills still cite `AGENTS.md`, so preserved third-party rules leave the suite activation-pending until merged/replaced.
 
-Runtime headlines: definitions and rubrics (§3), durable plan metadata (§2), MCP bundles and fallbacks (§4), safety gates plus isolated-workspace preference (§6), execution/verification discipline including review checkpoints and completion closure (§7), artifacts (§8), output contract (§9), documentation-backed decisions (§5), the high-risk challenge gate plus test-vs-bug and DOM/browser boundaries (§10), session lifecycle (§11).
+Runtime headlines: definitions and rubrics (§3), durable plan metadata plus the optional domain-docs convention (§2), MCP bundles and fallbacks (§4), safety gates plus isolated-workspace preference (§6), execution/verification discipline including review checkpoints and completion closure (§7), artifacts (§8), output contract (§9), documentation-backed decisions (§5), the high-risk challenge gate plus test-vs-bug and DOM/browser boundaries (§10), session lifecycle (§11).
 
 Artifact paths:
 - Plans: `.opencode/b-skills/b-plan/<task-slug>.md` after applying the `.opencode/.gitignore` guard in `global/AGENTS.md` §6 (legacy `.opencode/b-plans/` is deprecated). New saved plans include frontmatter for durable approval state, timestamps, approved git HEAD, risk, and touch points. Saved plans remain the canonical repo-local source of truth. `<task-slug>` follows the slug algorithm in `global/AGENTS.md` §8.
@@ -89,7 +89,7 @@ Routing/safety highlights: keep one active skill; strict trigger precedence; app
 
 ### Shared references
 
-The suite ships reusable checklists to `~/.config/opencode/references/b-skills/` so multiple skills can deepen security, testing, accessibility, and performance checks without duplicating long lists inside every `SKILL.md`.
+The suite ships reusable references to `~/.config/opencode/references/b-skills/` so multiple skills can deepen security, testing, accessibility, performance, and optional domain-glossary conventions without duplicating long lists inside every `SKILL.md`.
 
 See [REFERENCE.md](REFERENCE.md) for detailed skill contracts and maintenance conventions.
 
@@ -114,6 +114,7 @@ b-skills/
 │   └── AGENTS.md
 ├── references/
 │   ├── accessibility-checklist.md
+│   ├── domain-glossary.md
 │   ├── performance-checklist.md
 │   ├── security-checklist.md
 │   └── testing-patterns.md

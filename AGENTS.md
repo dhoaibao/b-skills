@@ -86,6 +86,7 @@ For this repo, each skill uses a single `SKILL.md` file plus a thin command wrap
 Top-level `references/*.md` files are allowed when two or more skills need the same checklist or pattern guidance.
 
 - Keep them short, task-oriented, and reusable across skills.
+- They may define optional conventions, such as glossary/domain-doc layouts, when adding a whole new skill would be overkill.
 - If a skill points at a shared reference, ensure `install.sh` syncs it into `~/.config/opencode/references/b-skills/`.
 - Treat reference-file changes like runtime-facing guidance: keep `README.md` and `REFERENCE.md` aligned in the same commit.
 

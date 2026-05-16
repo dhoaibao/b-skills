@@ -63,6 +63,8 @@ Restate the ask in one sentence, then ask only the blocking questions needed to 
 
 Use the clarification budget from `AGENTS.md` §1. Do not turn this into an open-ended interview.
 
+Prefer one blocking question at a time when the answer will change the next question. If a single concrete scenario will collapse the ambiguity faster than abstract discussion, ask for that scenario instead.
+
 ### Step 3 — Collapse ambiguity from local evidence
 
 Before asking the user to decide something the codebase already answers:
@@ -70,6 +72,10 @@ Before asking the user to decide something the codebase already answers:
 - Use `serena-symbol-toolkit` to inspect the existing behavior, naming, nearby patterns, or owning area.
 - Use `gitnexus-radar` only when the question is graph-shaped or the area is unfamiliar.
 - If a single narrow docs/API check would settle feasibility, use `context7-docs` inline.
+
+When the repo already has `CONTEXT.md` or `CONTEXT-MAP.md`, read it first and reuse its canonical terminology. If the user uses a vague or overloaded term, name the ambiguity, propose the narrowest wording that matches the glossary, and ask for confirmation only if code and docs do not already settle it.
+
+When the user describes current behavior or boundaries, cross-check that claim against the code before accepting it. If the code and the request disagree, surface the contradiction explicitly instead of building the spec on top of it.
 
 If the remaining blocker is broader external research, stop and hand off to **b-research**.
 
@@ -111,10 +117,16 @@ Close with the handoff envelope and, for non-trivial clarification work, the ski
 **Next:** [b-plan / b-implement / b-research]
 ```
 
+## Reference pointers
+
+- `references/domain-glossary.md` (installed under `~/.config/opencode/references/b-skills/`) — optional glossary convention for `CONTEXT.md`, `CONTEXT-MAP.md`, and ADR usage when the repo already carries domain docs.
+
 ## Rules
 
 - Clarify the end state; do not turn this skill into implementation planning.
 - Prefer repository evidence over user questions when the codebase already answers the ambiguity.
 - Ask only the minimum questions needed to make the work safely plannable.
+- If one concrete scenario or counterexample will expose the real boundary faster than abstraction, use it.
+- If the repo already has a glossary, prefer its terms over ad-hoc wording.
 - Keep the output compact; avoid writing a second durable artifact unless the user explicitly asks for one.
 - If clarification reveals that the real blocker is external feasibility, stop and use **b-research** instead of guessing.

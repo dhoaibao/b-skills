@@ -120,6 +120,12 @@ When the user asks to revise an approved plan, or `b-implement` discovers the pl
 
 Do not invent product behavior, acceptance criteria, compatibility promises, or naming decisions. Ask instead.
 
+### Optional domain docs convention
+
+- When a repo already has `CONTEXT.md` or `CONTEXT-MAP.md`, treat it as the project's glossary and bounded-context map, not as an implementation spec.
+- When wording, naming, or user intent is ambiguous, prefer the canonical terms from those files and consult nearby ADRs before inventing new terminology.
+- Create or update domain docs only when the active skill explicitly owns that work. Do not create glossary or ADR files as a side effect of ordinary implementation.
+
 ---
 
 ## 3. Definitions and rubrics
