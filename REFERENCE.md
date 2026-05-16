@@ -262,6 +262,7 @@ This repository is the install-only source layout for the suite. OpenCode does n
 - It replaces `~/.config/opencode/AGENTS.md` only when missing or explicitly approved.
 - Preserve-mode installs are activation-pending until the active `AGENTS.md` is replaced or merged.
 - `--dry-run` / `B_SKILLS_DRY_RUN=Y` previews changes without writing.
+- `--uninstall` / `B_SKILLS_UNINSTALL=Y` removes skills and commands only when they are marked as b-skills-managed, then removes shared references, `AGENTS.b-skills.md`, and the install manifest; it restores a recorded `AGENTS.md` backup only when the active file still matches the b-skills runtime snapshot, otherwise it preserves the active file.
 - Managed config metadata is stored in `~/.config/opencode/b-skills-install.json`.
 
 ### Maintenance rules

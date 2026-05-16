@@ -11,6 +11,7 @@
 #   B_SKILLS_INSTALL_MCP — Y to install MCP defaults; otherwise skipped
 #   B_SKILLS_DRY_RUN — Y to preview file/config changes without writing into OpenCode config
 #   B_SKILLS_REPLACE_AGENTS — Y to replace ~/.config/opencode/AGENTS.md without prompting; N to preserve it
+#   B_SKILLS_UNINSTALL — Y to remove b-skills-managed files from OpenCode config
 #   BRAVE_API_KEY  — Brave Search MCP API key
 #   CONTEXT7_API_KEY — Context7 MCP API key
 #   FIRECRAWL_API_KEY — Firecrawl MCP API key
@@ -19,6 +20,7 @@
 #   --dry-run         Preview install changes without writing them
 #   --replace-agents  Replace ~/.config/opencode/AGENTS.md without prompting
 #   --preserve-agents Never replace ~/.config/opencode/AGENTS.md
+#   --uninstall       Remove b-skills-managed files from OpenCode config
 
 set -euo pipefail
 
@@ -59,6 +61,9 @@ while [ "$#" -gt 0 ]; do
     --preserve-agents)
       B_SKILLS_REPLACE_AGENTS=N
       ;;
+    --uninstall)
+      B_SKILLS_UNINSTALL=Y
+      ;;
     *)
       die "Unknown argument: $1"
       ;;
@@ -74,6 +79,7 @@ FIRECRAWL_API_KEY_VALUE="${FIRECRAWL_API_KEY:-}"
 INSTALL_MCPS_VALUE="${B_SKILLS_INSTALL_MCP:-}"
 DRY_RUN_VALUE="${B_SKILLS_DRY_RUN:-N}"
 REPLACE_AGENTS_VALUE="${B_SKILLS_REPLACE_AGENTS:-}"
+UNINSTALL_VALUE="${B_SKILLS_UNINSTALL:-N}"
 CUSTOM_PROVIDER_ENABLED_VALUE="N"
 CUSTOM_PROVIDER_ID_VALUE=""
 CUSTOM_PROVIDER_NAME_VALUE=""
@@ -937,6 +943,153 @@ prune_stale_commands() {
 
   printf '%s' "$removed"
 }
+
+remove_path_if_exists() {
+  local path="$1" label="$2"
+  [ -e "$path" ] || {
+    log "✅ $label already absent"
+    return 0
+  }
+
+  if dry_run_enabled; then
+    log "[dry-run] remove $path"
+    return 0
+  fi
+
+  rm -rf "$path"
+  log "✅ $label removed"
+}
+
+remove_skill_if_managed() {
+  local skill_name="$1"
+  local skill_dir="$OPENCODE_DIR/skills/$skill_name"
+  [ -e "$skill_dir" ] || {
+    log "✅ skill $skill_name already absent"
+    return 0
+  }
+
+  if is_b_skills_skill_dir "$skill_dir"; then
+    remove_path_if_exists "$skill_dir" "skill $skill_name"
+  else
+    log "⏭ Preserved skill $skill_name because it is not marked as b-skills-managed"
+  fi
+}
+
+remove_command_if_managed() {
+  local command_name="$1"
+  local command_file="$OPENCODE_DIR/commands/$command_name.md"
+  [ -e "$command_file" ] || {
+    log "✅ command $command_name already absent"
+    return 0
+  }
+
+  if is_b_skills_command_file "$command_file"; then
+    remove_path_if_exists "$command_file" "command $command_name"
+  else
+    log "⏭ Preserved command $command_name because it is not marked as b-skills-managed"
+  fi
+}
+
+restore_agents_backup_if_available() {
+  local backup_path
+  [ -f "$INSTALL_MANIFEST" ] || return 1
+  [ -f "$RULES_DST" ] || return 1
+  [ -f "$RULES_SNAPSHOT_DST" ] || return 1
+  if ! cmp -s "$RULES_DST" "$RULES_SNAPSHOT_DST"; then
+    log "⏭ Preserved OpenCode AGENTS.md because it has changed since b-skills install"
+    return 0
+  fi
+
+  backup_path=$(env INSTALL_MANIFEST="$INSTALL_MANIFEST" python3 - <<'PYEOF'
+import json
+import os
+from pathlib import Path
+
+try:
+    payload = json.loads(Path(os.environ["INSTALL_MANIFEST"]).read_text())
+except (FileNotFoundError, json.JSONDecodeError, OSError):
+    raise SystemExit(0)
+
+path = payload.get("backups", {}).get("globalAgents", "")
+if isinstance(path, str) and path and path != "none":
+    print(path)
+PYEOF
+  )
+
+  [ -n "$backup_path" ] || return 1
+  [ -f "$backup_path" ] || {
+    warn "Recorded AGENTS backup not found: $backup_path"
+    return 1
+  }
+
+  if dry_run_enabled; then
+    log "[dry-run] restore $backup_path -> $RULES_DST"
+    return 0
+  fi
+
+  cp "$backup_path" "$RULES_DST"
+  log "✅ OpenCode AGENTS.md restored from $backup_path"
+}
+
+remove_agents_if_b_skills_managed() {
+  [ -f "$RULES_DST" ] || {
+    log "✅ OpenCode AGENTS.md already absent"
+    return 0
+  }
+
+  if [ -f "$RULES_SNAPSHOT_DST" ] && cmp -s "$RULES_DST" "$RULES_SNAPSHOT_DST"; then
+    remove_path_if_exists "$RULES_DST" "OpenCode AGENTS.md"
+    return 0
+  fi
+
+  log "⏭ Preserved OpenCode AGENTS.md because it does not match the b-skills snapshot"
+}
+
+uninstall_b_skills() {
+  section "Uninstall b-skills"
+
+  remove_skill_if_managed b-spec
+  remove_skill_if_managed b-plan
+  remove_skill_if_managed b-research
+  remove_skill_if_managed b-implement
+  remove_skill_if_managed b-refactor
+  remove_skill_if_managed b-debug
+  remove_skill_if_managed b-test
+  remove_skill_if_managed b-e2e
+  remove_skill_if_managed b-review
+
+  remove_command_if_managed b-spec
+  remove_command_if_managed b-plan
+  remove_command_if_managed b-research
+  remove_command_if_managed b-implement
+  remove_command_if_managed b-refactor
+  remove_command_if_managed b-debug
+  remove_command_if_managed b-test
+  remove_command_if_managed b-e2e
+  remove_command_if_managed b-review
+
+  remove_path_if_exists "$REFERENCES_DST" "shared references"
+
+  if ! restore_agents_backup_if_available; then
+    remove_agents_if_b_skills_managed
+  fi
+
+  remove_path_if_exists "$RULES_SNAPSHOT_DST" "runtime kernel snapshot"
+  remove_path_if_exists "$INSTALL_MANIFEST" "install manifest"
+
+  section "Done"
+  if dry_run_enabled; then
+    log "✅ b-skills uninstall preview completed."
+  else
+    log "✅ b-skills uninstalled from OpenCode."
+  fi
+}
+
+if wants_mcp_install "$UNINSTALL_VALUE"; then
+  uninstall_b_skills
+  trap - EXIT
+  exit 0
+fi
 
 merge_opencode_config() {
   ensure_dir "$(dirname "$CONFIG_FILE")"

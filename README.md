@@ -14,6 +14,12 @@ Preview an install without writing into `~/.config/opencode/`:
 curl -fsSL https://raw.githubusercontent.com/dhoaibao/b-skills/main/install.sh | bash -s -- --dry-run
 ```
 
+Uninstall b-skills-managed files from OpenCode config:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/dhoaibao/b-skills/main/install.sh | bash -s -- --uninstall
+```
+
 The installer deploys this suite into your global OpenCode config directory:
 - `~/.config/opencode/skills/`
 - `~/.config/opencode/commands/`
@@ -200,6 +206,7 @@ OpenCode integration: Serena starts without auto-opening the dashboard and owns 
 - Commands live in `commands/<name>.md`.
 - Shared references live in `references/*.md` and install to `~/.config/opencode/references/b-skills/`; single-skill references live at `skills/<name>/reference.md` and install with their owning skill.
 - `install.sh` is responsible for deploying and pruning suite-managed files under `~/.config/opencode/`.
+- `install.sh --uninstall` removes skills and commands only when they are marked as b-skills-managed, then removes shared references, the runtime snapshot, and the install manifest; it restores a recorded `AGENTS.md` backup only when the active file still matches the b-skills runtime snapshot, otherwise it preserves the active file.
 - `scripts/smoke-install.sh` runs isolated installer smoke tests against a temp HOME and repo snapshot.
 - `scripts/validate-skills.sh` checks frontmatter, required sections, stale tool names, old artifact paths, GitNexus scope drift, runtime-kernel/detailed-contract split, runtime-global leakage, and README/REFERENCE coverage.
 - Any skill change requires updating both `README.md` and `REFERENCE.md` in the same commit.
