@@ -30,6 +30,7 @@ If `$ARGUMENTS` is provided, treat it as the requirements pointer or summary.
 ## When to use
 
 - The user wants a pre-PR or pre-commit changed-code review.
+- The implementation hit a risky milestone and needs reviewer-style scrutiny before continuing.
 - The user explicitly wants a reviewer-style repository or maintainer audit.
 - The goal is to find correctness, regression, security, edge-case, or coverage risks.
 - The implementation is done and needs reviewer-style scrutiny.
@@ -68,6 +69,7 @@ Fallbacks: `AGENTS.md` §4. If optional bundles fail, continue narrower and labe
 
    State the chosen base (or its absence) explicitly in `Scope`. Switch to per-commit review only when the user asks for it.
 6. Pick **self-review** (`--self` or author = user) or **external review** (`--external` or author ≠ user) per the boundary in `AGENTS.md` §10. Default to **self-review** when unspecified and the working tree is dirty.
+7. Checkpoint reviews are valid mid-run. If the request or current state is a milestone checkpoint rather than the final branch review, keep the scope cumulative from the chosen base and label it as a checkpoint review in `Scope`.
 
 ### Step 2 — Pick the review depth
 
@@ -91,7 +93,8 @@ Line/file count alone never decides the path; a 5-line change touching auth is n
 **Baseline:**
 1. Use `$ARGUMENTS`, `--baseline=…`, an approved plan, or short user clarification to define what the change was supposed to do.
 2. If a selected plan references an issue URL, optionally extract it via `firecrawl-extraction` for context.
-3. If no concrete baseline is available after bounded clarification, continue in **diff-only risk review** mode or **repo-audit risk review** mode. In those modes, do not claim requirements coverage; only flag risks, regressions, and security findings against best-practice expectations and the security checklist.
+3. For checkpoint reviews, anchor the baseline to the approved plan step or milestone the implementation claims to have completed, using the incoming handoff details first when they are present.
+4. If no concrete baseline is available after bounded clarification, continue in **diff-only risk review** mode or **repo-audit risk review** mode. In those modes, do not claim requirements coverage; only flag risks, regressions, and security findings against best-practice expectations and the security checklist.
 
 **Inspect in impact-first order:**
 1. Changed symbols with the broadest references.
@@ -172,6 +175,7 @@ Close with the skill-exit status block (`AGENTS.md` §9).
 - Security checklist items are never skipped for changed entry points, sensitive paths, or shared boundaries — even on the fast path.
 - The fast path is gated by **risk bucket**, not by line/file count. Auth/security/migration/contract touches always force standard review.
 - Always include "Checked and clean" so the author sees what scope was actually reviewed. Cap at 5 entries, highest-risk first.
+- A checkpoint review should cover a coherent milestone slice. If the tree is still mid-transform and not reviewable, say so and send it back to execution rather than inventing findings from a broken intermediate state.
 - In `--repo-audit` mode, name the audited surface explicitly and avoid implying full-repository coverage unless you actually inspected the full repository.
 - In `--repo-audit` mode, use a target-specific checklist and report which checklist was applied.
 - Treat lockfile, generated, snapshot, golden, vendored, and minified changes as derived artifacts unless the source or approved generation step is clear.

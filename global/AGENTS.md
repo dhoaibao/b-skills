@@ -404,6 +404,13 @@ Skills do not restate this. They reference §6.
 - If a target file already has unrelated edits, patch around them.
 - If user changes directly conflict with the task, stop and ask.
 
+### Isolated workspace preference
+
+- For non-trivial build, refactor, or debug work, prefer an isolated workspace or linked worktree when the current tree is dirty enough to interfere, the task touches public contracts or sensitive paths, parallel user/agent work is likely, or a cleaner review surface materially helps.
+- Detect existing isolation first; if the harness already provided an isolated workspace or linked worktree, reuse it instead of creating nested isolation.
+- Prefer native harness isolation over manual git-worktree management when both are available.
+- If isolation is unavailable, sandbox-blocked, or the user declines it, continue in place and note that choice when it affects cleanup, review clarity, or confidence.
+
 ### Patch discipline
 
 - Before manual `apply_patch` edits to prose, config, or non-symbol glue, read the current target slice and anchor on nearby stable headings, keys, or function signatures.
@@ -433,6 +440,12 @@ When discovery reveals adjacent work, classify it before acting:
 
 Security, data-loss, or production-impacting issues found in touched code may be raised immediately, but still require approval before expanding the edit scope.
 
+### Review checkpoints
+
+- Use `b-review` at coherent checkpoints, not just at the very end, when a slice changes a public or external contract, auth/security/migration boundary, shared route/tool surface, or another milestone broad enough that regressions could hide behind later steps.
+- Skip checkpoint review for trivial or purely local steps that do not create a useful review boundary.
+- If a checkpoint review is deferred because the tree is still mid-transform or the next step is part of the same tightly coupled verification group, say so explicitly.
+
 ### Verification ladder
 
 - Discover baseline commands in this order: explicit plan/user command, project scripts, CI config, repo docs, existing language defaults, then one clarification. Do not invent tooling as verification.
@@ -457,6 +470,11 @@ If command output is truncated or times out, save the full output under `/tmp/op
 ### Verification provenance
 
 Every non-trivial final report lists evidence used: commands, diagnostics, browser state, sources, and skipped/unavailable checks. If output timed out/truncated, include the saved log path or say no full log exists.
+
+### Completion closure
+
+- Before reporting non-trivial execution complete, state final verification status, any remaining cleanup or lingering processes/worktrees/test data/artifacts, and the natural next action (review, commit, PR, merge, keep workspace, or discard it).
+- If an isolated workspace or linked worktree was used, say whether it remains active and whether cleanup is still pending. Do not delete branches or worktrees without approval.
 
 ### Empty-state defaults
 
@@ -694,9 +712,10 @@ Rerun the suspected test up to 2 times in isolation. If it passes some runs and 
 ### Session-start preflight (run once at first non-trivial action)
 
 1. `git status --short` — note dirty state; preserve unrelated changes (§6).
-2. Check for an approved plan under `.opencode/b-skills/b-plan/` matching the current request.
-3. Confirm MCP availability lazily on first use.
-4. Acknowledge dirty state only when it could affect the request.
+2. Note whether the current checkout is already isolated (linked worktree, harness-provided workspace, or equivalent). Reuse existing isolation; do not nest it casually.
+3. Check for an approved plan under `.opencode/b-skills/b-plan/` matching the current request.
+4. Confirm MCP availability lazily on first use.
+5. Acknowledge dirty state only when it could affect the request.
 
 ### Crash/resume
 

@@ -70,6 +70,9 @@ Run `git status --short` and inspect only the files relevant to the current step
 - Leave unrelated changes alone (`AGENTS.md` §6 worktree safety).
 - If the target file already has unrelated edits, patch around them.
 - If user changes directly conflict with the approved scope, stop and ask.
+- For non-trivial work, decide before source edits whether execution should stay in the current checkout or move to an isolated workspace/worktree. Prefer isolation when dirty state could interfere, when the task touches a public contract or sensitive path, when parallel work is likely, or when a cleaner review surface materially helps (`AGENTS.md` §6).
+- Detect existing isolation first. If the harness already provided it, reuse it; do not create nested isolation.
+- If isolation would materially help and none exists, pause and ask before creating or switching to it. If the user declines or the environment blocks it, continue in place and note that choice in the final report.
 
 For implement/finish/continue, proceed through dependency-ready steps while checks pass and no decision appears. For next-step requests, stop after one verified step. Treat small direct tasks as one step.
 
@@ -115,6 +118,7 @@ After a step passes verification:
 - Update saved-plan checkboxes when present. If the saved plan predates checkbox-style steps, append a short progress note under the completed step instead of rewriting the whole plan format.
 - For frontmatter plans, set `status: in-progress` after the first completed step and `status: complete` only when every approved step is done.
 - Keep the diff limited to approved scope.
+- If the completed step is a coherent high-risk milestone (public/external contract, auth/security/migration boundary, shared route/tool surface, or large user-visible slice), hand off to **b-review** before continuing further unless the plan marks the next work as part of the same tightly coupled verification group. In that handoff, name the exact completed plan step or milestone so review can anchor itself to the intended checkpoint instead of re-deriving it from the diff.
 - Continue to the next step only if there is one.
 
 **Step atomicity:** a step is normally an independently-verifiable unit and should pass its own check before the next step begins. The exception is a **tightly coupled group** (e.g., split a function and immediately update its one caller) where intermediate verification would fail by design. The plan must mark such groups explicitly ("Steps 3a–3c verify together"); otherwise treat each step as atomic. Never silently merge atomic steps to dodge a failing check.
@@ -122,7 +126,8 @@ After a step passes verification:
 At the end:
 - Inspect `git diff`.
 - Run the final relevant verification.
-- For non-trivial changes, emit an `AGENTS.md` §9 handoff recommending **b-review**.
+- State closure explicitly: final verification status, remaining cleanup or lingering processes/worktrees/test data/artifacts, and the natural next action.
+- For non-trivial changes, emit an `AGENTS.md` §9 handoff recommending **b-review**. If this is a checkpoint review rather than final branch review, include the completed step or milestone explicitly in the handoff `goal` or `decisions` field.
 - Close with the skill-exit status block (`AGENTS.md` §9).
 
 ## Rules
@@ -141,3 +146,4 @@ At the end:
 - "I'll fix this adjacent thing while I'm here." → Only if it is required to satisfy the approved step or make verification pass; otherwise leave it as follow-up.
 - "I'll verify after the whole feature lands." → Each step must prove itself before you carry its assumptions into the next step.
 - "The framework behavior is obvious." → If docs drove the choice, cite the source instead of relying on memory.
+- "This dirty workspace is probably fine." → For non-trivial work, decide isolation intentionally instead of letting unrelated changes blur verification or review.

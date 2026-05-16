@@ -103,6 +103,7 @@ External knowledge with auto-deepening depth — lookup or research.
 - Reads saved-plan frontmatter when present and requires an executable durable approval state (`approved` or `in-progress`) or explicit current-chat approval before editing; chat approval updates `approved_head` when a git HEAD is available.
 - Routes ambiguous end-state questions back to `b-spec`, and broad-but-clear work back to `b-plan`.
 - Preserves unrelated worktree changes and edits only files needed for the current step.
+- For non-trivial work, prefers an isolated workspace/worktree when dirty state, risky scope, or parallel work would otherwise blur verification or review; reuses existing isolation before asking to create more.
 - Uses `serena-symbol-toolkit` for symbol-aware edits and narrow diagnostics before broader checks.
 - Uses `gitnexus-radar` only when a shared route, tool, or exported boundary makes graph context genuinely useful.
 - Applies the **plan staleness gate** (`global/AGENTS.md` §2) before executing a saved plan.
@@ -114,6 +115,8 @@ External knowledge with auto-deepening depth — lookup or research.
 - Cites framework/library/vendor sources in the final report when docs materially drove the chosen implementation pattern.
 - Updates saved-plan task-list progress in place when the plan uses checkbox-style steps.
 - Updates frontmatter progress (`approved` → `in-progress` → `complete`) without stripping metadata.
+- Uses milestone-sized review checkpoints: after a coherent high-risk slice, hands off to `b-review` before piling on more changes unless the plan explicitly marks the next steps as tightly coupled, and names the completed plan step or milestone in that handoff so review has a stable baseline.
+- Ends non-trivial runs with explicit closure: final verification status, remaining cleanup/process/worktree state, and the natural next branch/worktree action.
 - Continues through approved plan steps when the user asks to implement or finish the plan; stops after one verified step when the user asks for only the next step.
 
 **Output**
@@ -181,15 +184,17 @@ Symptoms -> Code path -> Hypotheses -> Root cause -> Fix -> Verification
 **Core behavior**
 - Defaults to `git diff HEAD`; supports `--range=<ref>..<ref>` for a specific commit range and uses `git log` on the range.
 - Supports `--repo-audit` for maintainer-style review of an explicitly requested repository area or suite slice; in that mode it names the audited surface and avoids implying full-repository coverage unless the full repository was actually inspected.
+- Supports milestone/checkpoint review mid-run when implementation reaches a coherent risky slice that should be inspected before more changes land.
 - Picks **self-review** or **external review** mode per the boundary in `global/AGENTS.md` §10. Defaults to self-review when the working tree is dirty and unspecified.
 - Fast path is **risk-bucket-gated**, not line-count-gated: allowed only when changes are confined to a single non-sensitive module, no auth/billing/secrets/crypto/migration files are touched, no public contract changes, and no new external dependency. Auth/security/migration/contract touches always force standard review.
 - `--repo-audit` always uses the standard path.
-- Builds a requirements baseline from `$ARGUMENTS`, `--baseline=<path|url>`, an approved plan, or a short clarification.
+- Builds a requirements baseline from `$ARGUMENTS`, `--baseline=<path|url>`, an approved plan, a checkpoint handoff naming the completed milestone, or a short clarification.
 - Falls back to clearly labeled **diff-only risk review** or **repo-audit risk review** when no baseline exists after bounded clarification.
 - Reviews highest-risk symbols and boundaries first.
 - Uses a short surface-specific checklist for `--repo-audit` targets such as installers, runtime contracts, validators, route/tool boundaries, dependency changes, lockfiles, or generated artifacts.
 - Runs the **security checklist** (correctness, input validation, injection, auth/authz, sensitive-data exposure, concurrency, dependency hygiene, secret handling, regex DoS, rate limits, error handling) on every changed entry point and shared boundary, even on the fast path.
 - Treats lockfile, generated, snapshot, golden, vendored, and minified changes as derived artifacts unless the source or approved generation step is clear.
+- Rejects checkpoint reviews of half-finished mid-transform trees; if the slice is not yet coherent enough to review honestly, sends it back to execution instead of forcing a verdict.
 - Skips test adequacy and observability only when `--skip-tests` is present.
 - Reports findings first, ordered by the **severity rubric** in `global/AGENTS.md` §3 (BLOCKER / MAJOR / MINOR / NIT), and includes "Checked and clean" so the author sees what scope was actually inspected.
 

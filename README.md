@@ -61,7 +61,7 @@ You can inspect and maintain the suite from this source repository, which contai
 /b-review --repo-audit [area]  (reviewer-style repository or maintainer audit)
 ```
 
-`/b-plan` supports **quick mode** for trivial scoped tasks and **full mode** for non-trivial work. It owns broad or unclear refactors until they reduce to concrete mechanical steps, at which point `/b-refactor` becomes the safer executor. After plan approval, `/b-implement` is the default executor for multi-step work.
+`/b-plan` supports **quick mode** for trivial scoped tasks and **full mode** for non-trivial work. It owns broad or unclear refactors until they reduce to concrete mechanical steps, at which point `/b-refactor` becomes the safer executor. After plan approval, `/b-implement` is the default executor for multi-step work, preferring isolated workspace/worktree handling when dirty state, risky scope, or parallel work would otherwise blur verification.
 
 ### Decision boundaries
 
@@ -76,7 +76,7 @@ You can inspect and maintain the suite from this source repository, which contai
 
 In this source repo, shared runtime rules live in `global/AGENTS.md` and install to `~/.config/opencode/AGENTS.b-skills.md`; the installer replaces the active `AGENTS.md` only when missing or approved. Installed skills still cite `AGENTS.md`, so preserved third-party rules leave the suite activation-pending until merged/replaced.
 
-Runtime headlines: definitions and rubrics (§3), durable plan metadata (§2), MCP bundles and fallbacks (§4), safety gates (§6), execution/verification discipline (§7), artifacts (§8), output contract (§9), documentation-backed decisions (§5), the high-risk challenge gate plus test-vs-bug and DOM/browser boundaries (§10), session lifecycle (§11).
+Runtime headlines: definitions and rubrics (§3), durable plan metadata (§2), MCP bundles and fallbacks (§4), safety gates plus isolated-workspace preference (§6), execution/verification discipline including review checkpoints and completion closure (§7), artifacts (§8), output contract (§9), documentation-backed decisions (§5), the high-risk challenge gate plus test-vs-bug and DOM/browser boundaries (§10), session lifecycle (§11).
 
 Artifact paths:
 - Plans: `.opencode/b-skills/b-plan/<task-slug>.md` after applying the `.opencode/.gitignore` guard in `global/AGENTS.md` §6 (legacy `.opencode/b-plans/` is deprecated). New saved plans include frontmatter for durable approval state, timestamps, approved git HEAD, risk, and touch points. Saved plans remain the canonical repo-local source of truth. `<task-slug>` follows the slug algorithm in `global/AGENTS.md` §8.
@@ -85,7 +85,7 @@ Artifact paths:
 - Temporary command output: `/tmp/opencode/b-skills/<skill>/<slug>.log`.
 - Multi-artifact runs include a `manifest.json` per the schema in `global/AGENTS.md` §8.
 
-Routing/safety highlights: keep one active skill; strict trigger precedence; approved plans are execution source of truth; approval gates protect installs, servers, migrations, commits, destructive/shared-environment actions; generated/lock/snapshot files are derived; manual edits use `apply_patch` with fresh-read, small-hunk, stale-context retry discipline; verification narrows before broadening; GitNexus is optional radar and Serena is primary hands; non-trivial runs use the §9 handoff/status schemas. Preserve-mode installs are activation-pending until active `AGENTS.md` is replaced or merged.
+Routing/safety highlights: keep one active skill; strict trigger precedence; approved plans are execution source of truth; non-trivial execution prefers isolated workspace/worktree handling when it materially reduces risk; approval gates protect installs, servers, migrations, commits, destructive/shared-environment actions; generated/lock/snapshot files are derived; manual edits use `apply_patch` with fresh-read, small-hunk, stale-context retry discipline; verification narrows before broadening; milestone-sized risky slices can trigger `b-review` before the very end, with the completed step or milestone carried in the handoff; GitNexus is optional radar and Serena is primary hands; non-trivial runs use the §9 handoff/status schemas and explicit completion closure. Preserve-mode installs are activation-pending until active `AGENTS.md` is replaced or merged.
 
 ### Shared references
 
