@@ -62,7 +62,7 @@ Check only the requested viewport and browser unless responsive, mobile/desktop,
 
 For non-trivial flows, record the browser evidence context: URL, viewport/device, auth mode, data created or reused, key console/network findings, and the final UI assertion. Prefer seeded or namespaced test data; if data cannot be cleaned up safely, report it rather than deleting blindly.
 
-In author mode, translate the verified flow into stable test code with accessible selectors and clear assertions, then run the project's normal browser-test command once. Preserve repo-native trace, screenshot, video, and retry settings; do not add new E2E artifacts or retry policy unless the repo already uses them or the user approves.
+In author mode, translate the verified flow into stable test code with accessible selectors and clear assertions. Before running the project's normal browser-test command, inspect whether it starts a dev server, targets an external environment, or creates data; get the required approval or use the user-provided target before running it once. Preserve repo-native trace, screenshot, video, and retry settings; do not add new E2E artifacts or retry policy unless the repo already uses them or the user approves.
 
 ### Step 4 - Cleanup and report
 

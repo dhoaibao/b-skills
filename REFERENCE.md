@@ -155,9 +155,9 @@ Owns code-level testing work.
 - Discovers framework and narrowest runnable command from manifests/CI.
 - Routes red tests through the global test-vs-bug decision.
 - Confirms intended behavior from user-confirmed intent, an approved spec/plan, product contract, existing passing tests, intentional source changes, or fetched framework docs before changing assertions or snapshots.
-- Stops or hands off when no behavior baseline exists unless the user explicitly asks for structural coverage only.
+- Stops or hands off to `b-spec` for unclear intended behavior or `b-debug` for uncertain product behavior unless the user explicitly asks for structural coverage only.
 - Handles failing tests, new tests, coverage review, and flaky tests.
-- Uses red-first behavior when feasible for TDD or regression tests.
+- Uses red-first behavior when feasible for TDD or regression tests, then hands off with intended behavior, failing test path, command, current failure, likely source area, and verification target before production changes.
 - Chooses test type by boundary: pure logic unit, component DOM, existing integration/contract tests for cross-module contracts, and real-browser behavior in `b-e2e`.
 - Ranks coverage gaps by user impact, changed behavior, risk boundary, and edge-case value.
 - Keeps DOM-rendered and hybrid component tests here; real browsers go to `b-e2e`.
@@ -188,6 +188,7 @@ Uses a real browser for flow verification and browser-test authoring.
 - Checks focused accessibility on interacted surfaces.
 - Records browser evidence context for non-trivial flows: URL, viewport/device, auth mode, data created or reused, key console/network findings, and final UI assertion.
 - Preserves the repo's existing browser-test framework in author mode.
+- Inspects whether the browser-test command starts a dev server, targets an external environment, or creates data before running it, and gets required approval or uses a user-provided target.
 - Preserves repo-native trace, screenshot, video, and retry settings unless the user approves a change.
 - Creates artifacts and manifests when evidence or cleanup must be auditable; sensitive/auth artifacts stay outside the worktree by default.
 - Applies the shared test-data lifecycle rule, closes the browser, and reports cleanup/partial writes or residue owner.

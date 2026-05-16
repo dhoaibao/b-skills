@@ -59,7 +59,7 @@ You can inspect and maintain the suite from this source repository, which contai
 ```text
 /b-spec [rough idea] → /b-plan [scoped task] → approve plan → /b-implement → /b-test → /b-review → commit
 /b-spec [underspecified small ask] → /b-implement
-/b-test [behavior] → write failing/coverage tests → /b-implement or /b-debug
+/b-test [behavior] → write failing/coverage tests → hand off to /b-implement or /b-debug with the failing command and intended behavior
 /b-research [question]  (any time you need docs, API facts, or comparisons)
 /b-debug [symptom]      (any time something breaks or is slow)
 /b-refactor [target]    (mechanical code transformation)
@@ -75,7 +75,7 @@ You can inspect and maintain the suite from this source repository, which contai
 - `b-spec` vs `b-implement`: use `b-implement` when the request is already small, obvious, and implementation-ready.
 - `b-plan` vs `b-implement`: use `b-plan` for multi-file or decision-heavy work; use `b-implement` when the change is already scoped and obvious.
 - `b-implement` vs `b-refactor`: use `b-refactor` when the primary job is a behavior-preserving rename, extract, move, inline, or delete.
-- `b-test` vs `b-debug`: a red test with known-correct product behavior stays in `b-test`; a red test that reveals wrong runtime behavior goes to `b-debug`.
+- `b-test` vs `b-debug` vs `b-spec`: a red test with known-correct product behavior stays in `b-test`; a red test that reveals wrong runtime behavior goes to `b-debug`; unclear intended behavior goes to `b-spec`.
 - `b-review` default vs `--repo-audit`: review a diff or range by default; use `--repo-audit` for a reviewer-style pass over a named repository area.
 
 ### Runtime conventions
@@ -178,7 +178,7 @@ Skills reference **MCP bundles** summarized in `global/AGENTS.md` §4 and fully 
 | `playwright-browser` | `playwright` MCP, or local Playwright CLI via `bash` as fallback | Browser automation. `*_unsafe` variants are excluded from the default toolkit and require approval. |
 | `gitnexus-radar` *(optional)* | `gitnexus` | Optional graph radar — only when indexed, fresh, and target-aware. Never an edit layer. |
 
-`sequential-thinking` is bundled but optional; use it only when three or more plausible hypotheses have equal cheapest-verification cost. Verify core MCPs before relying on full suite behavior. GitNexus is optional and useful only for indexed repos.
+`sequential-thinking` is bundled but optional; use it only when three or more plausible hypotheses have equal cheapest-verification cost. Skills assume MCP bundles are available, then use the runtime fallback ladder when a bundle fails on first use. GitNexus is optional and useful only for indexed repos.
 
 **GitNexus best-practice flow:** install the CLI separately, install MCPs via `install.sh`, index with `gitnexus analyze --skip-agents-md` only after excluding sensitive/private artifacts, and use it only when indexed, fresh, and target-aware. If unavailable/stale/missing target, skills continue with Serena/native tools and label degraded confidence when relevant.
 

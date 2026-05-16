@@ -28,7 +28,7 @@ Own code-level tests: add coverage, fix test-only failures, and avoid confusing 
 
 - The failing test likely exposes real runtime behavior -> use **b-debug**.
 - The task drives a real browser -> use **b-e2e**.
-- Scope or acceptance is unclear -> use **b-plan**.
+- Scope, acceptance, or intended behavior is unclear -> use **b-spec** or **b-debug** per the global test-vs-bug decision.
 - The task is pre-PR logic review -> use **b-review**.
 - The task needs a new test strategy/framework -> use **b-plan** first.
 
@@ -52,7 +52,7 @@ Find relevant test files and project commands from manifests or CI. If a failing
 Use the global test-vs-bug decision. Acceptable behavior confirmation sources are user-confirmed intent, an approved spec/plan, existing product contract, existing passing tests that define the behavior, source change that intentionally updates behavior, or fetched framework docs for API semantics. If no behavior baseline exists, stop and hand off to **b-spec** for unclear intent or **b-debug** for uncertain product behavior, unless the user explicitly asks for structural coverage only.
 
 - **Failing test:** fix assertion, mock, fixture, setup, async, snapshot, or harness drift only after intended behavior is confirmed.
-- **Write tests:** add regression/unit/integration coverage for known behavior. For TDD or regression work, make the test fail first when feasible before changing implementation.
+- **Write tests:** add regression/unit/integration coverage for known behavior. For TDD or regression work, make the test fail first when feasible, then hand off with the intended behavior, failing test path, command, current failure, likely source area, and verification target before production changes.
 - **Coverage review:** rank missing tests by user impact, changed behavior, risk boundary, and edge-case value; add only the requested/highest-value gaps.
 - **Flaky test:** use the global flake procedure before rewriting or skipping.
 
