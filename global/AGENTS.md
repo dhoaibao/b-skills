@@ -77,7 +77,7 @@ Detailed plan metadata, staleness gate, and revision protocol: `references/b-ski
 
 ## 3. Risk, Readiness, And Confidence
 
-A change is **non-trivial** if it touches more than 3 files, a public contract, a sensitive path, dependencies, CI/build/release config, or requires sequencing. A small direct request may bypass planning only when it is 3 files or fewer, no public/sensitive change, and no design decision remains.
+A change is **non-trivial** if it touches more than 3 files, a public contract, a sensitive path, dependencies, CI/build/release config, or requires sequencing. A small direct request may bypass planning only when it is 3 files or fewer, no public/sensitive change, and no design decision remains. Routine low-risk work should stay on the shortest safe path; do not create a saved plan, artifact, or handoff just to look thorough.
 
 Risk bands:
 - **trivial**: one file, no exported change, few/no external references, behavior preserved.
@@ -122,7 +122,7 @@ When framework, library, or vendor docs materially affect implementation or revi
 
 When baseline behavior is missing, label the output as `baseline-missing` and do not claim requirements coverage. For recency-sensitive, pricing, security, licensing, compatibility, and migration answers, include the evidence date or `as of <date>`.
 
-Use happy-path compression for low-risk, single-step work with direct evidence: do the work, run the narrowest useful check, and report result plus skipped checks.
+Use happy-path compression for low-risk work with direct evidence: do the work or answer, run the narrowest useful check when there is a change, and report result plus skipped checks. Keep status blocks, handoffs, and artifacts for non-trivial runs or real evidence/coordination needs.
 
 Detailed evidence standards, citation provenance, and token-budget rules: `references/b-skills/runtime-contract.md` §5.
 
@@ -179,7 +179,7 @@ Detailed slug algorithm, paths, manifest schema, retention, and run-id continuit
 
 Lead with findings, decisions, or the next action. Keep reports compact unless blockers, high-risk boundaries, audits, handoffs, or incomplete evidence require detail.
 
-Every non-trivial run ends with a fenced `[status]` block using fields from the detailed contract. Required fields: `skill`, `state`, `artifacts`, `next`, `blockers`. Use `cause` when blocked and confidence when evidence is incomplete.
+Every non-trivial run ends with a fenced `[status]` block using fields from the detailed contract. Required fields: `skill`, `state`, `artifacts`, `next`, `blockers`. Use `cause` when blocked and confidence when evidence is incomplete. Trivial happy-path answers and tiny edits may omit the block.
 
 When handing off, emit a fenced `[handoff]` block before invoking the next skill. Required fields: `source`, `goal`, `decisions`, `assumptions`, `files`, `verification`, `blockers`, `next-skill`. The receiving skill must treat the handoff as initial source of truth and stop if it conflicts with the user's latest instruction or current repo evidence.
 

@@ -32,7 +32,8 @@ Clarifies rough or underspecified asks before planning.
 Turns a clear goal into an execution-ready plan without implementing.
 
 **Core behavior**
-- Uses quick mode for low-risk, chat-sized scoped work and full mode for durable, multi-session, dependency-heavy, or risky coordination.
+- Defaults to quick mode for low-risk, chat-sized scoped work and uses full mode only for durable, multi-session, dependency-heavy, or risky coordination.
+- Avoids promoting routine multi-step work to a saved plan solely because it has several obvious substeps.
 - Saves full plans under `.opencode/b-skills/b-plan/<task-slug>.md` with durable frontmatter and `contract_version` from `global/AGENTS.md`.
 - Promotes quick plans to saved plans when risk, breadth, or coordination grows.
 - Uses repo evidence only when it materially improves sequencing or touch-point accuracy.
@@ -41,7 +42,7 @@ Turns a clear goal into an execution-ready plan without implementing.
 - Keeps broad refactors here until they become concrete mechanical transforms for `b-refactor`.
 
 **Output**
-- Quick mode: chat plan with scope, risk, steps, and verification.
+- Quick mode: concise chat plan with scope, risk, 2-5 likely steps, and verification.
 - Full mode: saved plan using `skills/b-plan/reference.md`.
 
 **Shared reference**

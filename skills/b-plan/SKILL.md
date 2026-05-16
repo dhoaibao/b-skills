@@ -48,10 +48,10 @@ Fallbacks: `AGENTS.md` section 4. Graceful degradation: possible with native rea
 
 ### Step 1 - Choose quick or full mode
 
-- **Quick mode:** low-risk scoped work. Return a short chat plan and ask for approval.
-- **Full mode:** non-trivial work, real structural choice, public/sensitive risk, or durable coordination need. Save a plan under `.opencode/b-skills/b-plan/<task-slug>.md` after the global `.opencode/.gitignore` guard.
+- **Quick mode:** default for low-risk scoped work. Return a short chat plan and ask for approval.
+- **Full mode:** use only for non-trivial work, real structural choice, public/sensitive risk, or durable coordination need. Save a plan under `.opencode/b-skills/b-plan/<task-slug>.md` after the global `.opencode/.gitignore` guard.
 
-Default to quick mode when the plan is low/trivial risk, fits in chat, and can be executed in one coherent session. Use full mode when the plan needs durable approval, spans sessions, has more than about five meaningful steps, has unresolved dependencies, or discovery reveals broad references, public contracts, security-sensitive behavior, deployment risk, or a plan that is no longer readable in chat.
+Default to quick mode when the plan is low/trivial risk, fits in chat, and can be executed in one coherent session. Do not promote to full mode solely because the task has several routine substeps. Use full mode when the plan needs durable approval, spans sessions, has more than about five meaningful steps, has unresolved dependencies, or discovery reveals broad references, public contracts, security-sensitive behavior, deployment risk, or a plan that is no longer readable in chat.
 
 ### Step 2 - Lock scope and decisions
 
@@ -74,7 +74,7 @@ If multiple viable approaches matter, compare 2-3 options, pick one, and record 
 
 ### Step 5 - Write dependency-ordered steps
 
-Each step states changes, exact paths/symbols when known, why it comes now, and `Done when` verification. Use stable anchors for prose/config plans instead of long quoted text.
+Each step states changes, exact paths/symbols when known, why it comes now, and `Done when` verification. Quick plans should usually stay to 2-5 bullets. Use stable anchors for prose/config plans instead of long quoted text.
 
 Full-mode steps use checkbox style so **b-implement** can update progress:
 

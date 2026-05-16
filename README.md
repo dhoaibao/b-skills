@@ -45,7 +45,7 @@ You can inspect and maintain the suite from this source repository, which contai
 | Skill | Phase | When to use |
 |---|---|---|
 | `/b-spec` | Clarify | Clarify unclear end states, constraints, acceptance criteria, non-goals, and assumptions before planning or coding |
-| `/b-plan` | Decide | Turn a clear non-trivial goal into an execution-ready quick or saved plan |
+| `/b-plan` | Decide | Turn a clear goal into a short chat plan or, only when needed, a saved execution plan |
 | `/b-research` | Decide | External knowledge lookup or synthesis with version pinning, source extraction, citation discipline, and news/image routing when needed |
 | `/b-implement` | Build | Execute approved or clearly scoped work in coherent verified steps |
 | `/b-refactor` | Build | Execute concrete behavior-preserving transforms: rename, extract, move, inline, simplify, or delete |
@@ -59,6 +59,7 @@ You can inspect and maintain the suite from this source repository, which contai
 ```text
 /b-spec [rough idea] → /b-plan [scoped task] → approve plan → /b-implement → /b-test → /b-review → commit
 /b-spec [underspecified small ask] → /b-implement
+/b-implement [small obvious edit] → narrow check → concise result
 /b-test [behavior] → write failing/coverage tests → hand off to /b-implement or /b-debug with the failing command and intended behavior
 /b-research [question]  (any time you need docs, API facts, or comparisons)
 /b-debug [symptom]      (any time something breaks or is slow)
@@ -67,7 +68,7 @@ You can inspect and maintain the suite from this source repository, which contai
 /b-review --repo-audit [area]  (reviewer-style repository or maintainer audit)
 ```
 
-`/b-plan` supports **quick mode** for low-risk scoped work and **full mode** for non-trivial work. Skill files now keep only task-specific workflow; shared safety, evidence, artifact, output, and fallback rules are summarized in `global/AGENTS.md` and fully defined in `references/runtime-contract.md`. Routine low-risk runs use happy-path compression, while risky boundaries still trigger the full global discipline.
+`/b-plan` defaults to **quick mode** for low-risk scoped work and uses **full mode** only when durable coordination, real risk, or multi-session execution needs it. Skill files now keep only task-specific workflow; shared safety, evidence, artifact, output, and fallback rules are summarized in `global/AGENTS.md` and fully defined in `references/runtime-contract.md`. Routine low-risk runs use happy-path compression, while risky boundaries still trigger the full global discipline.
 
 ### Decision boundaries
 

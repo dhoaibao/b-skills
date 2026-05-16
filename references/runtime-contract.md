@@ -389,7 +389,9 @@ Keep runtime prose short. Preserve explicit safety gates, schemas, routing bound
 
 ### Happy-path compression
 
-For low-risk, single-step work with direct evidence, prefer a compact execution path: do the work, run the narrowest useful check, and report only the result, verification, and any skipped checks. Do not create saved artifacts, emit full ceremony, or force a handoff unless the run modifies code, writes required artifacts, hits incomplete evidence, or crosses a non-trivial/risky boundary.
+For low-risk work with direct evidence, prefer a compact execution path: answer or make the small change, run the narrowest useful check when there is an edit, and report only the result, verification, and any skipped checks. Do not create saved artifacts, emit full ceremony, or force a handoff unless the run writes required artifacts, hits incomplete evidence, needs durable coordination, or crosses a non-trivial/risky boundary.
+
+Daily-use fast path examples: a typo fix, one-file docs correction, obvious local rename with no exported references, or a direct answer from a single local read. These still obey safety gates, dirty-worktree preservation, and verification when code changes.
 
 Skill files should present a short happy path plus risk-specific branches. Edge-case machinery belongs here in the global contract unless it is unique to that skill.
 
@@ -755,7 +757,7 @@ Required fields are `skill`, `state`, `artifacts`, `next`, `blockers`. Every oth
 
 Skill prose that says "close with the skill-exit status block" inherits this schema verbatim; skills must not embed their own copy of the block in output templates.
 
-For trivial runs (a one-line answer, a tiny edit), the block can be omitted.
+For trivial happy-path runs (a one-line answer, a tiny edit, or a low-risk local check with direct evidence), omit the block unless the user asked for an audit trail, verification is incomplete, or another skill must continue.
 
 ### Error envelope (failure cause-class)
 

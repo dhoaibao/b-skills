@@ -221,6 +221,19 @@ for skill_name, required_phrases in patch_skill_expectations.items():
 if 'stable anchors' not in b_plan:
     errors.append('skills/b-plan/SKILL.md: prose/config plans should mention stable anchors for patchable edits')
 
+for required in ['Do not promote to full mode solely', '2-5 bullets']:
+    if required not in b_plan:
+        errors.append(f'skills/b-plan/SKILL.md: missing low-ceremony planning guard {required!r}')
+
+b_test = (root / 'skills' / 'b-test' / 'SKILL.md').read_text()
+for required in ['failing test path', 'verification target']:
+    if required not in b_test:
+        errors.append(f'skills/b-test/SKILL.md: missing TDD handoff field {required!r}')
+
+for required in ['Daily-use fast path examples', 'trivial happy-path runs']:
+    if required not in runtime_contract:
+        errors.append(f'references/runtime-contract.md: missing happy-path convention {required!r}')
+
 stale_reindex_prefix = 'If any GitNexus tool warns the index is stale, run `'
 if stale_reindex_prefix in root_agents and '--skip-agents-md' not in root_agents:
     errors.append('AGENTS.md: stale GitNexus reindex guidance remains: missing `--skip-agents-md`')
