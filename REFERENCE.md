@@ -14,16 +14,18 @@ Clarify what to build before planning. `b-spec` exists for rough, underspecified
 
 **Core behavior**
 - Stays active only while the end state is underdetermined.
-- Uses the smallest clarification loop needed to lock goal, constraints, success criteria, and non-goals.
+- Uses the smallest clarification loop needed to lock goal, constraints, success criteria, non-goals, and explicit assumptions.
 - Prefers one blocking question at a time when each answer changes the next question, and uses a concrete scenario or counterexample when that collapses ambiguity faster.
+- Enforces a **hard 2-round exit**: after two clarification rounds without a confirmed user-visible outcome, proposes 2 concrete interpretations with named assumptions and asks the user to pick one instead of looping. A "round" is one user response after a clarification ask, regardless of how many sub-questions that ask contained.
 - Checks local code context before asking the user to answer something the repo already answers.
 - Reuses canonical terminology from optional `CONTEXT.md` / `CONTEXT-MAP.md` files when the repo already has them, and surfaces glossary/code contradictions instead of silently picking one.
 - Hands off to `b-research` when the remaining blocker is real external feasibility or vendor/library behavior.
 - Keeps the output in chat by default instead of creating a second durable artifact.
 - Hands off to `b-implement` when the clarified request is now a small direct request, or to `b-plan` when the goal is clear but the work still needs sequencing.
+- Carries the spec's `Assumptions` into the handoff envelope's `assumptions` field so the downstream skill sees what was taken for granted.
 
 **Output**
-- Compact chat spec: goal, constraints, acceptance criteria, non-goals, next skill.
+- Compact chat spec: goal, constraints, acceptance criteria, non-goals, **assumptions** (always present, `none` if empty), next skill.
 
 **Key rules**
 - Clarify the target outcome; do not drift into implementation planning.
@@ -45,7 +47,9 @@ Think before coding. `b-plan` exists for broad or risky work where the goal is a
 - Writes new full-mode saved plans with durable frontmatter for `slug`, `status`, approval timestamps, approved git HEAD, risk, and touch points.
 - Uses the smallest blocking questions only; does not turn every plan into an interview.
 - Produces dependency-ordered steps as short as the work actually is, with exact files or symbols when known.
+- Applies a **risk-tiered plan-size guardrail**: ~8 steps / ~6 touch points for trivial/low, ~12 / ~10 for medium, no fixed cap for high risk when every step is independently verifiable. When the cap is exceeded without a structural reason, collapse adjacent steps or split into dependent slices. High-risk migrations that cannot be safely split are marked as a tightly coupled group.
 - For prose/config-heavy work, names stable anchors instead of long quoted paragraphs that can drift before implementation.
+- Carries incoming `assumptions` from a `b-spec` handoff: copies them into `Confirmed decisions` only after explicit user confirmation, otherwise keeps them in a plan-level `Assumptions` section so they remain visible without being treated as approved decisions.
 - Hands target-outcome ambiguity back to `b-spec` before trying to sequence the work.
 - Keeps broad or unclear refactors in planning until they reduce to concrete mechanical transforms for `b-refactor`.
 - Routes unresolved external feasibility, contract, migration, or security unknowns to `b-research` instead of guessing.
@@ -53,7 +57,7 @@ Think before coding. `b-plan` exists for broad or risky work where the goal is a
 
 **Output**
 - Quick mode: short chat plan.
-- Full mode: English plan file at `.opencode/b-skills/b-plan/<task-slug>.md` after applying the `.opencode/.gitignore` guard in `global/AGENTS.md` §6, where `<task-slug>` follows the slug algorithm in `global/AGENTS.md` §8. Saved plans remain canonical repo-local source-of-truth files. Skeleton: durable frontmatter, `# title`, `Confirmed decisions`, `Planned touch points`, `Dependencies`, `Risks`, `Unknowns`, checkbox-style `Steps`, `Verification`, `Rollback` (only when real), and `Revisions` (added when revised).
+- Full mode: English plan file at `.opencode/b-skills/b-plan/<task-slug>.md` after applying the `.opencode/.gitignore` guard in `global/AGENTS.md` §6, where `<task-slug>` follows the slug algorithm in `global/AGENTS.md` §8. Saved plans remain canonical repo-local source-of-truth files. Skeleton: durable frontmatter, `# title`, `Confirmed decisions`, `Assumptions` (when carrying unconfirmed inputs from `b-spec` or planning), `Planned touch points`, `Dependencies`, `Risks`, `Unknowns`, checkbox-style `Steps`, `Verification`, `Rollback` (only when real), and `Revisions` (added when revised).
 
 **Key rules**
 - Do not implement while planning.
@@ -81,6 +85,8 @@ External knowledge with auto-deepening depth — lookup or research.
 - Treats a user-provided URL, file, or document as **direct-source lookup** when one bounded source is likely sufficient; extraction is allowed in that lookup lane.
 - Pins library version from manifests **and** lockfiles; resolves at the closest workspace in monorepos.
 - Uses Context7 first for library and framework APIs; search discovers candidate sources, while final claims require Context7, direct extraction, or another primary source unless explicitly labeled snippet-only and low confidence.
+- Honors the **citation-provenance rule** (`global/AGENTS.md` §5): every cited URL must come from a result actually fetched in this session — never recalled from memory.
+- Refuses to take research questions that the codebase itself can answer; routes them back to the active skill.
 - Uses `firecrawl-extraction` for local docs and known URLs; `firecrawl-extended` only for site maps or structured fields; `firecrawl-deep` only with explicit user approval per invocation, or under a run-scoped capped pre-authorization (`global/AGENTS.md` §4 cost warning).
 - Reuses fetched results from earlier in the session instead of re-fetching.
 
@@ -115,7 +121,8 @@ External knowledge with auto-deepening depth — lookup or research.
 - Applies the **plan staleness gate** (`global/AGENTS.md` §2) before executing a saved plan.
 - Triggers the **plan revision protocol** (`global/AGENTS.md` §2) when the plan is wrong mid-execution.
 - Verifies each step before moving on, capped by the iteration cap in `global/AGENTS.md` §7. Treats each step as **atomic** — independently verifiable — unless the plan explicitly marks a **tightly coupled group** (e.g., "Steps 3a–3c verify together") where intermediate verification would fail by design; never silently merges atomic steps to dodge a failing check.
-- Detects **cascading failures**: when fixing the current step's failure introduces a new failure in a previously-passing area, allows one attempted cascade fix only, then stops and either triggers the plan revision protocol (`global/AGENTS.md` §2), hands off to `b-debug` for root-cause, or surfaces the cascade to the user. Cascades are not absorbed by the iteration cap.
+- Defers to the shared **transform rollback** rule in `global/AGENTS.md` §7 when a partial edit has left the tree mid-transform: finish forward to a coherent baseline, or patch-based reverse the in-flight edits; never exit the skill with the tree mid-transform.
+- Defers to the shared **cascading-failures** rule in `global/AGENTS.md` §7: one attempted cascade fix, then stop and either trigger plan revision, hand off to `b-debug`, or surface the cascade. Cascades are not absorbed by the iteration cap.
 - Follows global `apply_patch` discipline: fresh target slice, small hunks, stale-context retry after missing expected lines.
 - Applies the **high-risk challenge gate** from `global/AGENTS.md` §10 on auth/authz, security-boundary, migration, public/external-contract, and irreversible-write work before calling a step done.
 - Cites framework/library/vendor sources in the final report when docs materially drove the chosen implementation pattern.
@@ -157,7 +164,7 @@ Closes with the **skill-exit status block** from `global/AGENTS.md` §9.
 - Uses cheap local checks before broader experimentation: exact error search, diagnostics, `context7-docs` for API misuse, and optional public-web lookups under the privacy gate (`global/AGENTS.md` §6).
 - Handles non-deterministic bugs explicitly: enumerates non-determinism sources before broader experimentation.
 - Handles perf bugs explicitly: measures before and after with profilers, benchmarks, or runtime tracing — never infers speed from code shape.
-- Handles **cannot-reproduce** reports explicitly: states the gap, captures state diffs, and asks before patching.
+- Handles **cannot-reproduce** reports via the shared **agent-cannot-reproduce protocol** in `global/AGENTS.md` §10: captures the environment diff, asks for specific signals (exact command/interaction, logs/stack trace at failure, env/version/flag details, minimal repro snippet), and offers three options (instrument and wait, treat as one-shot, investigate the captured diff) rather than speculate-patching.
 - Confirms root cause before editing.
 - **Tags every temporary probe** with a greppable marker (`b-debug-probe` in the language-appropriate comment form: `// b-debug-probe`, `# b-debug-probe`, `<!-- b-debug-probe -->`) so probes are recoverable at cleanup.
 - Applies the smallest fix under global `apply_patch` discipline when manual edits are needed, verifies with the narrowest relevant runtime check, then re-scans the diff: first greps for the `b-debug-probe` tag and removes every match, then scans for untagged probes (`console.log`, `print`, breakpoints, fake clocks, profiler hooks) before reporting success.
@@ -203,10 +210,12 @@ Symptoms -> Code path -> Hypotheses -> Root cause -> Fix -> Verification
 - Rejects checkpoint reviews of half-finished mid-transform trees; if the slice is not yet coherent enough to review honestly, sends it back to execution instead of forcing a verdict.
 - Skips test adequacy and observability only when `--skip-tests` is present.
 - Reports findings first, ordered by the **severity rubric** in `global/AGENTS.md` §3 (BLOCKER / MAJOR / MINOR / NIT), and includes "Checked and clean" so the author sees what scope was actually inspected.
+- Applies the **output verbosity cap** (`global/AGENTS.md` §9): every BLOCKER is reported (never elided); MAJOR / MINOR / NIT cap at 15 per severity with the remainder surfaced as a one-line follow-up.
+- Emits one of three verdicts: **READY FOR PR** (no BLOCKER, no MAJOR), **READY WITH FOLLOW-UPS** (no BLOCKER; MAJORs deferred as explicit follow-up work), or **NEEDS FIXES** (any BLOCKER, or MAJORs that should not ship).
 
 **Output**
 ```text
-Findings -> Coverage / Tests / Observability -> READY FOR PR or NEEDS FIXES
+Findings -> Coverage / Tests / Observability -> READY FOR PR | READY WITH FOLLOW-UPS | NEEDS FIXES
 ```
 
 **Key rules**
@@ -236,7 +245,7 @@ Findings -> Coverage / Tests / Observability -> READY FOR PR or NEEDS FIXES
 - Discovers the project's test framework and narrowest runnable commands from manifests or CI.
 - Routes red tests through the **test-vs-bug decision** in `global/AGENTS.md` §10.
 - Separates work into four lanes: failing test, write tests, coverage review, or flaky test (with the flake handling procedure in `global/AGENTS.md` §10).
-- Owns DOM-rendered unit tests (jsdom, RTL, Vue Test Utils, Svelte testing-library) per the **DOM-unit vs browser-flow boundary** in `global/AGENTS.md` §10.
+- Owns DOM-rendered unit tests and **hybrid component tests** (components mounting real router/store/query-client/provider chains under jsdom/happy-dom/node) per the **DOM-unit vs browser-flow boundary** in `global/AGENTS.md` §10. Promotes to `b-e2e` only when a real browser engine drives the flow or when the test requires real network, real cookies, or visual assertions.
 - Uses `serena-symbol-toolkit` to map tests to source ownership when helpers, imports, or interfaces hide the real target.
 - Captures large failure output under `/tmp/opencode/b-skills/b-test/` instead of depending on truncated terminal output.
 - Treats snapshots, golden files, fixtures, mocks, and async timing as explicit test concerns; updates snapshots only after the **snapshot confirmation procedure** in `global/AGENTS.md` §10.
@@ -270,6 +279,7 @@ Type -> Framework -> Findings -> Changes -> Verification -> Remaining gaps
 - Creates a session-specific artifact directory under `.opencode/b-skills/b-e2e/<run-id>/` using the run-id format from `global/AGENTS.md` §8.
 - Uses repo-local `.opencode/...` artifact paths for non-sensitive artifacts after applying the `.opencode/.gitignore` guard from `global/AGENTS.md` §6; sensitive artifacts and auth/session state still default to `~/.config/opencode/b-skills/...` or `/tmp/opencode/b-skills/...`.
 - Verifies localhost targets are reachable before navigating; never starts a dev server without approval.
+- Applies a **production-target guard**: production or production-like targets (production hostname, customer-facing domain, real auth realm) are read-only by default; mutating steps require per-step approval naming the environment. Ambiguous targets (staging, preview, ephemeral env, internal hostname) trigger one clarifying question before any mutating step.
 - Clarifies only blocking state: auth/session, test data, whether writes are allowed.
 - Reuses approved stored auth state (`storageState.json`) when available, but saves reusable post-login auth state only with explicit user opt-in and in a non-worktree path by default.
 - Detects **expired stored auth** (post-load snapshot lands on a login page, session-expired banner, or 401/403) and never silently re-authenticates: asks the user to choose between refreshing the stored state, re-auth ephemerally for this run only, or aborting.
@@ -316,6 +326,7 @@ Mode -> Target -> Driver -> Interactions -> Assertions -> Test code -> Artifacts
 - For **rename + extract**, does extract first under the old name, then `rename_symbol`, so each transform is independently verifiable.
 - Treats **move between files** as the highest-mechanical-risk refactor: add destination first, update every import and test path, update build config and barrel files, only then `safe_delete_symbol` the origin, then re-confirm references.
 - Verifies with diagnostics plus the narrowest risk-appropriate check (verification ladder in `global/AGENTS.md` §7).
+- Defers to the shared **transform rollback** rule in `global/AGENTS.md` §7 when verification fails partway through a multi-file transform: the Step 2 reference map is the worklist when finishing forward; otherwise patch-based reverse the in-flight edits, never exiting mid-transform.
 - Hands behavioral redesign back to `b-plan` via the handoff envelope in `global/AGENTS.md` §9, including the locked target and the reference map.
 - **Splits across runs** when the reference map shows the refactor is too large to verify in one coherent pass: stops, hands back to `b-plan` with the reference map and a proposed slice list, where each slice ends with the tree in a coherent verifiable state and slices that depend on a prior merge go into the new plan's `Dependencies`.
 
@@ -376,6 +387,14 @@ This repository is the install-only source layout for the suite. OpenCode does n
 - Verification command discovery follows explicit plan/user command, project scripts, CI config, repo docs, existing language-native defaults, then clarification. Long-running commands and background jobs require approval when they are persistent or mutating, and cleanup is reported.
 - Severity (BLOCKER / MAJOR / MINOR / NIT), risk (trivial / low / medium / high), the **non-trivial** definition, the **small direct request** threshold (≤3 files), and the **confidence signal** all live in `global/AGENTS.md` §3.
 - Tool-use heuristics nudge the agent to narrow scope or summarize remaining unknowns after sustained MCP use instead of following brittle hard call ceilings (`global/AGENTS.md` §4).
+- **Citation provenance** (`global/AGENTS.md` §5): cited URLs must come from a result actually fetched in this session; URLs recalled from memory must be re-fetched or labeled `Confidence: low — uncited recall`.
+- **Transform rollback** (`global/AGENTS.md` §7) is shared across `b-implement`, `b-refactor`, and `b-debug`: never exit a skill with the tree mid-transform.
+- **Cascading failures** (`global/AGENTS.md` §7) are shared across `b-implement`, `b-refactor`, and `b-test`: one cascade fix, then stop and revise/handoff/surface.
+- **Completion contract** (`global/AGENTS.md` §7) defines "done": verification ran, status block emitted, manifest written for multi-artifact runs, follow-ups captured on an existing report surface, tree coherent.
+- **Agent-cannot-reproduce protocol** (`global/AGENTS.md` §10) is shared across `b-debug`, `b-e2e`, and `b-test` for symptoms only the user can trigger.
+- **Hybrid component tests** stay in `b-test` per the **DOM-unit vs browser-flow boundary** in `global/AGENTS.md` §10 unless a real browser engine, real network, real cookies, or visual assertions are involved.
+- **Output verbosity caps** (`global/AGENTS.md` §9): BLOCKER findings are never elided; MAJOR/MINOR/NIT cap at 15 per severity; "Checked and clean" caps at 5; sources prefer 2–4 (max 8 outside literature scans); narration leads with the result, not tool play-by-play.
+- **Common rationalizations** (`global/AGENTS.md` §12) is the suite-wide anti-pattern table; skills do not maintain their own duplicate copies.
 - Empty-state defaults (no diff, no plan, no test framework, no MCP) are owned in `global/AGENTS.md` §7.
 - Fallback labeling uses `[degraded: <reason>]` consistently across skills (`global/AGENTS.md` §4).
 - Session-start preflight and crash/resume rules are owned in `global/AGENTS.md` §11.

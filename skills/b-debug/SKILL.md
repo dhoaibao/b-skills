@@ -78,7 +78,7 @@ Start with the cheapest verification:
 - For perf bugs: profiler, `time`/`hyperfine`, runtime tracing, or a tight benchmark — never guess from code shape alone.
 - For non-deterministic bugs: forced ordering, fake clock, stress loop. Repro must demonstrate the failure under conditions you control before claiming root cause.
 
-If the symptom **cannot be reproduced** — disappears between sessions, was reported but never returns — do not patch. State this explicitly, capture every state difference between the failing report and current environment (config, version, data), and ask the user whether to (a) instrument and wait, (b) treat as one-shot, or (c) investigate the diff.
+If the symptom **cannot be reproduced** by the agent, follow the **agent-cannot-reproduce protocol** in `AGENTS.md` §10: do not patch, capture the environment diff, and ask for the specific signals listed there (command sequence, logs, env, repro snippet) before continuing.
 
 State the root cause explicitly before editing:
 
@@ -123,6 +123,4 @@ Close with the skill-exit status block (`AGENTS.md` §9).
 
 ## Common rationalizations
 
-- "This is probably the cause." → Not enough; state `Root cause: <what> because <why>` before editing.
-- "I can leave the probe in until later." → Every `b-debug-probe` must be removed before success is reported.
-- "I can't reproduce it, but a defensive patch is harmless." → Cannot-reproduce is a real evidence gap; surface it unless the user approves instrumentation or containment.
+See the suite-wide anti-pattern table in `AGENTS.md` §12. Debug-specific reminders: state `Root cause: <what> because <why>` before editing, remove every `b-debug-probe` before reporting success, and never defensive-patch a cannot-reproduce report.

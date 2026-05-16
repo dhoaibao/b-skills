@@ -65,6 +65,8 @@ Use the clarification budget from `AGENTS.md` §1. Do not turn this into an open
 
 Prefer one blocking question at a time when the answer will change the next question. If a single concrete scenario will collapse the ambiguity faster than abstract discussion, ask for that scenario instead.
 
+**Hard 2-round exit.** A "round" is one user response after a clarification ask, regardless of how many sub-questions that ask contained. If after two such rounds the user still cannot name a user-visible outcome or pick between plausible interpretations, **stop asking**. Propose 2 concrete interpretations explicitly, name the assumption each one rests on, and ask the user to pick one or override. Never loop a third round of open clarification.
+
 ### Step 3 — Collapse ambiguity from local evidence
 
 Before asking the user to decide something the codebase already answers:
@@ -92,7 +94,10 @@ Keep the output in chat by default. Produce a compact, execution-ready spec:
 - <testable outcome>
 - <testable outcome>
 **Non-goals:** <what this request is not asking for>
+**Assumptions:** <what the spec takes for granted that the user did not explicitly confirm, or `none`>
 ```
+
+Always include an **Assumptions** line, even when empty (`Assumptions: none`). Spec without assumptions silently becomes a contract the user did not agree to.
 
 Do not create a separate saved artifact by default; this spec is the input to the next skill.
 
@@ -100,6 +105,8 @@ Do not create a separate saved artifact by default; this spec is the input to th
 
 - Hand off to **b-implement** when the clarified request is now small and obvious.
 - Hand off to **b-plan** when the goal is now clear but the work still needs sequencing, dependencies, or risk management.
+
+Carry the spec's `Assumptions` into the handoff envelope's `assumptions` field (`AGENTS.md` §9) so the downstream skill sees what was taken for granted. Decisions the user explicitly confirmed go to `decisions`; the rest are assumptions.
 
 Close with the handoff envelope and, for non-trivial clarification work, the skill-exit status block (`AGENTS.md` §9).
 
@@ -114,6 +121,7 @@ Close with the handoff envelope and, for non-trivial clarification work, the ski
 - [testable outcome]
 - [testable outcome]
 **Non-goals:** [excluded scope]
+**Assumptions:** [what the spec takes for granted that the user did not explicitly confirm, or `none`]
 **Next:** [b-plan / b-implement / b-research]
 ```
 

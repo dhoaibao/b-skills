@@ -110,7 +110,7 @@ Each slice must end with the tree in a coherent, verifiable state. Slices that d
 4. Inspect `git diff` to confirm the change stayed within intended scope.
 5. If `apply_patch` reports missing expected lines, treat it as stale context; re-read the current target slice and retry only with verified smaller context (`AGENTS.md` §6).
 6. If failures indicate a real regression, use **b-debug**. If they indicate test-mechanic drift, use **b-test**.
-7. **Partial-completion recovery:** if verification fails partway through a multi-file transform (e.g., a move with imports half-updated, a rename that missed a re-export), do not paper over the broken state with more edits. Either (a) finish the transform to a coherent baseline in one focused pass using the Step 2 reference map as the worklist, or (b) manually roll back only the in-flight edits for the current transform. If a file-level restore is truly required, stop and ask for approval first because it can discard unrelated user changes in the same path. Never exit the skill with the tree mid-transform — surface the rollback to the user.
+7. **Partial-completion recovery** is handled by the transform rollback rule in `AGENTS.md` §7. The Step 2 reference map is the worklist when finishing forward.
 8. Apply the iteration cap from `AGENTS.md` §7.
 
 Close with the skill-exit status block (`AGENTS.md` §9).

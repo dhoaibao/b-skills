@@ -27,6 +27,9 @@ touch_points:
 ## Confirmed decisions
 - <decision> — <one-line rationale>
 
+## Assumptions
+- <what the plan takes for granted that the user did not explicitly confirm>   (omit the section when there are none; do not silently elide unconfirmed assumptions)
+
 ## Planned touch points
 - `<path>` — <what changes here>
 

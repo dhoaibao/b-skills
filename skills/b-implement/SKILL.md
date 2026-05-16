@@ -59,7 +59,7 @@ If the request is still ambiguous at the goal level rather than the sequencing l
 
 Apply the **plan staleness gate** (`AGENTS.md` §2) before executing. A stale plan must be re-planned, not improvised against.
 
-Extract only execution-critical data: approval state, decisions, touch points, steps/request, verification, blockers.
+Extract only execution-critical data: approval state, decisions, touch points, steps/request, verification, blockers. If the upstream handoff envelope carried `assumptions`, surface them in the final report and verify any that affect public contracts or sensitive paths before treating them as confirmed.
 
 For saved plans with frontmatter, require `status: approved`, `status: in-progress`, or explicit approval in the current conversation before editing. If approval arrives in chat for a draft plan, update `status`, `approved_at`, `approved_by`, and `approved_head` when available before the first source edit. Legacy plans without frontmatter may execute from explicit current-chat approval per `AGENTS.md` §2.
 
@@ -106,9 +106,7 @@ Classify failures:
 
 **Documentation-backed decisions.** If framework, library, or vendor API docs determined the chosen pattern, cite the source in the final report. Add a short inline code comment only when the contract would otherwise be non-obvious to a future reader.
 
-**Mid-step rollback:** if a partial edit has left the tree in a broken state (compile failure, import cycle, half-renamed symbol) and the next iteration cannot move forward without first restoring a coherent baseline, stop attempting to push through. Either (a) finish the edit to a coherent state in one more focused pass, or (b) manually roll back only the edits made in the current step using patch-based reversals. If a file-level restore is truly required, stop and ask for approval first because it can discard unrelated user changes in the same path. Never leave the working tree mid-transform across a skill exit — surface the rollback explicitly to the user.
-
-**Cascading failures:** if fixing the current step's failure introduces a new failure in a previously-passing area, treat the cascade as evidence that the plan or the step's scope is wrong, not as another iteration. After **one** attempted cascade fix that doesn't restore green, stop. Either trigger the plan revision protocol (`AGENTS.md` §2), hand off to **b-debug** for root-cause, or surface the cascade to the user. Do not burn the iteration cap chasing cascades.
+**Transform rollback** and **cascading failures** are handled per `AGENTS.md` §7. Surface either explicitly to the user; never exit the skill with the tree mid-transform.
 
 Apply the iteration cap from `AGENTS.md` §7.
 
@@ -143,7 +141,4 @@ At the end:
 
 ## Common rationalizations
 
-- "I'll fix this adjacent thing while I'm here." → Only if it is required to satisfy the approved step or make verification pass; otherwise leave it as follow-up.
-- "I'll verify after the whole feature lands." → Each step must prove itself before you carry its assumptions into the next step.
-- "The framework behavior is obvious." → If docs drove the choice, cite the source instead of relying on memory.
-- "This dirty workspace is probably fine." → For non-trivial work, decide isolation intentionally instead of letting unrelated changes blur verification or review.
+See the suite-wide anti-pattern table in `AGENTS.md` §12. The ones that bite hardest here: opportunistic adjacent fixes, deferring verification to "the end", uncited framework assumptions, and ignoring a dirty workspace.

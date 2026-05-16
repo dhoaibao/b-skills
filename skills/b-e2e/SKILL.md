@@ -44,9 +44,10 @@ Fallbacks: `AGENTS.md` §4. Prefer Playwright MCP, then local Playwright CLI if 
 1. Create a run artifact directory per `AGENTS.md` §8. For repo-local non-sensitive artifacts, apply the `.opencode/.gitignore` guard (`AGENTS.md` §6), then use `.opencode/b-skills/b-e2e/<run-id>/`. Use non-worktree paths for sensitive/auth state unless repo-local persistence is explicitly approved.
 2. Determine the **target**: a URL, an extension surface, a local app, or an authenticated entry point. Record the target type.
 3. Before touching `localhost`, verify the server is reachable. Do not start a dev server without approval (canonical approval ask in `AGENTS.md` §6).
-4. Clarify only what blocks the flow: auth/session state, test data, and whether writes are allowed.
-5. **Auth state reuse:** load approved safe stored auth state when available. If auth is needed and no state exists, ask before saving reusable post-login state. Without opt-in, use ephemeral/current-run state only.
-6. **Expired stored auth.** If a stored auth state loads but the post-load snapshot lands on a login page, session-expired banner, or 401/403, treat the state as expired. Do **not** silently re-authenticate. Ask the user whether to (a) re-auth and refresh the stored state, (b) re-auth ephemerally for this run only, or (c) abort.
+4. **Production-target guard.** If the target is a production or production-like URL (production hostname, customer-facing domain, real auth realm), set writes to disallowed by default. Any mutating step against such a target requires explicit per-step approval naming the environment, per the `external-write` class in `AGENTS.md` §6. Verify mode on production is read-only unless the user overrides. If unsure whether the target qualifies (staging, preview, ephemeral env, internal-only hostname), ask once before any mutating step rather than guessing.
+5. Clarify only what blocks the flow: auth/session state, test data, and whether writes are allowed.
+6. **Auth state reuse:** load approved safe stored auth state when available. If auth is needed and no state exists, ask before saving reusable post-login state. Without opt-in, use ephemeral/current-run state only.
+7. **Expired stored auth.** If a stored auth state loads but the post-load snapshot lands on a login page, session-expired banner, or 401/403, treat the state as expired. Do **not** silently re-authenticate. Ask the user whether to (a) re-auth and refresh the stored state, (b) re-auth ephemerally for this run only, or (c) abort.
 
 ### Step 2 — Pick the mode
 
@@ -115,7 +116,7 @@ Close with the skill-exit status block (`AGENTS.md` §9).
 
 - Always snapshot before guessing where to click or type.
 - Do not start a dev server without approval.
-- Do not mutate production-like data without explicit confirmation.
+- Do not mutate production-like data without explicit confirmation. Verify mode against a production target is read-only by default; mutating steps require per-step approval naming the environment.
 - Preserve the repo's existing browser-test framework when editing test files.
 - Do not introduce Playwright test files into a non-Playwright repo unless the user approves.
 - Multi-viewport checks are opt-in except for responsive UI work or UI intended for both mobile and desktop.

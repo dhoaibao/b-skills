@@ -339,6 +339,7 @@ When framework, library, or vendor API docs materially influence an implementati
 
 - Do not add citations for purely local code changes or obvious language semantics.
 - One narrow authoritative lookup is enough; this rule does not force a separate research pass when the current skill already resolved the question.
+- **Citation provenance.** Every cited URL must come from a result the agent actually fetched in this session (via `context7-docs`, `brave-discovery`, `firecrawl-extraction`, or a user-supplied URL). Do not cite URLs from memory. If the supporting page is from memory and was not re-fetched, either fetch it now or label the claim as `Confidence: low — uncited recall`.
 
 ### Token budget
 
@@ -468,6 +469,37 @@ Security, data-loss, or production-impacting issues found in touched code may be
 ### Iteration cap
 
 Use a **maximum of 3 fix/verify loops per step** before reporting remaining evidence and the blocker. This applies to `b-implement`, `b-debug`, `b-refactor`, and `b-test`. Skills do not restate the number.
+
+### Transform rollback (shared across `b-implement`, `b-refactor`, `b-debug`)
+
+If a partial edit leaves the tree in a broken state (compile failure, import cycle, half-renamed symbol, mid-move imports) and the next iteration cannot move forward without first restoring a coherent baseline:
+
+1. **Finish forward** in one focused pass when the remaining work to coherence is small and the reference map is already in hand, **or**
+2. **Patch-based reverse** of only the edits made in the current step/transform.
+3. A file-level restore is only acceptable with explicit user approval, because it can discard unrelated user changes in the same path.
+4. Never exit the skill with the tree mid-transform — surface the rollback explicitly to the user in the final report.
+
+Skills reference this rule rather than restating it.
+
+### Cascading failures (shared across `b-implement`, `b-refactor`, `b-test`)
+
+If fixing the current step's failure introduces a new failure in a previously-passing area, treat the cascade as evidence that the plan or step scope is wrong, not as another iteration. After **one** attempted cascade fix that does not restore green, stop. Either:
+
+- Trigger the plan revision protocol (§2),
+- Hand off to `b-debug` for root cause, or
+- Surface the cascade to the user.
+
+Do not burn the iteration cap chasing cascades.
+
+### Completion contract
+
+A non-trivial run is "done" only when **all** are true:
+
+- Required verification ran (or was explicitly skipped with stated reason).
+- Status block emitted (§9).
+- Artifacts manifest written when more than one artifact exists (§8).
+- Outstanding follow-ups land on an existing report surface — the report's `Follow-up` / `Remaining gaps` section, the status block `notes` field, or the `blockers` field when they block the next skill — not silently dropped.
+- The tree is in a coherent state — no mid-transform leftovers (see Transform rollback).
 
 ### Truncated output
 
@@ -660,6 +692,18 @@ For non-trivial implementation, debug, test, refactor, review, or research work,
 - the natural next action
 - the skill-exit status block
 
+### Output verbosity cap
+
+A single skill report must not pad itself to look thorough. Hard caps:
+
+- **BLOCKER findings are never elided.** Every BLOCKER must appear in the report, no matter the count. A BLOCKER by definition prevents shipping; hiding the 16th one risks shipping with unknown blockers.
+- **Other-severity findings** (MAJOR / MINOR / NIT): cap at **15 entries per severity**, ranked by impact. Surface the remainder as a one-line `Remaining: N more <severity> findings — request expansion to see them` item.
+- **"Checked and clean" entries:** cap at **5**, highest-risk first.
+- **Sources / citations:** prefer 2–4 authoritative; never more than 8 unless the user asked for a literature scan.
+- **Step-by-step narration:** lead with the result; do not restate every tool call. Tool-by-tool play-by-play belongs in logs, not the report.
+
+When a cap is hit, name it explicitly ("capped at 15 MAJORs") so the user knows the report is bounded, not exhaustive.
+
 ---
 
 ## 10. Cross-cutting decisions
@@ -704,6 +748,21 @@ Rerun the suspected test up to 2 times in isolation. If it passes some runs and 
 - jsdom, happy-dom, React Testing Library, Vue Test Utils, Svelte testing-library, and any test that renders components without launching a real browser → `b-test`.
 - Playwright, Cypress, WebdriverIO, Puppeteer, or anything driving a real Chromium/Firefox/WebKit instance → `b-e2e`.
 - A test file that boots Playwright but is invoked through the unit-test runner still counts as `b-e2e` because a real browser is launched.
+- **Hybrid component tests** (component-scoped tests that mount a real router, real store, real query client, or other non-trivial provider chain) stay in `b-test` as long as the runner is jsdom/happy-dom/node. Promote to `b-e2e` only when a real browser engine drives the flow, or when the test starts requiring real network, real cookies, or visual assertions.
+
+### Agent-cannot-reproduce protocol (shared across `b-debug`, `b-e2e`, `b-test`)
+
+When the user can reproduce a symptom but the agent cannot in the current environment:
+
+1. Do not patch defensively.
+2. Capture every state difference between the user's failing context and the current environment: config, version, data, OS, runtime, env vars, feature flags.
+3. Ask the user for **one or more** of:
+   - the exact command or interaction sequence,
+   - logs or stack trace at the moment of failure,
+   - environment details (versions, env vars, feature flags),
+   - a minimal repro snippet or test.
+4. If the user cannot supply more, offer three options explicitly: (a) instrument and wait, (b) treat as one-shot and close, (c) investigate the captured environment diff.
+5. Never silently substitute speculation for a real repro.
 
 ### Self-review vs reviewing-someone-else's-code
 
@@ -732,5 +791,31 @@ Rerun the suspected test up to 2 times in isolation. If it passes some runs and 
 ### Cross-skill conventions
 
 - Skill descriptions cover **intent and disambiguation only**. Trigger keywords live in §1, not duplicated in every skill description.
-- Skills must not redefine: severity, risk, "non-trivial," "small direct request," iteration cap, onboarding rule, privacy gate, confidence signal, run-id format, artifact paths, slug algorithm, test-vs-bug decision, DOM/browser boundary, manifest schema, status block, or handoff envelope. Reference §3, §4, §6, §7, §8, §9, or §10 as needed.
+- Skills must not redefine any of the items below. Reference the canonical section instead.
+  - **Rubrics (§3):** severity, risk, "non-trivial", "small direct request", confidence signal.
+  - **Routing (§1, §10):** test-vs-bug decision, DOM-unit vs browser-flow boundary, hybrid component test boundary, self/external review boundary.
+  - **Protocols (§5, §6, §7, §10):** citation provenance, privacy gate, onboarding rule, iteration cap, transform rollback, cascading failures, agent-cannot-reproduce protocol, completion contract, snapshot confirmation, flake handling.
+  - **Schemas (§8, §9):** run-id format, slug algorithm, artifact paths, manifest schema, status block, handoff envelope, output verbosity caps.
+  - **Anti-patterns (§12):** common rationalizations table — skills reference it; they do not maintain their own copies.
 - A skill should switch to another skill only on a real stop/block condition — not for optional enrichment the current skill can finish inline with bounded evidence.
+
+---
+
+## 12. Common rationalizations (suite-wide anti-patterns)
+
+These are the recurring justifications agents use to bypass discipline. When tempted, name the rationalization and apply the counter — do not act on it.
+
+| Rationalization | Counter |
+|---|---|
+| "I'll fix this adjacent thing while I'm here." | Only if required to satisfy the approved step or make verification pass; otherwise it is a follow-up (§7 scope expansion). |
+| "I'll verify after the whole feature lands." | Each step must prove itself before its assumptions carry into the next (§7 verification ladder). |
+| "The framework behavior is obvious." | If docs drove the choice, cite a fetched source (§5 citation provenance). |
+| "This dirty workspace is probably fine." | For non-trivial work, decide isolation intentionally (§6 isolated workspace preference). |
+| "Tests pass, so it's probably fine." | Tests do not replace contract, security, or operability review. |
+| "The diff is tiny." | Risk bucket, not line count, decides depth (§3). |
+| "This is probably the cause." | Not enough; state `Root cause: <what> because <why>` before editing. |
+| "I can leave the probe in until later." | Every temporary probe must be removed before reporting success. |
+| "I can't reproduce it, but a defensive patch is harmless." | Cannot-reproduce is a real evidence gap — follow the agent-cannot-reproduce protocol (§10). |
+| "I'll phrase the finding softly." | Severity should match actual ship risk, not reviewer comfort. |
+| "I'll just bump the iteration count one more time." | After 3 fix/verify loops on the same step, the answer is the report, not another attempt (§7). |
+| "I'll cite this from memory." | Citations must come from a fetched source in this session (§5). |

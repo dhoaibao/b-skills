@@ -25,8 +25,7 @@ If `$ARGUMENTS` is provided, treat it as the test task or failing symptom and pr
 - User asks to write tests for new or existing behavior.
 - A test is failing and the **test-vs-bug decision** in `AGENTS.md` §10 routes the work to the test lane.
 - User asks about coverage gaps or missing regression tests.
-- DOM-rendered unit tests (jsdom, happy-dom, React Testing Library, Vue Test Utils, Svelte testing-library) — these stay here, not in **b-e2e**. See the **DOM-unit vs browser-flow boundary** in `AGENTS.md` §10.
-- **Hybrid component tests** (component-scoped tests that mount a real router, real store, real query client, or other non-trivial provider chain) stay in **b-test** as long as the runner is jsdom/happy-dom/node — the test is still a unit/integration test, just with realistic wiring. Route to **b-e2e** only when a real browser engine drives the flow. When a hybrid test starts requiring real network, real cookies, or visual assertions, that is the signal to promote it to **b-e2e**, not to keep stretching jsdom.
+- DOM-rendered unit tests and hybrid component tests stay here, not in **b-e2e**. See the **DOM-unit vs browser-flow boundary** in `AGENTS.md` §10 for both rules.
 
 ## When NOT to use
 

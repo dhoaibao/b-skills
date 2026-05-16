@@ -127,10 +127,14 @@ Skip entirely when `--skip-tests` is present.
 
 ### Step 5 — Report
 
-1. Findings first, ordered by severity from `AGENTS.md` §3 (BLOCKER / MAJOR / MINOR / NIT).
+1. Findings first, ordered by severity from `AGENTS.md` §3 (BLOCKER / MAJOR / MINOR / NIT). Apply the **output verbosity cap** in `AGENTS.md` §9: every BLOCKER is reported (never elided); MAJOR / MINOR / NIT cap at 15 per severity with the remainder surfaced as a one-line follow-up.
 2. Include **Checked and clean** — risk areas inspected with no finding — so the author sees what scope was actually covered. Cap at **5 entries**, highest-risk first; do not pad with low-risk inspections.
 3. If there are no findings, say so explicitly and note residual risk or skipped verification.
 4. Attach the confidence signal from `AGENTS.md` §3 when review depended on partial evidence.
+5. Pick the verdict tier honestly:
+   - **READY FOR PR** — no BLOCKER, no MAJOR; MINOR/NIT may remain.
+   - **READY WITH FOLLOW-UPS** — no BLOCKER; MAJOR findings exist but are explicit follow-up work the author has agreed to handle post-merge, or are scoped out by the plan.
+   - **NEEDS FIXES** — any BLOCKER, or MAJOR findings that should not ship.
 
 **Research escalation.** If the review requires external knowledge to judge correctness (suspicious third-party API usage, unfamiliar library behavior, CVE plausibility), do **not** drift into open-ended research inline. Either resolve it with a single `context7-docs` lookup or emit a handoff envelope to **b-research** with the specific question and resume the review with the answer in hand.
 
@@ -162,7 +166,7 @@ Close with the skill-exit status block (`AGENTS.md` §9).
 - Observability: [adequate / gaps / skipped]
 
 #### Verdict
-**[READY FOR PR / NEEDS FIXES]**
+**[READY FOR PR / READY WITH FOLLOW-UPS / NEEDS FIXES]**
 ```
 
 (Confidence line attached when evidence is partial.)
@@ -191,6 +195,4 @@ Close with the skill-exit status block (`AGENTS.md` §9).
 
 ## Common rationalizations
 
-- "The tests pass, so it's probably fine." → Tests do not replace contract, security, or operability review.
-- "The diff is tiny." → Risk bucket, not line count, decides the review depth.
-- "I'll phrase this softly because it might be okay." → Severity should match the actual ship risk, not reviewer comfort.
+See the suite-wide anti-pattern table in `AGENTS.md` §12. Review-specific reminders: tests passing does not replace contract/security/operability review, risk bucket beats line count, and severity should match ship risk, not reviewer comfort.

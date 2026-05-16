@@ -32,6 +32,7 @@ If `$ARGUMENTS` is provided, treat it as the research question and proceed direc
 - Runtime bug tracing or root-cause analysis → use **b-debug**.
 - Deciding what to build or how to sequence work → use **b-plan**.
 - Pre-PR review of changed code → use **b-review**.
+- **The question is answerable from the codebase.** If a single Serena lookup, repo grep, or local doc read would settle the question, stay in the active skill — do not route to research for what local evidence already answers.
 
 ## Tools required
 
@@ -166,3 +167,4 @@ Close the run with the skill-exit status block (`AGENTS.md` §9) for research-mo
 - Never use `firecrawl-deep` before exhausting default and extended tiers, and never without explicit user approval. The default is **per-invocation approval**. A user may substitute a **run-scoped capped pre-authorization** ("approved up to N uses for this run") under the rules in `AGENTS.md` §4 — record the cap in the status block `notes` / handoff `carve-outs`, decrement on each use, and never exceed the cap. Carve-outs never override §6 safety gates.
 - Use a `Limitations` section instead of filling factual gaps from prior model knowledge.
 - Reuse results fetched earlier in the same session; do not re-fetch identical pages.
+- **Cited URLs must come from fetched results.** Honor the citation-provenance rule in `AGENTS.md` §5: every URL in `Sources` must trace back to an actual `context7-docs`, `brave-discovery`, `firecrawl-extraction`, or user-supplied fetch in this session — never recalled from memory.

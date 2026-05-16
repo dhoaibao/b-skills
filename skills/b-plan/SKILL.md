@@ -72,6 +72,8 @@ If the goal is clear but planning inputs are incomplete, ask the smallest set of
 
 Record confirmed decisions as short implementation-ready statements. If a decision is behavioral, contractual, or naming-related and the codebase cannot answer it, ask the user.
 
+If the upstream handoff envelope (`AGENTS.md` §9) carried `assumptions` from `b-spec`, copy them into the plan's `Confirmed decisions` only after explicit user confirmation; otherwise keep them in a plan-level `Assumptions` section so they remain visible without being treated as approved decisions.
+
 If the task depends on unresolved external research that affects feasibility, architecture, contracts, security, or migration order, stop and use **b-research** before finishing the plan.
 
 ### Step 3 — Scan existing code when relevant
@@ -112,6 +114,23 @@ Full-mode steps are written as Markdown task-list items so `b-implement` can upd
 ```
 
 If the task depends on another plan, record it in `Dependencies` per the multi-plan rule in `skills/b-plan/reference.md`.
+
+**Plan-size guardrail.** A saved plan should be coherent enough to verify in one execution pass. Scale the smell threshold to the risk rubric (`AGENTS.md` §3):
+
+| Risk | Soft cap on steps | Soft cap on touch points |
+|---|---|---|
+| trivial / low | ~8 | ~6 |
+| medium | ~12 | ~10 |
+| high | no fixed cap | every step must be independently verifiable; split only when slicing is safe |
+
+When the plan exceeds its band's cap without a structural reason, either:
+
+1. Collapse adjacent steps that share verification, or
+2. Split into dependent slices (each with its own slug) and record the chain in `Dependencies`.
+
+High-risk migrations may legitimately exceed the medium cap when splitting would create unsafe intermediate states (e.g., a schema migration that must run as one transaction). In that case, mark the plan as a single tightly coupled group per `AGENTS.md` §7 step atomicity and explain why in the plan's `Confirmed decisions`.
+
+Do not save a plan that no agent — fresh or otherwise — can finish in one focused run.
 
 ### Step 6 — Deliver the plan
 

@@ -38,15 +38,15 @@ You can inspect and maintain the suite from this source repository, which contai
 
 | Skill | Phase | When to use |
 |---|---|---|
-| `/b-spec` | Clarify | Clarify the end state, constraints, and acceptance criteria when the request is underspecified or still a rough idea, sharpening terminology from repo glossary docs when they exist |
-| `/b-plan` | Decide | Turn a clear goal into an execution-ready plan when the work is broad, dependency-heavy, or risky |
+| `/b-spec` | Clarify | Clarify the end state, constraints, acceptance criteria, and explicit assumptions when the request is underspecified or still a rough idea; enforces a hard 2-round clarification exit and sharpens terminology from repo glossary docs when they exist |
+| `/b-plan` | Decide | Turn a clear goal into an execution-ready plan when the work is broad, dependency-heavy, or risky; plan size is bounded by a risk-tiered guardrail |
 | `/b-research` | Decide | External knowledge — lookup or research with citation discipline; auto-deepens, never asks the user to pick a mode |
 | `/b-implement` | Build | Execute approved or clearly scoped work one step at a time, verify each step, and stop for new decisions |
 | `/b-refactor` | Build | Concrete behavior-preserving transforms — rename, extract, move, inline, or delete dead code |
 | `/b-debug` | Validate | Runtime bug ownership — trace, confirm root cause, fix minimally, verify; handles errors, races, perf regressions, and cannot-reproduce reports |
 | `/b-test` | Validate | Code-level tests — write tests, fix test-only failures, or review coverage gaps without confusing them with runtime bugs |
 | `/b-e2e` | Validate | Live browser verification and browser-test authoring, while respecting the repo's existing E2E framework |
-| `/b-review` | Validate | Pre-PR changed-code review, or an explicitly requested repository audit, focused on blockers, regressions, security, and missing coverage |
+| `/b-review` | Validate | Pre-PR changed-code review, or an explicitly requested repository audit, focused on blockers, regressions, security, and missing coverage; emits one of three verdicts: READY FOR PR, READY WITH FOLLOW-UPS, or NEEDS FIXES |
 
 ### Typical Flows
 
@@ -76,7 +76,7 @@ You can inspect and maintain the suite from this source repository, which contai
 
 In this source repo, shared runtime rules live in `global/AGENTS.md` and install to `~/.config/opencode/AGENTS.b-skills.md`; the installer replaces the active `AGENTS.md` only when missing or approved. Installed skills still cite `AGENTS.md`, so preserved third-party rules leave the suite activation-pending until merged/replaced.
 
-Runtime headlines: definitions and rubrics (§3), durable plan metadata plus the optional domain-docs convention (§2), MCP bundles and fallbacks (§4), safety gates plus isolated-workspace preference (§6), execution/verification discipline including review checkpoints and completion closure (§7), artifacts (§8), output contract (§9), documentation-backed decisions (§5), the high-risk challenge gate plus test-vs-bug and DOM/browser boundaries (§10), session lifecycle (§11).
+Runtime headlines: definitions and rubrics (§3), durable plan metadata plus the optional domain-docs convention (§2), MCP bundles and fallbacks (§4), evidence standards including documentation-backed decisions and the citation-provenance rule (§5), safety gates plus isolated-workspace preference (§6), execution/verification discipline including review checkpoints, transform rollback, cascading failures, and the completion contract (§7), artifacts (§8), output contract including the verbosity cap that exempts BLOCKERs (§9), cross-cutting decisions including the high-risk challenge gate, test-vs-bug routing, DOM/browser and hybrid component boundaries, and the agent-cannot-reproduce protocol (§10), session lifecycle and cross-skill conventions (§11), and the suite-wide common-rationalizations table (§12).
 
 Artifact paths:
 - Plans: `.opencode/b-skills/b-plan/<task-slug>.md` after applying the `.opencode/.gitignore` guard in `global/AGENTS.md` §6 (legacy `.opencode/b-plans/` is deprecated). New saved plans include frontmatter for durable approval state, timestamps, approved git HEAD, risk, and touch points. Saved plans remain the canonical repo-local source of truth. `<task-slug>` follows the slug algorithm in `global/AGENTS.md` §8.
@@ -85,7 +85,7 @@ Artifact paths:
 - Temporary command output: `/tmp/opencode/b-skills/<skill>/<slug>.log`.
 - Multi-artifact runs include a `manifest.json` per the schema in `global/AGENTS.md` §8.
 
-Routing/safety highlights: keep one active skill; strict trigger precedence; approved plans are execution source of truth; non-trivial execution prefers isolated workspace/worktree handling when it materially reduces risk; approval gates protect installs, servers, migrations, commits, destructive/shared-environment actions; generated/lock/snapshot files are derived; manual edits use `apply_patch` with fresh-read, small-hunk, stale-context retry discipline; verification narrows before broadening; milestone-sized risky slices can trigger `b-review` before the very end, with the completed step or milestone carried in the handoff; GitNexus is optional radar and Serena is primary hands; non-trivial runs use the §9 handoff/status schemas and explicit completion closure. Preserve-mode installs are activation-pending until active `AGENTS.md` is replaced or merged.
+Routing/safety highlights: keep one active skill; strict trigger precedence; approved plans are execution source of truth; non-trivial execution prefers isolated workspace/worktree handling when it materially reduces risk; approval gates protect installs, servers, migrations, commits, destructive/shared-environment actions; b-e2e treats production-like targets as read-only by default; generated/lock/snapshot files are derived; manual edits use `apply_patch` with fresh-read, small-hunk, stale-context retry discipline; transform rollback and cascading-failure rules apply across implement/refactor/debug/test; verification narrows before broadening; milestone-sized risky slices can trigger `b-review` before the very end, with the completed step or milestone carried in the handoff; GitNexus is optional radar and Serena is primary hands; cited URLs must come from results actually fetched in the current session; report verbosity is capped per severity but BLOCKERs are never elided; non-trivial runs use the §9 handoff/status schemas and the §7 completion contract. Preserve-mode installs are activation-pending until active `AGENTS.md` is replaced or merged.
 
 ### Shared references
 
