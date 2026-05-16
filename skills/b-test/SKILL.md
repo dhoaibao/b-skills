@@ -56,6 +56,8 @@ Use the global test-vs-bug decision:
 - **Coverage review:** rank missing tests by user impact, changed behavior, risk boundary, and edge-case value; add only the requested/highest-value gaps.
 - **Flaky test:** use the global flake procedure before rewriting or skipping.
 
+Choose test type by the behavior boundary: pure logic gets unit tests, component behavior gets DOM-rendered tests, cross-module contracts get integration or contract tests if the repo already has them, and real browser behavior goes to **b-e2e**.
+
 If product behavior is uncertain, hand off to **b-debug**.
 
 ### Step 3 - Fix or add tests

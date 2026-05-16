@@ -8,6 +8,7 @@ New saved plans include durable frontmatter from `AGENTS.md` §2 before the Mark
 
 ```markdown
 ---
+contract_version: <current-contract-version>
 slug: <task-slug>
 status: draft
 created_at: <YYYY-MM-DD>

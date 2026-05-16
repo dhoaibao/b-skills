@@ -33,7 +33,7 @@ Turns a clear goal into an execution-ready plan without implementing.
 
 **Core behavior**
 - Uses quick mode for low-risk, chat-sized scoped work and full mode for durable, multi-session, dependency-heavy, or risky coordination.
-- Saves full plans under `.opencode/b-skills/b-plan/<task-slug>.md` with durable frontmatter from `global/AGENTS.md`.
+- Saves full plans under `.opencode/b-skills/b-plan/<task-slug>.md` with durable frontmatter and `contract_version` from `global/AGENTS.md`.
 - Promotes quick plans to saved plans when risk, breadth, or coordination grows.
 - Uses repo evidence only when it materially improves sequencing or touch-point accuracy.
 - Records assumptions separately from confirmed decisions unless the user confirms them.
@@ -60,6 +60,7 @@ Answers external-knowledge questions from fetched evidence.
 - Uses Context7 for library/framework APIs, search for discovery, news search for recency-sensitive questions, image search when visual evidence matters, and Firecrawl extraction for final page/document evidence.
 - Auto-deepens when evidence is stale, contradictory, non-authoritative, or indirect.
 - Applies global privacy, citation-provenance, confidence, and deep-research approval rules.
+- Requires primary vendor or source-repo evidence when available for security, licensing, pricing, breaking migrations, or production-impacting compatibility.
 
 **Output**
 - Lookup: direct answer, optional example, source, confidence when needed.
@@ -75,6 +76,7 @@ Executes approved or clearly scoped work in coherent verified steps.
 - Resolves source of truth from saved plan, plan slug, approved chat plan, or small direct request.
 - Requires executable plan approval state or current-chat approval before editing.
 - Applies plan staleness before source edits and updates saved-plan progress/frontmatter without stripping metadata.
+- States a one-line pre-edit checkpoint covering source of truth, expected touch points, behavior that must not change, verification, and approval/review needs.
 - Preserves unrelated worktree changes and chooses isolation when global rules say it materially reduces risk.
 - Uses Serena for symbol-aware edits and `apply_patch` for small prose/config/glue edits under global patch discipline.
 - Allows tiny local mechanical edits required by an approved step; primary or broad mechanical transforms go to `b-refactor`.
@@ -95,6 +97,7 @@ Owns runtime and behavior failures.
 
 **Core behavior**
 - Starts from concrete symptoms, stack traces, repro notes, determinism, and perf baseline when relevant.
+- Keeps a repro record for non-trivial or blocked bugs: command or interaction, target/workspace, versions/config flags, expected/actual behavior, determinism, and evidence without secret values.
 - Uses fast path when a trace strongly implicates one file/function.
 - Ranks suspects only as needed and confirms root cause before editing.
 - Tags temporary probes with `b-debug-probe`, removes probes, and re-verifies after cleanup.
@@ -124,6 +127,7 @@ Reviews diffs, ranges, checkpoints, or explicitly requested repo areas.
 - In repo-audit mode, names sampled files/symbols, skipped surfaces, and residual risk.
 - Checks tests/operability unless `--skip-tests` is present.
 - Reports findings first, includes checked-and-clean areas for standard reviews, and emits READY FOR PR, READY WITH FOLLOW-UPS, or NEEDS FIXES.
+- Blocks READY FOR PR when there is no baseline, required verification was skipped, or sampled audit coverage leaves material unreviewed risk.
 
 **Output**
 - Scope/mode/path/baseline, findings, checked-clean areas, coverage/tests/observability, verdict.
@@ -143,6 +147,7 @@ Owns code-level testing work.
 - Routes red tests through the global test-vs-bug decision.
 - Handles failing tests, new tests, coverage review, and flaky tests.
 - Uses red-first behavior when feasible for TDD or regression tests.
+- Chooses test type by boundary: pure logic unit, component DOM, existing integration/contract tests for cross-module contracts, and real-browser behavior in `b-e2e`.
 - Ranks coverage gaps by user impact, changed behavior, risk boundary, and edge-case value.
 - Keeps DOM-rendered and hybrid component tests here; real browsers go to `b-e2e`.
 - Updates snapshots/goldens only after intended behavior is confirmed.
@@ -168,6 +173,7 @@ Uses a real browser for flow verification and browser-test authoring.
 - Snapshots before interaction and verifies concrete UI state.
 - Handles unreachable localhost targets by asking whether to start the repo server with approval, use a user-started target, or abort.
 - Checks focused accessibility on interacted surfaces.
+- Records browser evidence context for non-trivial flows: URL, viewport/device, auth mode, data created or reused, key console/network findings, and final UI assertion.
 - Preserves the repo's existing browser-test framework in author mode.
 - Creates artifacts and manifests when evidence or cleanup must be auditable; sensitive/auth artifacts stay outside the worktree by default.
 - Closes the browser and reports cleanup/partial writes.
@@ -191,6 +197,7 @@ Handles concrete behavior-preserving transforms.
 - Promotes risk for non-LSP languages, generated consumers, exports/shared APIs, moves, and broad reference maps.
 - Applies the smallest matching transform: rename, safe delete, extract, inline, rename+extract, or move.
 - Requires concrete behavior-preserving boundaries for `simplify`, and sends public/package-boundary moves back to planning unless already approved.
+- Requires observable equivalence to be named for `simplify`, `inline`, and `extract`; otherwise treats the request as redesign and sends it back to planning.
 - Adds move destinations first, updates imports/tests/config/barrels, verifies, then removes origin.
 - Hands behavioral redesign or over-broad transforms back to `b-plan`.
 
@@ -221,12 +228,16 @@ This repository is the install-only source layout for the suite. OpenCode does n
 - `.opencode/b-skills/<skill>/<run-id>/report.md` — saved review/research reports.
 - `~/.config/opencode/b-skills/<skill>/<run-id>/` or `/tmp/opencode/b-skills/<skill>/<run-id>/` — non-worktree sensitive artifacts.
 - `/tmp/opencode/b-skills/<skill>/<slug>.log` — large command output and temporary logs.
+- New saved plans and multi-artifact manifests carry the current `contract_version` from `global/AGENTS.md` §0; manifests must be valid JSON.
 
 ### Runtime global conventions
+- The runtime kernel in `global/AGENTS.md` §0 captures the always-on rules to preserve under context pressure.
 - One active skill at a time; trigger precedence lives in `global/AGENTS.md`.
 - Skill bodies are intentionally concise: trigger boundary, task-specific workflow, and task-specific stop conditions only.
-- Global rules own rubrics, safety gates, approval lifetime, artifacts, manifest transitions, status/handoff schemas, skipped-check labels, evidence hierarchy, happy-path compression, fallback labeling, patch discipline, transform rollback, cascading failures, and output caps.
+- Global rules own rubrics, readiness vocabulary, safety gates, approval lifetime, artifacts, manifest transitions, slash-command flag/mode handling, status/handoff schemas, skipped-check labels, evidence hierarchy, happy-path compression, fallback labeling, patch discipline, transform rollback, cascading failures, and output caps.
 - Non-trivial runs define success, verify with the global ladder, respect monorepo workspace selection and command budgets, and report skipped checks with global labels.
+- Blocked or non-trivial debug/test/E2E runs record a minimal environment snapshot without secret values.
+- Receiving skills must treat handoff envelopes as initial source of truth and validate inherited assumptions against latest user/repo evidence.
 - Serena is primary hands for symbols and edits. GitNexus is optional radar only when indexed, fresh, and target-aware.
 - Cited URLs must come from sources fetched or supplied in the current session.
 - Common rationalizations live in `global/AGENTS.md`; skills do not duplicate them.

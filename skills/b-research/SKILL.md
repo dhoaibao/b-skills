@@ -62,6 +62,8 @@ Use Context7 first for library/framework APIs. Otherwise discover authoritative 
 
 For recency-sensitive questions, use the news search path before extraction. Use image search only when visual evidence is material to the answer.
 
+For security, licensing, pricing, breaking migrations, or production-impacting compatibility, require primary vendor or source-repo evidence when available. If only secondary sources are available, label the limitation and lower confidence.
+
 Auto-deepen when first evidence is stale, contradictory, non-authoritative, or indirect. Use search snippets only for discovery unless explicitly labeled snippet-only with low confidence.
 
 Use `firecrawl-extended` only for maps or structured fields. Use `firecrawl-deep` only after lower tiers fail and approval is granted. Respect the public-web privacy gate on every external call.

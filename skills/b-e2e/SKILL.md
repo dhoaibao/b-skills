@@ -60,6 +60,8 @@ In verify mode, snapshot before interacting, navigate, execute with browser tool
 
 Check only the requested viewport unless responsive behavior or both mobile/desktop are in scope. Include a focused accessibility check for interacted controls, labels, roles, and focus order. Default to functional assertions; visual baselines require approval.
 
+For non-trivial flows, record the browser evidence context: URL, viewport/device, auth mode, data created or reused, key console/network findings, and the final UI assertion. Prefer seeded or namespaced test data; if data cannot be cleaned up safely, report it rather than deleting blindly.
+
 In author mode, translate the verified flow into stable test code with accessible selectors and clear assertions, then run the project's normal browser-test command once.
 
 ### Step 4 - Cleanup and report

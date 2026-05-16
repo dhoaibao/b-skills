@@ -60,6 +60,8 @@ For non-trivial work, decide whether the current checkout is safe or whether iso
 
 ### Step 3 - Implement the smallest coherent step
 
+Before editing, state the current step in one line: source of truth, files or symbols expected to change, behavior that must not change, planned verification, and whether approval or a review checkpoint is required.
+
 Use Serena for symbol-aware edits and `apply_patch` for small prose/config/glue edits under the global patch discipline. If `apply_patch` reports missing expected lines, treat it as stale context: re-read and retry with smaller verified context.
 
 Stay within approved scope. Stop for new product decisions, stale/wrong plans, or unplanned broad transforms. Tiny local mechanical edits required to complete the approved step may stay here; broad or primary mechanical transforms go to **b-refactor**.

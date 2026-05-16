@@ -46,6 +46,8 @@ Fallbacks: `AGENTS.md` section 4. Graceful degradation: possible with native ana
 
 Collect exact failure, expected vs actual behavior, repro notes, determinism, and for perf bugs workload/baseline/threshold.
 
+For non-trivial or blocked bugs, keep a repro record: command or interaction, workspace or target, relevant versions/config flags, expected behavior, actual behavior, determinism, and strongest evidence. Do not include secret values or private data.
+
 If production impact, data loss, or security risk is active, identify the safest containment first and ask before shared-environment action.
 
 ### Step 2 - Rank suspects only as needed

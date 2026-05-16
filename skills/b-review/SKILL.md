@@ -73,7 +73,7 @@ Use diagnostics or narrow commands only when review confidence depends on runtim
 
 Report findings first, ordered by global severity. Include checked-and-clean areas for standard reviews, capped by global verbosity rules; fast reviews may omit them only when the report says why. If no findings, say so and name residual risk or skipped checks.
 
-Verdicts: **READY FOR PR**, **READY WITH FOLLOW-UPS**, or **NEEDS FIXES**.
+Verdicts: **READY FOR PR**, **READY WITH FOLLOW-UPS**, or **NEEDS FIXES**. Do not use **READY FOR PR** when the review has no baseline, required verification was skipped, or sampled audit coverage leaves material unreviewed risk; use **READY WITH FOLLOW-UPS** or **NEEDS FIXES** instead.
 
 If external knowledge is required, resolve one narrow docs lookup inline or hand off to **b-research**.
 

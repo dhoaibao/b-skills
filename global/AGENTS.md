@@ -4,6 +4,27 @@
 
 ---
 
+## 0. Runtime Kernel
+
+Use this kernel before the detailed sections. If context pressure is high, preserve these rules first.
+
+1. Route to exactly one active skill by intent; switch only at a stop condition or explicit user override.
+2. Follow the source-of-truth ladder: latest user instruction, approved saved plan, approved chat plan, repo evidence, then stated assumptions.
+3. Do not invent product behavior, acceptance criteria, compatibility promises, naming, or verification commands.
+4. Ask before dependency writes, dev servers, migrations, commits, destructive commands, production-like writes, broad refactors, or shared-environment mutation.
+5. Never read or expose likely secrets, private stack traces, internal URLs, customer data, or proprietary code to public web tools without explicit approval.
+6. Preserve unrelated worktree changes; patch around them and stop only on direct conflicts.
+7. Use the lightest reliable evidence: runtime, symbol, graph, exact text, then snippets only for discovery.
+8. Prefer native tools for exact local evidence; use Serena for symbol hands, GitNexus only as optional fresh radar, and browser tools only through `b-e2e`.
+9. For non-trivial work, define success, make the smallest coherent change, verify with the narrowest useful check, and never leave a mid-transform tree.
+10. Report final state with evidence, skipped checks, blockers, confidence when incomplete, and the status/handoff schemas when the run is non-trivial.
+
+### Contract Version
+
+This runtime contract version is `2026-05-16`. New saved plans and multi-artifact manifests should include this value as `contract_version` so future agents can detect stale artifact semantics. In schema examples and reusable templates, write the field as `<current-contract-version>` to avoid drift; concrete run artifacts use the actual version string from this section. Legacy artifacts without this field remain valid but should be treated as pre-versioned.
+
+---
+
 ## 1. Routing
 
 Match the user's intent to one active skill before acting. If a request spans phases, sequence `Clarify -> Decide -> Build -> Validate`.
@@ -86,6 +107,7 @@ New saved plans should start with YAML frontmatter so approval and staleness are
 
 ```yaml
 ---
+contract_version: <current-contract-version>
 slug: <task-slug>
 status: draft | approved | in-progress | complete | superseded
 created_at: <YYYY-MM-DD>
@@ -99,6 +121,8 @@ touch_points:
 ```
 
 When the user approves a saved plan, update `status`, `approved_at`, `approved_by`, and `approved_head` in place when the repo has a git HEAD. `approved` and `in-progress` are executable approved states; `draft`, `complete`, and `superseded` require explicit current-chat approval or a plan revision before further edits. Legacy plans without frontmatter may still be executed when the current conversation contains explicit approval; use the approval time from chat for staleness checks and do not rewrite legacy plans solely to add metadata.
+
+Before executing a saved plan, validate that required frontmatter is present when the plan is versioned, `status` is executable or currently approved, `touch_points` names the planned files or areas, and every unchecked step has a `Done when` verification. If validation fails, fix the plan through the revision protocol or hand back to `b-plan`; do not silently improvise.
 
 ### Plan staleness gate
 
@@ -154,6 +178,17 @@ A request that may bypass `/b-plan` and go straight to `/b-implement` must meet 
 - No remaining design decision; behavior is obvious from the request.
 
 Anything failing this threshold goes back to `/b-plan`.
+
+### Readiness vocabulary
+
+Use these terms consistently across skills:
+- **Verified** means the stated check or runtime observation ran and directly supports the claim.
+- **Validated** means the artifact or plan passed required structural checks, but behavior may still need verification.
+- **Complete** means the requested scope is done, required verification ran or was explicitly skipped, and no blockers remain.
+- **Partial** means useful progress or artifacts exist, but completion criteria are not satisfied.
+- **Ready** means no known blockers remain within the reviewed or implemented scope; it does not imply unreviewed surfaces are safe.
+
+Do not use `READY FOR PR`, `complete`, or high confidence when the required baseline, verification, or evidence is missing. Use `READY WITH FOLLOW-UPS`, `partial`, or a lower confidence label instead.
 
 ### Severity rubric (`/b-review`, `/b-debug`, any finding)
 
@@ -308,6 +343,12 @@ When fallback changes the intended tool path, evidence source, or verification r
 - `gitnexus-radar` should usually stay to 1-2 calls per run; more often means the question should move back to Serena or native tools.
 - Reuse recently fetched URLs, docs, and symbol results instead of re-fetching them.
 - The verification iteration cap (§7) still applies.
+
+### Slash-command flags and modes
+
+When a skill declares flags or modes, parse them before tool use. Unknown flags should not be ignored: ask once or continue only if the intended behavior is still unambiguous. For conflicting flags, prefer the safer or narrower mode and state the choice; if both modes would mutate state or change evidence requirements, ask.
+
+Mode precedence is skill-specific, but the global default is: explicit user flag, explicit user prose, approved plan or handoff, then skill default. When a user requests multiple modes in one run, execute the evidence-gathering mode before the authoring or mutation mode unless the skill says otherwise.
 
 ### Run cost signal
 
@@ -546,6 +587,10 @@ When a relevant check is skipped, use one of these labels before the reason so d
 - Before reporting non-trivial execution complete, state final verification status, any remaining cleanup or lingering processes/worktrees/test data/artifacts, and the natural next action (review, commit, PR, merge, keep workspace, or discard it).
 - If an isolated workspace or linked worktree was used, say whether it remains active and whether cleanup is still pending. Do not delete branches or worktrees without approval.
 
+### Environment snapshot
+
+For blocked or non-trivial debug, test, and E2E runs whose result depends on local setup, record the minimum environment snapshot in the final report or artifact: command or URL, workspace root, runtime/package-manager/browser versions when available, relevant flags/config/env names without secret values, data/auth mode, viewport/device for browser work, and what remains unknown. Do not print secret values.
+
 ### Empty-state defaults
 
 When the expected input is missing, do not silently fall back; ask once with a concrete default in mind:
@@ -629,6 +674,7 @@ Any run that produces more than one artifact must include `manifest.json` at the
 
 ```json
 {
+  "contract_version": "<current-contract-version>",
   "run_id": "<YYYYMMDD-HHMMSS>-<task-slug>",
   "skill": "<b-skill-name>",
   "status": "complete | blocked | partial",
@@ -642,7 +688,7 @@ Any run that produces more than one artifact must include `manifest.json` at the
 }
 ```
 
-Single-artifact runs may skip the manifest and report these fields inline instead.
+Single-artifact runs may skip the manifest and report these fields inline instead. Manifests must be valid JSON and should not include comments or trailing commas.
 
 ### Manifest state transitions
 
@@ -736,6 +782,8 @@ next-skill: <b-skill-name>
 
 Required fields are `source`, `goal`, `decisions`, `assumptions`, `files`, `verification`, `blockers`, `next-skill`. `run-id` and `carve-outs` are **omit-when-empty**. The `run-id` propagates per §8 so the receiving skill writes artifacts under the same run.
 
+The receiving skill must read the handoff as its initial source of truth, restate any inherited assumptions that affect execution, and stop if the handoff conflicts with the user's latest instruction or current repo evidence.
+
 ### Standard report shape
 
 For non-trivial implementation, debug, test, refactor, review, or research work, final responses include:
@@ -771,6 +819,8 @@ Before a skill reports completion on work touching auth/authz, security boundari
 3. Name the evidence that makes the claim acceptable now.
 
 Keep it short. If the evidence is missing or indirect, do not present the work as settled: widen verification, lower confidence, or stop.
+
+For developer-tooling suites, public or external contracts include command wrappers, CLI flags, MCP tool names or schemas, installer behavior, generated config formats, exported APIs, route shapes, and documented runtime skill behavior.
 
 ### Test failure vs runtime bug
 
