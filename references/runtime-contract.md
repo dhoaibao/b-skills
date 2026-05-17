@@ -224,7 +224,7 @@ Use the lightest reliable tool. Native Glob/Grep/Read/Bash stay first for exact 
 | Graph overview, architecture, blast radius, changed-scope validation | `gitnexus-radar` when indexed, fresh, target-aware | `serena-symbol-toolkit` |
 | Exact symbol discovery, declarations, references, symbol edits | `serena-symbol-toolkit` | Native tools + `apply_patch` |
 | Library/framework docs | `context7-docs` | `/b-research` |
-| Web search | `brave-discovery` | `firecrawl-extraction` |
+| Web/news/image discovery | `brave-discovery` | `firecrawl-extraction` for source content |
 | Known URL extraction | `firecrawl-extraction` | `firecrawl-extended`, then `firecrawl-deep` (approval) |
 | Local document extraction | `firecrawl-extraction` (`firecrawl_parse`) | `firecrawl-extraction` (`firecrawl_scrape`) only if already hosted |
 | Browser automation | `playwright-browser` via `/b-e2e` | none |
@@ -276,9 +276,8 @@ Skills reference bundles by name instead of repeating tool lists.
 #### `brave-discovery`
 
 - **Server:** `brave-search`
-- **Tools:** `brave_web_search`.
-- **Role:** page discovery only. Pass discovered URLs to `firecrawl-extraction` for content.
-- `brave_news_search` / `brave_image_search` are outside the bundle; use only when news or visual evidence is explicit.
+- **Tools:** `brave_web_search`, plus `brave_news_search` for recency-sensitive questions and `brave_image_search` when visual evidence is material.
+- **Role:** web/news/image discovery only. Pass discovered URLs to `firecrawl-extraction` for source content when the final answer depends on page substance rather than result metadata.
 
 #### `firecrawl-extraction` (default tier)
 
@@ -663,17 +662,17 @@ Files inside a run directory follow these conventions so they're predictable acr
 ### Paths
 
 - **Plans:** `.opencode/b-skills/b-plan/<task-slug>.md` (canonical) after applying the `.opencode/.gitignore` guard in §6. Saved plans remain repo-local source-of-truth files. The legacy `.opencode/b-plans/` is deprecated; do not write there.
-- **Skill artifacts:** `.opencode/b-skills/<skill>/<run-id>/` for repo-local non-sensitive artifacts after applying the `.opencode/.gitignore` guard in §6.
+- **Skill artifacts:** `.opencode/b-skills/<skill>/<run-id>/` for repo-local non-sensitive b-skills artifacts after applying the `.opencode/.gitignore` guard in §6.
 - **Saved reports:** `.opencode/b-skills/<skill>/<run-id>/report.md` for explicit review/research reports after applying the `.opencode/.gitignore` guard in §6.
 - **Sensitive artifacts:** browser auth/session state and similar secrets default to `~/.config/opencode/b-skills/<skill>/<run-id>/` or `/tmp/opencode/b-skills/<skill>/<run-id>/`; never store them in a tracked worktree path.
 - **Temporary logs:** `/tmp/opencode/b-skills/<skill>/<slug>.log`.
 
-Do not write generated artifacts outside those paths unless editing project source files is the task.
+Do not invent new b-skills artifact paths. Project-native verification outputs such as coverage reports, test traces, browser videos, screenshots, snapshots, or framework `test-results` may be produced in the repo's configured locations when running an approved or risk-appropriate command; report them when they affect evidence, cleanup, or generated-artifact provenance.
 
 ### Artifact minimization
 
 - Do not create run artifacts for routine chat answers, tiny edits, or successful low-risk checks.
-- Create artifacts only when needed for saved plans, explicit saved reports, browser evidence, large/truncated logs, auth/session state, generated evidence, partial failures, or user-requested auditability.
+- Create b-skills artifacts only when needed for saved plans, explicit saved reports, browser evidence, large/truncated logs, auth/session state, generated evidence, partial failures, or user-requested auditability.
 - If an artifact is optional, prefer the chat/status summary over writing files.
 
 ### Retention and cleanup

@@ -61,7 +61,7 @@ Answers external-knowledge questions from fetched evidence.
 - Chooses lookup for one fact/signature/config/capability and research for synthesis, comparison, recency, or conflicts.
 - Pins library versions when APIs, configs, migrations, signatures, or examples depend on version.
 - Treats user-provided URLs/files/documents as direct-source lookup when one source is likely sufficient.
-- Uses Context7 for library/framework APIs, search for discovery, news search for recency-sensitive questions, image search when visual evidence matters, and Firecrawl extraction for final page/document evidence.
+- Uses Context7 for library/framework APIs, `brave-discovery` for web/news/image discovery, and Firecrawl extraction for final page/document evidence when page substance matters.
 - Auto-deepens when evidence is stale, contradictory, non-authoritative, or indirect.
 - Applies global privacy, citation-provenance, confidence, and deep-research approval rules.
 - Requires primary vendor or source-repo evidence when available for security, licensing, pricing, breaking migrations, or production-impacting compatibility.
@@ -131,7 +131,7 @@ Reviews diffs, ranges, checkpoints, or explicitly requested repo areas.
 - Establishes a baseline from arguments, plan, checkpoint, or clarification; otherwise labels the review diff-only/audit-only.
 - Labels no-baseline reviews as `baseline-missing` and avoids requirements-coverage claims.
 - Inspects highest-risk symbols and boundaries first.
-- In repo-audit mode, names sampled files/symbols, skipped surfaces, and residual risk.
+- In repo-audit mode, names sampled files/symbols, skipped surfaces, and residual risk; skill-suite audits check routing boundaries, command wrappers, runtime-contract consistency, docs sync, validator coverage, artifact paths, and safety-gate drift.
 - Names relevant security checklist sections when they affect findings or confidence.
 - Checks tests/operability unless `--skip-tests` is present.
 - Reports findings first, includes checked-and-clean areas for standard reviews, and emits READY FOR PR, READY WITH FOLLOW-UPS, or NEEDS FIXES.
@@ -190,8 +190,8 @@ Uses a real browser for flow verification and browser-test authoring.
 - Records browser evidence context for non-trivial flows: URL, viewport/device, auth mode, data created or reused, key console/network findings, and final UI assertion.
 - Preserves the repo's existing browser-test framework in author mode.
 - Inspects whether the browser-test command starts a dev server, targets an external environment, or creates data before running it, and gets required approval or uses a user-provided target.
-- Preserves repo-native trace, screenshot, video, and retry settings unless the user approves a change.
-- Creates artifacts and manifests when evidence or cleanup must be auditable; sensitive/auth artifacts stay outside the worktree by default.
+- Preserves repo-native trace, screenshot, video, retry, and artifact settings unless the user approves a change.
+- Creates b-skills artifacts and manifests only when evidence or cleanup must be auditable under the global artifact rules; repo-native browser-test outputs follow project configuration and are reported when relevant.
 - Applies the shared test-data lifecycle rule, closes the browser, and reports cleanup/partial writes or residue owner.
 
 **Output**

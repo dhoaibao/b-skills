@@ -34,7 +34,7 @@ Answer external-knowledge questions at the lightest reliable depth, with fetched
 ## Tools required
 
 - `context7-docs` (primary for library/framework API lookups)
-- `brave-discovery` (page discovery)
+- `brave-discovery` (web, news, and image discovery)
 - `firecrawl-extraction` (known URLs and local documents)
 - `firecrawl-extended` *(optional, for site maps or structured fields)*
 - `firecrawl-deep` *(last resort; approval-gated by `AGENTS.md`)*
@@ -60,7 +60,7 @@ Skip pinning when the question is conceptual and version is not material.
 
 Use Context7 first for library/framework APIs when it can match the pinned version; otherwise discover authoritative pages, then extract the highest-signal source. Prefer official docs, source repos, release notes, standards, and vendor materials over blogs or tutorials.
 
-For recency-sensitive questions, use the news search path before extraction and include `as of <date>` or source publication dates in the answer. Use image search only when visual evidence is material to the answer.
+For recency-sensitive questions, use the `brave-discovery` news path before extraction and include `as of <date>` or source publication dates in the answer. Use image search only when visual evidence is material to the answer.
 
 For security, licensing, pricing, breaking migrations, or production-impacting compatibility, require primary vendor or source-repo evidence when available and include the evidence date. If only secondary sources are available, label the limitation and lower confidence.
 

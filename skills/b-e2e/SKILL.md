@@ -45,7 +45,7 @@ Identify the target URL/app/surface and whether auth or writes are needed. Verif
 
 Production-like targets are read-only by default. Mutating steps require explicit approval naming the environment. Use ephemeral auth unless reusable stored auth is explicitly approved; if stored auth is expired, ask whether to refresh, re-auth ephemerally, or abort.
 
-Create repo-local artifacts only when evidence must be saved; otherwise rely on the global happy-path compression rule. Sensitive/auth artifacts stay outside the worktree by default. Artifacts and a manifest are required when writing tests, saving screenshots/snapshots, using auth/session state, creating test data, or encountering partial writes/failures. Apply the global test data lifecycle rule before creating, reusing, or cleaning browser data.
+Create b-skills artifacts only when evidence or cleanup state must be saved; otherwise rely on the global happy-path compression rule. Repo-native browser-test outputs may follow project configuration and should be reported when they affect evidence or cleanup. Sensitive/auth artifacts stay outside the worktree by default. A manifest is required only when the global multi-artifact rule applies. Apply the global test data lifecycle rule before creating, reusing, or cleaning browser data.
 
 ### Step 2 - Pick mode
 
@@ -62,7 +62,7 @@ Check only the requested viewport and browser unless responsive, mobile/desktop,
 
 For non-trivial flows, record the browser evidence context: URL, viewport/device, auth mode, data created or reused, key console/network findings, and the final UI assertion. Prefer seeded or namespaced test data; if data cannot be cleaned up safely, report it rather than deleting blindly.
 
-In author mode, translate the verified flow into stable test code with accessible selectors and clear assertions. Before running the project's normal browser-test command, inspect whether it starts a dev server, targets an external environment, or creates data; get the required approval or use the user-provided target before running it once. Preserve repo-native trace, screenshot, video, and retry settings; do not add new E2E artifacts or retry policy unless the repo already uses them or the user approves.
+In author mode, translate the verified flow into stable test code with accessible selectors and clear assertions. Before running the project's normal browser-test command, inspect whether it starts a dev server, targets an external environment, or creates data; get the required approval or use the user-provided target before running it once. Preserve repo-native trace, screenshot, video, and retry settings; do not change the repo's E2E artifact or retry policy unless the repo already uses that pattern or the user approves.
 
 ### Step 4 - Cleanup and report
 

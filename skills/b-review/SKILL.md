@@ -59,7 +59,7 @@ Fast path is allowed only for a single non-sensitive area with no public contrac
 
 Use arguments, `--baseline`, approved plan, checkpoint handoff, or short clarification to identify intended behavior. Without a baseline, run a `baseline-missing` diff-only or repo-audit risk review and do not claim requirements coverage.
 
-Inspect highest-risk changed symbols and boundaries first. For audits, use a surface-specific checklist: installer/update path, runtime contract, validator, route/tool boundary, dependency/lockfile, generated artifact, or security-sensitive rule. Name the sampled files/symbols, skipped surfaces, and residual risk so a no-findings audit is not mistaken for exhaustive proof.
+Inspect highest-risk changed symbols and boundaries first. For audits, use a surface-specific checklist: installer/update path, runtime contract, validator, route/tool boundary, dependency/lockfile, generated artifact, or security-sensitive rule. For skill-suite audits, check routing boundaries, skill-to-command wrapper alignment, runtime-contract consistency, README/REFERENCE sync, validator coverage, artifact paths, and safety-gate drift. Name the sampled files/symbols, skipped surfaces, and residual risk so a no-findings audit is not mistaken for exhaustive proof.
 
 Run the security checklist on changed entry points and shared boundaries even on fast path, and name the relevant checklist sections when they affect findings or confidence. Treat lockfile, generated, snapshot, golden, vendored, and minified changes as derived unless source or approved generation is clear.
 

@@ -85,7 +85,7 @@ The runtime kernel lives in `global/AGENTS.md` (installs to `~/.config/opencode/
 
 Artifact paths:
 - Plans: `.opencode/b-skills/b-plan/<task-slug>.md` (`.opencode/.gitignore` guard: `global/AGENTS.md` §6; slug: §8; legacy `.opencode/b-plans/` deprecated).
-- Skill artifacts: `.opencode/b-skills/<skill>/<run-id>/` (`run-id = <YYYYMMDD-HHMMSS>-<slug>`); sensitive/E2E auth outside worktree.
+- Skill artifacts: `.opencode/b-skills/<skill>/<run-id>/` (`run-id = <YYYYMMDD-HHMMSS>-<slug>`); sensitive/E2E auth outside worktree. Repo-native test, coverage, trace, video, and screenshot outputs follow project configuration when produced by verification commands.
 - Saved reports: `.opencode/b-skills/<skill>/<run-id>/report.md`.
 - Temp logs: `/tmp/opencode/b-skills/<skill>/<slug>.log`.
 - Multi-artifact runs: valid JSON `manifest.json` with `contract_version` per `references/runtime-contract.md` §8.
@@ -170,7 +170,7 @@ Skills reference **MCP bundles** summarized in `global/AGENTS.md` §4 and fully 
 |---|---|---|
 | `serena-symbol-toolkit` | `serena` | Primary hands for symbol discovery, references, diagnostics, and symbol-aware edits. Includes the once-per-session onboarding preflight and the LSP-coverage caveat. |
 | `context7-docs` | `context7` | Library/framework docs with a manifests-plus-lockfiles version-pinning rule. |
-| `brave-discovery` | `brave-search` | Page discovery only. `brave_news_search` / `brave_image_search` are used inline when a skill explicitly needs news or visual evidence. |
+| `brave-discovery` | `brave-search` | Web/news/image discovery only. Final page substance should come from extraction when possible; news and image search are used only when recency or visual evidence is material. |
 | `firecrawl-extraction` | `firecrawl` | Default tier: `firecrawl_scrape`, `firecrawl_parse`. |
 | `firecrawl-extended` | `firecrawl` | Conditional tier: `firecrawl_map`, `firecrawl_extract` for site maps and structured fields. |
 | `firecrawl-deep` | `firecrawl` | Last-resort tier: `firecrawl_interact`, `firecrawl_agent`. Cost warning — minutes-scale. **Per-invocation approval by default**; a run-scoped capped pre-authorization may be granted in lieu of per-call asks per `global/AGENTS.md` §4. |
@@ -179,7 +179,7 @@ Skills reference **MCP bundles** summarized in `global/AGENTS.md` §4 and fully 
 
 `sequential-thinking` is bundled but optional; use it only when three or more plausible hypotheses have equal cheapest-verification cost. Skills assume MCP bundles are available, then use the runtime fallback ladder when a bundle fails on first use. GitNexus is optional and useful only for indexed repos.
 
-**Tool priority:** Serena is primary hands for symbol work; GitNexus is optional radar for graph/impact questions (indexed, fresh, target-aware only). Normal flow: `GitNexus narrow → Serena inspect/edit`. Cost-gated tools (`firecrawl-deep`, `*_unsafe`) require per-invocation approval; `firecrawl-deep` supports run-scoped pre-authorization (see `references/runtime-contract.md` §4). Full tool rules in `AGENTS.md` §MCP selection criteria.
+**Tool priority:** Serena is primary hands for symbol work; GitNexus is optional radar for graph/impact questions (indexed, fresh, target-aware only). Normal flow: `GitNexus narrow → Serena inspect/edit`. Cost-gated tools (`firecrawl-deep`, `*_unsafe`) require per-invocation approval; `firecrawl-deep` supports run-scoped pre-authorization (see `references/runtime-contract.md` §4). Full tool rules live in `global/AGENTS.md` §4 and `references/runtime-contract.md` §4.
 
 ---
 

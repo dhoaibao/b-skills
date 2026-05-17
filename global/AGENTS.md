@@ -104,7 +104,7 @@ Use the lightest reliable tool. Native Glob/Grep/Read/Bash stay first for exact 
 | Graph overview, architecture, blast radius | `gitnexus-radar` when indexed, fresh, target-aware | `serena-symbol-toolkit` |
 | Exact symbol/body/references/edits | `serena-symbol-toolkit` | Native tools + `apply_patch` |
 | Library/framework docs | `context7-docs` | `/b-research` |
-| Web search | `brave-discovery` | `firecrawl-extraction` |
+| Web/news/image discovery | `brave-discovery` | `firecrawl-extraction` for source content |
 | Known URL or local document extraction | `firecrawl-extraction` | `firecrawl-extended`, then approval-gated `firecrawl-deep` |
 | Browser automation | `playwright-browser` via `/b-e2e` | local Playwright CLI if installed |
 
@@ -169,7 +169,7 @@ Use the slug and run-id conventions from the detailed contract. Run IDs are `<YY
 
 Approved saved plans live under `.opencode/b-skills/b-plan/<task-slug>.md` after the repo-local `.opencode/.gitignore` guard. Non-sensitive skill artifacts live under `.opencode/b-skills/<skill>/<run-id>/`. Sensitive artifacts default to `~/.config/opencode/b-skills/<skill>/<run-id>/` or `/tmp/opencode/b-skills/<skill>/<run-id>/`. Temporary logs live under `/tmp/opencode/b-skills/<skill>/<slug>.log`.
 
-Create artifacts only when needed for saved plans, explicit saved reports, browser evidence, large/truncated logs, auth/session state, generated evidence, partial failures, or user-requested auditability. Multi-artifact runs require a valid JSON `manifest.json` with `contract_version`.
+Create b-skills artifacts only when needed for saved plans, explicit saved reports, browser evidence, large/truncated logs, auth/session state, generated evidence, partial failures, or user-requested auditability. Repo-native verification outputs follow project configuration; report them when they affect evidence or cleanup. Multi-artifact b-skills runs require a valid JSON `manifest.json` with `contract_version`.
 
 Detailed slug algorithm, paths, manifest schema, retention, and run-id continuity: `references/b-skills/runtime-contract.md` §8.
 
