@@ -73,6 +73,7 @@ run_install_status() {
   B_SKILLS_REPO="$repo_snapshot" \
   B_SKILLS_DIR="$sandbox/source" \
   B_SKILLS_INSTALL_MCP="$install_mcp" \
+  B_SKILLS_INSTALL_GITNEXUS=N \
   bash "$ROOT_DIR/install.sh" "$@" >/dev/null 2>&1
   rc=$?
   set -e
@@ -88,6 +89,7 @@ run_install_output() {
   B_SKILLS_REPO="$repo_snapshot" \
   B_SKILLS_DIR="$sandbox/source" \
   B_SKILLS_INSTALL_MCP="$install_mcp" \
+  B_SKILLS_INSTALL_GITNEXUS=N \
   bash "$ROOT_DIR/install.sh" "$@"
 }
 
@@ -112,6 +114,7 @@ export HOME="$sandbox/home"
 export B_SKILLS_REPO="$repo_snapshot"
 export B_SKILLS_DIR="$sandbox/source"
 export B_SKILLS_INSTALL_MCP=N
+export B_SKILLS_INSTALL_GITNEXUS=N
 cat "$ROOT_DIR/install.sh" | bash
 EOF
   chmod +x "$runner"

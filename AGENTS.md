@@ -194,7 +194,6 @@ Skills declare MCP usage by referencing **bundles** summarized in `global/AGENTS
 - Label each bundle in "Tools required" with its role: required vs `*(optional, for [condition])`*.
 - Always include a `Graceful degradation:` line summarizing skill-specific fallback (the generic MCP fallback ladder lives in `references/runtime-contract.md` §4 and is not restated).
 - Write skill prose to prefer the lightest capable tool. Do not force MCP-first behavior for exact strings, manifests, prose, small file reads, or other cases where native tools are cheaper and equally reliable.
-- Do not list `sequential-thinking` in a skill's tool table. The global rules describe when to reach for it inline; it is not a per-skill dependency.
 - Do not list `*_unsafe` tool variants (e.g., browser code-execution) in skill workflows. Approval is required per-invocation; they are excluded from default toolkits.
 
 **GitNexus-specific criteria:**

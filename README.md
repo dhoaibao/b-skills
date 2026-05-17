@@ -172,13 +172,13 @@ Skills reference **MCP bundles** summarized in `global/AGENTS.md` §4 and fully 
 |---|---|---|
 | `serena-symbol-toolkit` | `serena` | Primary hands for symbol discovery, references, diagnostics, and symbol-aware edits. Includes the once-per-session onboarding preflight and the LSP-coverage caveat. |
 | `context7-docs` | `context7` | Library/framework docs with a manifests-plus-lockfiles version-pinning rule. |
-| `brave-discovery` | `brave-search` | Web/news/image discovery only. Final page substance should come from extraction when possible; news and image search are used only when recency or visual evidence is material. |
+| `brave-discovery` | `brave-search` | Open-web source discovery for unknown URLs, recency-sensitive questions, advisories, and comparisons. Final page substance should come from extraction when possible; news and image search are used only when recency or visual evidence is material. |
 | `firecrawl-extraction` | `firecrawl` | Default tier: `firecrawl_scrape`, `firecrawl_parse`. |
 | `firecrawl-extended` | `firecrawl` | Conditional tier: `firecrawl_map`, `firecrawl_extract` for site maps and structured fields. |
 | `firecrawl-deep` | `firecrawl` | Last-resort tier: `firecrawl_interact`, `firecrawl_agent`. Cost warning — minutes-scale. **Per-invocation approval by default**; a run-scoped capped pre-authorization may be granted in lieu of per-call asks per `global/AGENTS.md` §4. |
 | `gitnexus-radar` *(optional)* | `gitnexus` | Optional graph radar — only when indexed, fresh, and target-aware. Never an edit layer. |
 
-`sequential-thinking` is bundled but optional; use it only when three or more plausible hypotheses have equal cheapest-verification cost. Skills assume MCP bundles are available, then use the runtime fallback ladder when a bundle fails on first use. GitNexus is optional and useful only for indexed repos.
+Default installer MCPs: `serena`, `context7`, `brave-search`, and `firecrawl`. `gitnexus` is an installer-optional add-on for indexed-repo graph radar. Skills assume referenced bundles are available, then use the runtime fallback ladder when a bundle fails on first use.
 
 **Tool priority:** Serena is primary hands for symbol work; GitNexus is optional radar for graph/impact questions (indexed, fresh, target-aware only). Normal flow: `GitNexus narrow → Serena inspect/edit`. Cost-gated tools (`firecrawl-deep`, `*_unsafe`) require per-invocation approval; `firecrawl-deep` supports run-scoped pre-authorization (see `references/runtime-contract.md` §4). Full tool rules live in `global/AGENTS.md` §4 and `references/runtime-contract.md` §4.
 

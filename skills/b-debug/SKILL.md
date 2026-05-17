@@ -35,7 +35,7 @@ Confirm root cause, fix minimally, verify, and remove probes. If the user asks o
 - `serena-symbol-toolkit` *(preferred for tracing and focused fixes)*
 - `gitnexus-radar` *(optional, for unfamiliar cross-module paths)*
 - `context7-docs` *(optional, for suspected API misuse)*
-- `brave-discovery` + `firecrawl-extraction` *(optional, for public errors after the privacy gate)*
+- `brave-discovery` + `firecrawl-extraction` *(optional, for public errors, recent deprecations, or upstream advisories after the privacy gate)*
 - Native search and `bash` - exact errors, config, repro commands, profilers, and diagnostics.
 
 Fallbacks: `AGENTS.md` section 4. Graceful degradation: possible with native analysis, slower without Serena.

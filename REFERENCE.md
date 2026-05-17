@@ -61,7 +61,7 @@ Answers external-knowledge questions from fetched evidence.
 - Chooses lookup for one fact/signature/config/capability and research for synthesis, comparison, recency, or conflicts.
 - Pins library versions when APIs, configs, migrations, signatures, or examples depend on version.
 - Treats user-provided URLs/files/documents as direct-source lookup when one source is likely sufficient.
-- Uses Context7 for library/framework APIs, `brave-discovery` for web/news/image discovery, and Firecrawl extraction for final page/document evidence when page substance matters.
+- Uses Context7 for library/framework APIs, `brave-discovery` to find unknown official URLs, recent advisories/release notes, and comparison sources, and Firecrawl extraction for final page/document evidence when page substance matters.
 - Auto-deepens when evidence is stale, contradictory, non-authoritative, or indirect.
 - Applies global privacy, citation-provenance, confidence, and deep-research approval rules.
 - Requires primary vendor or source-repo evidence when available for security, licensing, pricing, breaking migrations, or production-impacting compatibility.
@@ -250,7 +250,6 @@ Key maintainer rules:
 - Native tools first for exact strings, manifests, prose, configs, and small reads.
 - Skills reference MCP bundles by name; summaries in `global/AGENTS.md`, full definitions in `references/runtime-contract.md`.
 - Runtime evidence outranks symbol evidence, then graph, text, and snippets.
-- `sequential-thinking` is optional for evenly ranked multi-hypothesis decisions.
 
 ### Maintenance rules
 - Keep command wrappers thin.

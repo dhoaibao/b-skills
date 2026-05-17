@@ -149,9 +149,11 @@ for doc_path, doc_text in [('README.md', readme), ('global/AGENTS.md', global_ru
         errors.append(f'{doc_path}: model-specific reasoning wording should not be present')
 
 if '@modelcontextprotocol/server-sequential-thinking' in install_sh:
-    for doc_path, doc_text in [('README.md', readme), ('global/AGENTS.md', global_rules), ('references/runtime-contract.md', runtime_contract)]:
-        if 'Not bundled.' in doc_text:
-            errors.append(f'{doc_path}: sequential-thinking wording conflicts with install.sh bundled defaults')
+    errors.append('install.sh: sequential-thinking should not be bundled in the MCP defaults')
+
+for doc_path, doc_text in [('README.md', readme), ('REFERENCE.md', reference), ('AGENTS.md', root_agents), ('references/runtime-contract.md', runtime_contract)]:
+    if 'sequential-thinking' in doc_text:
+        errors.append(f'{doc_path}: sequential-thinking should be fully removed from suite docs and maintainer guidance')
 
 for required in ['Radar/hands boundary', 'Evidence standards', 'GitNexus freshness gate', 'Patch discipline', 'Token budget']:
     if required not in runtime_contract:

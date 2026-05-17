@@ -8,7 +8,8 @@
 #   B_SKILLS_REPO  — git URL to clone (default: https://github.com/dhoaibao/b-skills.git)
 #   B_SKILLS_DIR   — local clone path (default: $HOME/.b-skills)
 #   B_SKILLS_REF   — git ref to check out after clone/pull (default: leave on default branch)
-#   B_SKILLS_INSTALL_MCP — Y to install MCP defaults; otherwise skipped
+#   B_SKILLS_INSTALL_MCP — Y to install core MCP defaults; otherwise skipped
+#   B_SKILLS_INSTALL_GITNEXUS — Y to install optional GitNexus MCP when MCP defaults are enabled
 #   B_SKILLS_DRY_RUN — Y to preview file/config changes without writing into OpenCode config
 #   B_SKILLS_REPLACE_AGENTS — Y to replace ~/.config/opencode/AGENTS.md without prompting; N to preserve it
 #   B_SKILLS_UNINSTALL — Y to remove b-skills-managed files from OpenCode config
@@ -81,6 +82,7 @@ BRAVE_API_KEY_VALUE="${BRAVE_API_KEY:-}"
 CONTEXT7_API_KEY_VALUE="${CONTEXT7_API_KEY:-}"
 FIRECRAWL_API_KEY_VALUE="${FIRECRAWL_API_KEY:-}"
 INSTALL_MCPS_VALUE="${B_SKILLS_INSTALL_MCP:-}"
+INSTALL_GITNEXUS_VALUE="${B_SKILLS_INSTALL_GITNEXUS:-}"
 DRY_RUN_VALUE="${B_SKILLS_DRY_RUN:-N}"
 REPLACE_AGENTS_VALUE="${B_SKILLS_REPLACE_AGENTS:-}"
 UNINSTALL_VALUE="${B_SKILLS_UNINSTALL:-N}"
@@ -390,6 +392,7 @@ write_install_manifest() {
     RULES_BACKUP_PATH="$RULES_BACKUP_PATH" \
     CONFIG_BACKUP_PATH="$CONFIG_BACKUP_PATH" \
     INSTALL_MCPS_VALUE="$INSTALL_MCPS_VALUE" \
+    INSTALL_GITNEXUS_VALUE="$INSTALL_GITNEXUS_VALUE" \
     CUSTOM_PROVIDER_ENABLED_VALUE="$CUSTOM_PROVIDER_ENABLED_VALUE" \
     CUSTOM_PROVIDER_ID_VALUE="$CUSTOM_PROVIDER_ID_VALUE" \
     python3 - <<'PYEOF'
@@ -422,6 +425,7 @@ payload = {
     },
     "managedConfig": {
         "mcpDefaults": is_yes(os.environ.get("INSTALL_MCPS_VALUE", "")),
+        "gitnexus": is_yes(os.environ.get("INSTALL_GITNEXUS_VALUE", "")),
         "customProvider": os.environ.get("CUSTOM_PROVIDER_ID_VALUE", "") if is_yes(os.environ.get("CUSTOM_PROVIDER_ENABLED_VALUE", "")) else "none",
     },
 }
@@ -451,7 +455,7 @@ prompt_mcp_install_if_needed() {
     return 0
   fi
 
-  printf 'Install MCP defaults in OpenCode config? [y/N]: ' > /dev/tty
+  printf 'Install core MCP defaults (serena, context7, brave-search, firecrawl) in OpenCode config? [y/N]: ' > /dev/tty
   if IFS= read -r entered_value < /dev/tty; then
     :
   else
@@ -462,6 +466,173 @@ prompt_mcp_install_if_needed() {
     INSTALL_MCPS_VALUE="Y"
   else
     INSTALL_MCPS_VALUE="N"
+  fi
+}
+
+has_existing_mcp_server() {
+  local server_name="$1"
+  [ -f "$CONFIG_FILE" ] || return 1
+
+  env CONFIG_FILE="$CONFIG_FILE" SERVER_NAME="$server_name" python3 - <<'PYEOF'
+import json
+import os
+from pathlib import Path
+
+config_path = Path(os.environ["CONFIG_FILE"])
+server_name = os.environ["SERVER_NAME"]
+
+def strip_jsonc_comments(text):
+    result = []
+    in_string = False
+    string_char = ""
+    escaped = False
+    i = 0
+
+    while i < len(text):
+        char = text[i]
+        next_char = text[i + 1] if i + 1 < len(text) else ""
+
+        if in_string:
+            result.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == string_char:
+                in_string = False
+            i += 1
+            continue
+
+        if char == '"':
+            in_string = True
+            string_char = char
+            result.append(char)
+            i += 1
+            continue
+
+        if char == "/" and next_char == "/":
+            i += 2
+            while i < len(text) and text[i] not in "\r\n":
+                i += 1
+            continue
+
+        if char == "/" and next_char == "*":
+            i += 2
+            while i + 1 < len(text) and text[i:i + 2] != "*/":
+                i += 1
+            i += 2 if i + 1 < len(text) else 0
+            continue
+
+        result.append(char)
+        i += 1
+
+    return "".join(result)
+
+def strip_trailing_commas(text):
+    result = []
+    in_string = False
+    string_char = ""
+    escaped = False
+    i = 0
+
+    while i < len(text):
+        char = text[i]
+
+        if in_string:
+            result.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == string_char:
+                in_string = False
+            i += 1
+            continue
+
+        if char == '"':
+            in_string = True
+            string_char = char
+            result.append(char)
+            i += 1
+            continue
+
+        if char == ",":
+            j = i + 1
+            while j < len(text) and text[j] in " \t\r\n":
+                j += 1
+            if j < len(text) and text[j] in "]}":
+                i += 1
+                continue
+
+        result.append(char)
+        i += 1
+
+    return "".join(result)
+
+try:
+    raw_text = config_path.read_text()
+except (FileNotFoundError, OSError):
+    raise SystemExit(1)
+
+try:
+    config = json.loads(raw_text)
+except json.JSONDecodeError:
+    normalized = strip_trailing_commas(strip_jsonc_comments(raw_text)).strip() or "{}"
+    config = json.loads(normalized)
+
+mcp = config.get("mcp", {})
+if isinstance(mcp, dict) and server_name in mcp:
+    raise SystemExit(0)
+
+raise SystemExit(1)
+PYEOF
+}
+
+prompt_gitnexus_install_if_needed() {
+  local entered_value
+  local default_choice="N"
+
+  if ! wants_mcp_install "$INSTALL_MCPS_VALUE"; then
+    INSTALL_GITNEXUS_VALUE="N"
+    return 0
+  fi
+
+  if has_existing_mcp_server gitnexus; then
+    default_choice="Y"
+  fi
+
+  if wants_mcp_install "$INSTALL_GITNEXUS_VALUE"; then
+    INSTALL_GITNEXUS_VALUE="Y"
+    return 0
+  fi
+
+  if [ -n "$INSTALL_GITNEXUS_VALUE" ]; then
+    INSTALL_GITNEXUS_VALUE="N"
+    return 0
+  fi
+
+  if ! prompt_available; then
+    INSTALL_GITNEXUS_VALUE="$default_choice"
+    return 0
+  fi
+
+  if [ "$default_choice" = "Y" ]; then
+    printf 'Install optional GitNexus graph radar for indexed-repo impact/architecture tasks? [Y/n]: ' > /dev/tty
+  else
+    printf 'Install optional GitNexus graph radar for indexed-repo impact/architecture tasks? [y/N]: ' > /dev/tty
+  fi
+  if IFS= read -r entered_value < /dev/tty; then
+    :
+  else
+    entered_value=""
+  fi
+
+  if [ -z "$entered_value" ]; then
+    INSTALL_GITNEXUS_VALUE="$default_choice"
+  elif wants_mcp_install "$entered_value"; then
+    INSTALL_GITNEXUS_VALUE="Y"
+  else
+    INSTALL_GITNEXUS_VALUE="N"
   fi
 }
 
@@ -1274,6 +1445,7 @@ brave_api_key = os.environ.get("BRAVE_API_KEY_VALUE") or "YOUR_API_KEY"
 context7_api_key = os.environ.get("CONTEXT7_API_KEY_VALUE") or "YOUR_API_KEY"
 firecrawl_api_key = os.environ.get("FIRECRAWL_API_KEY_VALUE") or "YOUR_API_KEY"
 install_mcps = (os.environ.get("INSTALL_MCPS_VALUE") or "").strip().lower() in {"y", "yes"}
+install_gitnexus = (os.environ.get("INSTALL_GITNEXUS_VALUE") or "").strip().lower() in {"y", "yes"}
 custom_provider_enabled = (os.environ.get("CUSTOM_PROVIDER_ENABLED_VALUE") or "").strip().lower() in {"y", "yes"}
 custom_provider_id = (os.environ.get("CUSTOM_PROVIDER_ID_VALUE") or "").strip()
 custom_provider_name = (os.environ.get("CUSTOM_PROVIDER_NAME_VALUE") or "").strip()
@@ -1467,14 +1639,6 @@ mcp_defaults = {
             "BRAVE_API_KEY": brave_api_key,
         },
     },
-    "sequential-thinking": {
-        "type": "local",
-        "command": [
-            "npx",
-            "-y",
-            "@modelcontextprotocol/server-sequential-thinking",
-        ],
-    },
     "context7": {
         "type": "remote",
         "url": "https://mcp.context7.com/mcp",
@@ -1504,6 +1668,9 @@ mcp_defaults = {
             "False",
         ],
     },
+}
+
+gitnexus_defaults = {
     "gitnexus": {
         "type": "local",
         "command": [
@@ -1529,6 +1696,16 @@ if install_mcps:
     ensure_secret(mcp["brave-search"].get("environment"), "BRAVE_API_KEY", brave_api_key)
     ensure_secret(mcp["context7"].get("headers"), "CONTEXT7_API_KEY", context7_api_key)
     ensure_secret(mcp["firecrawl"].get("environment"), "FIRECRAWL_API_KEY", firecrawl_api_key)
+
+    if install_gitnexus:
+        for server_name, defaults in gitnexus_defaults.items():
+            current = mcp.get(server_name)
+            if isinstance(current, dict):
+                deep_fill(current, defaults)
+            else:
+                mcp[server_name] = defaults
+    else:
+        mcp.pop("gitnexus", None)
 
 custom_provider_models = parse_custom_provider_models(custom_provider_models_raw)
 custom_provider_delete_models = parse_custom_provider_delete_models(custom_provider_delete_models_raw)
@@ -1774,6 +1951,9 @@ section "MCP setup"
 prompt_mcp_install_if_needed
 if wants_mcp_install "$INSTALL_MCPS_VALUE"; then
   collect_mcp_api_keys
+  prompt_gitnexus_install_if_needed
+else
+  INSTALL_GITNEXUS_VALUE="N"
 fi
 
 section "Provider setup"
@@ -1787,7 +1967,12 @@ migrate_legacy_backup_files
 section "MCP defaults"
 if wants_mcp_install "$INSTALL_MCPS_VALUE"; then
   log "✅ MCP defaults merged"
-  log "   Servers: serena, context7, brave-search, firecrawl, sequential-thinking (optional), gitnexus"
+  log "   Core servers: serena, context7, brave-search, firecrawl"
+  if wants_mcp_install "$INSTALL_GITNEXUS_VALUE"; then
+    log "   Optional servers: gitnexus"
+  else
+    log "   Optional servers: gitnexus (skipped)"
+  fi
   log "   brave-search: $(api_key_status "$BRAVE_API_KEY_VALUE")"
   log "   context7: $(api_key_status "$CONTEXT7_API_KEY_VALUE")"
   log "   firecrawl: $(api_key_status "$FIRECRAWL_API_KEY_VALUE")"

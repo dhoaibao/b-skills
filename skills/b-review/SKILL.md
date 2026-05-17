@@ -39,7 +39,7 @@ Flags: `--skip-tests`, `--baseline=<path|url>`, `--range=<ref>..<ref>`, `--self`
 - `serena-symbol-toolkit` *(preferred for focused code inspection)*
 - `gitnexus-radar` *(optional, for broad route/API/tool/shared-flow risk)*
 - `context7-docs` *(optional, for suspicious third-party API usage)*
-- `brave-discovery` + `firecrawl-extraction` *(optional, for focused public CVE/risky-pattern lookup)*
+- `brave-discovery` + `firecrawl-extraction` *(optional, for focused public CVE, advisory, or release-drift lookup)*
 
 Fallbacks: `AGENTS.md` section 4. Graceful degradation: possible with git diff, native tools, and focused reads.
 

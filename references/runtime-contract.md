@@ -224,7 +224,7 @@ Use the lightest reliable tool. Native Glob/Grep/Read/Bash stay first for exact 
 | Graph overview, architecture, blast radius, changed-scope validation | `gitnexus-radar` when indexed, fresh, target-aware | `serena-symbol-toolkit` |
 | Exact symbol discovery, declarations, references, symbol edits | `serena-symbol-toolkit` | Native tools + `apply_patch` |
 | Library/framework docs | `context7-docs` | `/b-research` |
-| Web/news/image discovery | `brave-discovery` | `firecrawl-extraction` for source content |
+| Web/news/image discovery and unknown-URL source shortlisting | `brave-discovery` | `firecrawl-extraction` for source content |
 | Known URL extraction | `firecrawl-extraction` | `firecrawl-extended`, then `firecrawl-deep` (approval) |
 | Local document extraction | `firecrawl-extraction` (`firecrawl_parse`) | `firecrawl-extraction` (`firecrawl_scrape`) only if already hosted |
 
@@ -276,7 +276,7 @@ Skills reference bundles by name instead of repeating tool lists.
 
 - **Server:** `brave-search`
 - **Tools:** `brave_web_search`, plus `brave_news_search` for recency-sensitive questions and `brave_image_search` when visual evidence is material.
-- **Role:** web/news/image discovery only. Pass discovered URLs to `firecrawl-extraction` for source content when the final answer depends on page substance rather than result metadata.
+- **Role:** open-web discovery only. Use it to find unknown official URLs, recent advisories/release notes, and comparison sources, then pass discovered URLs to `firecrawl-extraction` when the final answer depends on page substance rather than result metadata.
 
 #### `firecrawl-extraction` (default tier)
 
@@ -293,10 +293,6 @@ Skills reference bundles by name instead of repeating tool lists.
 
 - **Tools:** `firecrawl_interact`, `firecrawl_agent`.
 - **Cost warning:** can run for minutes and burn substantial credit. Exhaust lower tiers, then get approval per invocation by default. A user may grant a run-scoped, capped pre-authorization in lieu of per-invocation asks; see "Tool-use heuristics" in this section for the exact rules.
-
-#### Sequential-thinking
-
-Bundled but optional. Use only when **three or more** plausible hypotheses remain with equal cheapest-verification cost.
 
 ### MCP availability and fallback ladder
 
