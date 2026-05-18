@@ -5,11 +5,14 @@ description: >
   ALWAYS invoke when the user asks to write tests, fix failing tests,
   evaluate coverage, or work TDD-style. Unlike b-debug, which traces runtime
   bugs, b-test owns test-specific failures: wrong assertions, missing mocks,
-  fixture or setup issues, and coverage gaps. Use the test-vs-bug decision in
-  AGENTS.md section 10 when a red test could go either way.
-compatibility: opencode
+  fixture or setup issues, and coverage gaps. Use the runtime contract's
+  test-vs-bug decision when a red test could go either way.
+user-invocable: true
+disable-model-invocation: false
 metadata:
   suite: b-skills
+  runtime: claude
+  execution: inline
 ---
 
 # b-test
@@ -17,6 +20,12 @@ metadata:
 $ARGUMENTS
 
 Own code-level tests: add coverage, fix test-only failures, and avoid confusing red tests with product bugs.
+
+## Claude execution model
+
+- User-invocable as `/b-test`.
+- Execution: inline in the current conversation.
+- Rationale: test edits, failing commands, and verification loops should remain connected to the active source-change context.
 
 ## When to use
 
@@ -39,7 +48,7 @@ Own code-level tests: add coverage, fix test-only failures, and avoid confusing 
 - `serena-symbol-toolkit` *(preferred for mapping tests to source behavior and editing existing tests)*
 - `context7-docs` *(optional, for testing-framework API or matcher behavior)*
 
-Fallbacks: `AGENTS.md` section 4. Graceful degradation: possible with native tools and `apply_patch`.
+Fallbacks: `references/b-skills/runtime-contract.md` §4. Graceful degradation: possible with native tools and `apply_patch`.
 
 ## Steps
 

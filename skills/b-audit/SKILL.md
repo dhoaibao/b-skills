@@ -5,9 +5,14 @@ description: >
   reviewer-style audit of a named repository area, runtime contract, installer,
   validator, tool boundary, or skill-suite surface. Unlike b-review, b-audit is
   not diff/range-first and reports sampled coverage plus residual risk.
-compatibility: opencode
+user-invocable: true
+disable-model-invocation: false
+context: fork
+agent: b-audit-agent
 metadata:
   suite: b-skills
+  runtime: claude
+  execution: fork
 ---
 
 # b-audit
@@ -18,12 +23,19 @@ Audit a named repository surface for production-readiness risk. Findings first; 
 
 Flags: `--baseline=<path|url>`, `--surface=<area>`, `--skip-checks`, `--self`, `--external`.
 
+## Claude execution model
+
+- User-invocable as `/b-audit`.
+- Execution: forked context.
+- Agent: `b-audit-agent`.
+- Rationale: audits need independent sampling and risk assessment without mutating the active implementation context.
+
 ## When to use
 
 - The user explicitly requests a repository, maintainer, or suite-slice audit.
 - The target is a named surface such as installer/update path, runtime contract, validator, tool boundary, dependency/lockfile, generated artifact, or security-sensitive rule.
 - The goal is to find systemic correctness, safety, operability, documentation drift, or coverage risk outside a specific diff/range review.
-- A b-skills suite audit needs routing boundaries, skill-command alignment, runtime-contract consistency, docs sync, validator coverage, artifact paths, or safety-gate drift checked.
+- A b-skills suite audit needs routing boundaries, skill-agent/runtime alignment, runtime-contract consistency, docs sync, validator coverage, artifact paths, or safety-gate drift checked.
 
 ## When NOT to use
 
@@ -41,7 +53,7 @@ Flags: `--baseline=<path|url>`, `--surface=<area>`, `--skip-checks`, `--self`, `
 - `context7-docs` *(optional, for suspicious third-party API usage)*
 - `brave-discovery` + `firecrawl-extraction` *(optional, for focused public CVE, advisory, or release-drift lookup)*
 
-Fallbacks: `AGENTS.md` section 4. Graceful degradation: possible with native tools, focused reads, and targeted commands; graph-shaped impact confidence may be lower without optional radar.
+Fallbacks: `references/b-skills/runtime-contract.md` §4. Graceful degradation: possible with native tools, focused reads, and targeted commands; graph-shaped impact confidence may be lower without optional radar.
 
 ## Steps
 
@@ -55,7 +67,7 @@ State mode: self-audit or external audit. Use arguments, `--baseline`, approved 
 
 Choose the smallest surface-specific checklist from `reference.md`: installer/update path, runtime contract, validator, route/tool boundary, dependency/lockfile, generated artifact, or security-sensitive rule.
 
-For b-skills suite audits, check routing boundaries, skill-to-command wrapper alignment, runtime-contract consistency, README/REFERENCE sync, validator coverage, artifact paths, and safety-gate drift.
+For b-skills suite audits, check routing boundaries, skill-agent/runtime alignment, runtime-contract consistency, README/REFERENCE sync, validator coverage, artifact paths, and safety-gate drift.
 
 ### Step 3 - Inspect risk evidence
 

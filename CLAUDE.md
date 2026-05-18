@@ -1,13 +1,16 @@
-# b-skills — Repo conventions & skill authoring
+# b-skills — Claude repo conventions & skill authoring
 
-Guidelines for creating, editing, and maintaining the install-only OpenCode skill suite in this repository.
+Guidelines for creating, editing, and maintaining the install-only b-skills suite in this repository. The active installer target is a Claude Code-native standalone runtime.
 
 ## Scope
 
 - This file is maintainer guidance for the source repository.
-- Runtime suite behavior lives in `global/AGENTS.md` (kernel), `references/runtime-contract.md` (detailed contract), and `skills/*/SKILL.md` (per-skill).
-- `install.sh` deploys runtime files to `~/.config/opencode/`, always writes `b-skills/AGENTS.md`, and replaces `AGENTS.md` only when missing or approved.
-- When authoring runtime-facing skill prose, reference `AGENTS.md`. Long-form schemas, rubrics, and edge-case protocols live in `references/runtime-contract.md`.
+- Current runtime suite behavior lives in `global/CLAUDE.md` (concise runtime memory installed as `~/.claude/CLAUDE.md`), `references/runtime-contract.md` (detailed contract), `skills/*/SKILL.md` (per-skill workflow), plus `agents/`, `hooks/`, and `settings/` for Claude-native governance.
+- Approved phase 1 runtime target: Claude Code standalone user-level configuration under `~/.claude/`.
+- Approved phase 1 distribution target: standalone installer first; optional Claude plugin packaging after standalone parity is verified.
+- Public UX target: preserve the 9 short `/b-*` skill names unless a Claude-native constraint forces a rename.
+- `install.sh` deploys runtime files to `~/.claude/`, merges `~/.claude/settings.json`, and optionally configures MCP in `~/.claude.json` with backup and dry-run discipline.
+- When authoring runtime-facing skill prose, reference installed `CLAUDE.md`, task-specific workflow in skills, enforceable policy in hooks/settings, isolated lanes in agents, and long-form details in references.
 
 ## Quick links
 
@@ -20,13 +23,18 @@ Guidelines for creating, editing, and maintaining the install-only OpenCode skil
 - `skills/b-test/SKILL.md` — Test writing, coverage, and test-only failures
 - `skills/b-review/SKILL.md` — Pre-PR changed-code review
 - `skills/b-audit/SKILL.md` — Repository and suite-slice audits
-- `references/` — Reusable checklists and the detailed runtime contract
-- `global/AGENTS.md` — Runtime kernel source (installs as `b-skills/AGENTS.md`)
-- `commands/` — Thin slash-command wrappers
+- `CLAUDE.md` — Claude maintainer guidance for this source repository
+- `global/CLAUDE.md` — concise Claude always-on memory source installed as `~/.claude/CLAUDE.md`
+- `references/` — reusable checklists and the current detailed runtime contract
+- `agents/` — Claude custom agent definitions
+- `hooks/` — Claude hook configs and helper scripts, including `hooks/b-skills-guard.py`
+- `settings/` — managed Claude settings/MCP/permission snippets, including `settings/b-skills.settings.json`
 
 ---
 
 ## Frontmatter spec
+
+Skill files and the installer use Claude-native runtime surfaces. Do not change one skill's activation model without updating all affected docs and validation in the same step.
 
 Every `skills/<name>/SKILL.md` must begin with YAML frontmatter:
 
@@ -34,36 +42,51 @@ Every `skills/<name>/SKILL.md` must begin with YAML frontmatter:
 ---
 name: b-skill-name
 description: >
-  [Trigger-focused description, <=80 words. Answer only: "when should OpenCode load this skill?"
+  [Trigger-focused description, <=80 words. Answer only: "when should Claude load this skill?"
   Include: ALWAYS trigger condition and one sentence distinguishing this from
   similar skills.
   Do NOT include usage instructions — those go in the skill body.]
-compatibility: opencode
+user-invocable: true
+disable-model-invocation: false
+# Add context: fork only when the skill should run in an isolated context.
 metadata:
   suite: b-skills
+  runtime: claude
+  execution: inline # inline | fork
 ---
 ```
 
 **Required fields:**
 - `name` — kebab-case, prefixed with `b-`
 - `description` — <=80 words, trigger-focused only
+- `user-invocable: true`
+- `disable-model-invocation: false`
+- `metadata.suite: b-skills`
+- `metadata.runtime: claude`
+- `metadata.execution: inline | fork`
 
-**OpenCode-supported optional fields:**
+**Supported optional fields:**
+- `allowed-tools`
+- `context`
+- `agent`
+- `model`
+- `effort`
+- `hooks`
+- `paths`
 - `license`
-- `compatibility`
-- `metadata`
 
 **Repo conventions:**
-- Set `compatibility: opencode`
-- Set `metadata.suite: b-skills`
+- Use `context: fork` when `metadata.execution: fork`.
+- Do not keep the old compatibility field in skill frontmatter.
+- Do not add restrictive `allowed-tools` until the skill's actual Claude tool boundary has been verified.
 
-**Do not carry forward Claude-only frontmatter fields** such as top-level `effort`, `model`, `disable-model-invocation`, `user-invocable`, or `paths`.
+Use Claude Code-native fields to express runtime behavior directly, not as decorative metadata.
 
 **Description rules:**
 - Start with a one-line summary of what the skill does
 - Include `ALWAYS invoke when...` with a short, intent-shaped condition
 - End with one-clause disambiguation from the most similar skill
-- Keep Vietnamese trigger words in `global/AGENTS.md` or `references/runtime-contract.md` routing aids rather than spamming every skill description with multilingual keyword lists
+- Keep Vietnamese trigger words in `references/runtime-contract.md` routing aids rather than spamming every skill description with multilingual keyword lists
 - No step-by-step instructions, no tool lists, no output format details
 
 ---
@@ -78,10 +101,39 @@ skills/<name>/
 └── scripts/           # Utility scripts (optional)
     └── helper.sh
 
-commands/<name>.md     # Matching slash-command wrapper (required in this repo)
 ```
 
-For this repo, each skill uses a single `SKILL.md` file plus a thin command wrapper. Add extra files (`reference.md`, `examples.md`, `scripts/`) only when they materially improve maintenance — for example, externalize long templates to `reference.md` so `SKILL.md` stays scannable under context pressure (see `skills/b-plan/reference.md`).
+Each skill uses a single `SKILL.md` file by default. Add extra files (`reference.md`, `examples.md`, `scripts/`) only when they materially improve maintenance — for example, externalize long templates to `reference.md` so `SKILL.md` stays scannable under context pressure (see `skills/b-plan/reference.md`).
+
+Target Claude-native runtime source layout:
+
+```text
+CLAUDE.md        # Claude maintainer guidance for this source repo
+global/CLAUDE.md # concise always-on Claude memory installed to ~/.claude/CLAUDE.md
+skills/          # 9 Claude-native b-* skill definitions
+agents/          # custom agents for isolated delegated lanes
+hooks/           # hook configs and helper scripts for enforceable policy
+settings/        # managed Claude settings, permissions, MCP, and hook snippets
+references/      # on-demand shared references that still earn their context cost
+```
+
+Forked skills must set both `context: fork` and `agent: <agent-name>` in skill frontmatter. The matching `agents/<agent-name>.md` file must define tool, permission, and memory boundaries, and preload the owning skill with the `skills` frontmatter field.
+
+Current forked skill agent mapping:
+
+| Skill | Agent |
+|---|---|
+| `b-plan` | `b-plan-agent` |
+| `b-research` | `b-research-agent` |
+| `b-review` | `b-review-agent` |
+| `b-audit` | `b-audit-agent` |
+
+Claude governance sources:
+
+| Source | Purpose |
+|---|---|
+| `hooks/b-skills-guard.py` | SessionStart context plus Bash mutation guard |
+| `settings/b-skills.settings.json` | Claude hook and permission settings template |
 
 ## Shared references
 
@@ -89,7 +141,7 @@ Top-level `references/*.md` files are allowed when two or more skills need the s
 
 - Keep them short, task-oriented, and reusable across skills.
 - They may define optional conventions, such as glossary/domain-doc layouts, when adding a whole new skill would be overkill.
-- If a skill points at a shared reference, ensure `install.sh` syncs it into `~/.config/opencode/references/b-skills/`.
+- If a current skill points at a shared reference, ensure `install.sh` syncs it into `~/.claude/references/b-skills/` or beside installed skills.
 - Treat reference-file changes like runtime-facing guidance: keep `README.md` and `REFERENCE.md` aligned in the same commit.
 
 ---
@@ -101,10 +153,13 @@ Top-level `references/*.md` files are allowed when two or more skills need the s
 name: b-example
 description: >
   [<=80 words, intent + disambiguation. Do NOT include trigger keyword
-  lists; those live in AGENTS.md and maintainer docs.]
-compatibility: opencode
+  lists; those live in this maintainer guide and detailed references.]
+user-invocable: true
+disable-model-invocation: false
 metadata:
   suite: b-skills
+  runtime: claude
+  execution: inline
 ---
 
 # b-example
@@ -113,6 +168,11 @@ $ARGUMENTS
 
 [1-2 sentence summary of what this skill does and why it exists.]
 
+## Claude execution model
+- User-invocable as `/b-example`.
+- Execution: inline or forked context.
+- Rationale: [why this skill should or should not isolate its context]
+
 ## When to use
 - [Bullet list of scenarios]
 
@@ -120,16 +180,16 @@ $ARGUMENTS
 - [Scenarios that should trigger a different skill instead]
 
 ## Tools required
-- `bundle-name` (see `AGENTS.md` §4)
+- `bundle-name` (see `references/runtime-contract.md` §4)
 - `bundle-name` *(optional, for [condition])*
 
 Skills reference **MCP bundles** by name (e.g., `serena-symbol-toolkit`,
 `gitnexus-radar`, `context7-docs`). Do not enumerate per-tool lists inside
-the skill; the bundle definition in `AGENTS.md` is the source of
-truth, including session-init steps, fallback ladder, and cost/approval
-caveats.
+the skill; the bundle definition in `references/runtime-contract.md` is the
+source of truth, including session-init steps, fallback ladder, and
+cost/approval caveats.
 
-Fallbacks: reference `AGENTS.md` MCP fallback ladder. Skills add
+Fallbacks: reference `references/runtime-contract.md` MCP fallback ladder. Skills add
 only skill-specific stop/degrade behavior.
 
 Graceful degradation: [✅ Possible / ⚠️ Partial / ❌ Not possible] — [brief explanation]
@@ -154,33 +214,15 @@ Graceful degradation: [✅ Possible / ⚠️ Partial / ❌ Not possible] — [br
   risk, iteration cap, privacy gate, onboarding rule, confidence signal,
   run-id format, artifact paths, slug algorithm, status block, handoff
   envelope, manifest schema, test-vs-bug decision, DOM/browser boundary,
-  or canonical approval ask — those live in AGENTS.md and skills
-  reference them.]
+  or canonical approval ask — those live in global/CLAUDE.md,
+  references/runtime-contract.md, hooks/settings, or agents.]
 ```
-
----
-
-## Command wrapper template
-
-Every skill in this repo must have a matching `commands/<name>.md` wrapper:
-
-```markdown
----
-description: Run the b-example skill for [short purpose]
----
-
-Load the `b-example` skill and follow it exactly for this request.
-
-$ARGUMENTS
-```
-
-Keep command wrappers thin. They are entrypoints, not duplicate logic stores.
 
 ---
 
 ## MCP selection criteria
 
-Skills declare MCP usage by referencing **bundles** summarized in `global/AGENTS.md` §4 and fully defined in `references/runtime-contract.md` §4 — not by enumerating individual tool names. Bundle definitions own session-init steps, fallback behavior, cost/approval caveats, and language-coverage caveats.
+Skills declare MCP usage by referencing **bundles** summarized in installed `CLAUDE.md` and fully defined in `references/runtime-contract.md` §4 — not by enumerating individual tool names. Bundle definitions own session-init steps, fallback behavior, cost/approval caveats, and language-coverage caveats.
 
 | Role | When to add | Example |
 |---|---|---|
@@ -201,7 +243,7 @@ Skills declare MCP usage by referencing **bundles** summarized in `global/AGENTS
 - Serena is **primary hands** for exact symbol discovery, source inspection, references, and symbol-aware edits.
 - Add `gitnexus-radar` to a skill only when graph-level intelligence (cross-file impact, architecture context, execution-flow discovery, stale-index detection, route/API consumers, multi-repo mapping) materially improves the workflow. GitNexus is the preferred first step for graph-shaped tasks only when the repo is **indexed, fresh, and target-aware**; Serena then handles exact symbol inspection and edits.
 - If the target symbol or file is already known, or the task is local to a single file/module, skip GitNexus and go straight to Serena.
-- Every skill that uses GitNexus must rely on the freshness gate summarized in `global/AGENTS.md` §4 and fully defined in `references/runtime-contract.md` §4, then fall back to Serena/native tools when the gate fails.
+- Every skill that uses GitNexus must rely on the freshness gate summarized in installed `CLAUDE.md` and fully defined in `references/runtime-contract.md` §4, then fall back to Serena/native tools when the gate fails.
 - When both MCPs appear in one workflow, GitNexus answers the graph question first; Serena then becomes the source of truth for symbol lookup, body inspection, references, and edits. Do not keep both active on the same exact question.
 - Before maintainers suggest `gitnexus analyze --skip-agents-md` or add indexing guidance to a skill, verify it is **only when indexing is safe**.
 
@@ -213,13 +255,13 @@ All skills live in `skills/<name>/SKILL.md`. When changing skill files:
 
 | Change type | Action |
 |---|---|
-| **Create** new skill | Create `skills/<name>/SKILL.md` and `commands/<name>.md` |
-| **Update** skill | Edit `skills/<name>/SKILL.md` and keep `commands/<name>.md` aligned. If the change adds or modifies a long template/skeleton, externalize it to `skills/<name>/reference.md` and link from `SKILL.md` |
-| **Delete** skill | Delete `skills/<name>/SKILL.md`, `commands/<name>.md`, any `reference.md`/`examples.md`/`scripts/`, and the directory if empty |
+| **Create** new skill | Create `skills/<name>/SKILL.md`; document any concrete Claude alias gap before adding non-skill entrypoints |
+| **Update** skill | Edit `skills/<name>/SKILL.md`; if the change adds or modifies a long template/skeleton, externalize it to `skills/<name>/reference.md` and link from `SKILL.md` |
+| **Delete** skill | Delete `skills/<name>/SKILL.md`, any `reference.md`/`examples.md`/`scripts/`, its agent if dedicated, and the directory if empty |
 
-**Runtime contract sync** — when always-on runtime behavior changes, update `global/AGENTS.md`; when detailed schemas/rubrics/protocols change, update `references/runtime-contract.md`. Keep related repo docs aligned in the same commit.
+**Runtime contract sync** — when always-on Claude runtime behavior changes, update `global/CLAUDE.md`; when detailed schemas/rubrics/protocols change, update `references/runtime-contract.md`; when policy is enforceable, update hooks/settings instead of duplicating prose. Keep related repo docs aligned in the same commit.
 
-**Root `AGENTS.md`** — keep repo-level maintainer guidance in the root `AGENTS.md` so it remains available when working in this source repository.
+**Root `CLAUDE.md`** — keep repo-level maintainer guidance in this root `CLAUDE.md` so Claude Code loads the source-repo authoring rules when working in this repository. Do not reintroduce a root `AGENTS.md`.
 
 ---
 
@@ -248,4 +290,4 @@ Before merging any skill file change, verify:
 5. **No trigger keyword regression** — before rewriting a description, list all current trigger keywords and verify all survive in the new version
 6. **Suite validator passes** — run `scripts/validate-skills.sh` before installing or committing skill changes
 7. **No avoidable churn** — steps should not force repeated Serena preflights, optional MCP escalation, or skill switches when the current skill can complete with bounded evidence
-8. **No duplicated global concepts** — slug algorithm, status block, handoff envelope, manifest schema, approval ask, fallback labeling, tool-use heuristics, empty-state defaults, plan staleness gates, workspace isolation preference, review checkpoint cadence, completion closure protocol, and the DOM-unit vs browser boundary all live in `global/AGENTS.md` or `references/runtime-contract.md`. Skills reference them; they do not restate them.
+8. **No duplicated global concepts** — slug algorithm, status block, handoff envelope, manifest schema, approval ask, fallback labeling, tool-use heuristics, empty-state defaults, plan staleness gates, workspace isolation preference, review checkpoint cadence, completion closure protocol, and the DOM-unit vs browser boundary all live in `global/CLAUDE.md`, hooks/settings, or `references/runtime-contract.md`. Skills reference them; they do not restate them.

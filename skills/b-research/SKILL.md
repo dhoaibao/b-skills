@@ -7,9 +7,14 @@ description: >
   topics. Auto-detects depth; never asks the user to pick a mode. Unlike
   b-debug or b-plan, it fetches docs and web information rather than tracing
   code or choosing implementation.
-compatibility: opencode
+user-invocable: true
+disable-model-invocation: false
+context: fork
+agent: b-research-agent
 metadata:
   suite: b-skills
+  runtime: claude
+  execution: fork
 ---
 
 # b-research
@@ -17,6 +22,13 @@ metadata:
 $ARGUMENTS
 
 Answer external-knowledge questions at the lightest reliable depth, with fetched-source evidence.
+
+## Claude execution model
+
+- User-invocable as `/b-research`.
+- Execution: forked context.
+- Agent: `b-research-agent`.
+- Rationale: web and docs evidence can be gathered and summarized without polluting the active coding context.
 
 ## When to use
 
@@ -37,9 +49,9 @@ Answer external-knowledge questions at the lightest reliable depth, with fetched
 - `brave-discovery` (open-web discovery for unknown URLs, recent sources, and comparisons)
 - `firecrawl-extraction` (known URLs and local documents when extraction is available)
 - `firecrawl-extended` *(optional, for site maps or structured fields)*
-- `firecrawl-deep` *(last resort; approval-gated by `AGENTS.md`)*
+- `firecrawl-deep` *(last resort; approval-gated by `references/b-skills/runtime-contract.md` §4)*
 
-Fallbacks: `AGENTS.md` section 4. Graceful degradation: partial; synthesis is weaker without extraction, and rich local documents may become unavailable.
+Fallbacks: `references/b-skills/runtime-contract.md` §4. Graceful degradation: partial; synthesis is weaker without extraction, and rich local documents may become unavailable.
 
 ## Steps
 

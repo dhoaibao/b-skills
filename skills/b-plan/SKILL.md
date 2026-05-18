@@ -2,14 +2,19 @@
 name: b-plan
 description: >
   Think before coding. ALWAYS invoke when the goal is already clear but the
-  task is non-trivial per AGENTS.md section 3, the implementation approach or
+  task is non-trivial per the runtime contract, the implementation approach or
   sequencing matters, or the user explicitly asks for a plan, architecture
   direction, or ordered implementation steps. Decomposes work, chooses an
   approach, and writes an execution-ready plan. Unlike b-spec, b-plan
   sequences a clear target rather than discovering it.
-compatibility: opencode
+user-invocable: true
+disable-model-invocation: false
+context: fork
+agent: b-plan-agent
 metadata:
   suite: b-skills
+  runtime: claude
+  execution: fork
 ---
 
 # b-plan
@@ -20,9 +25,16 @@ Turn a clear goal into the smallest execution-ready plan. Do not implement.
 
 If `$ARGUMENTS` is present, treat it as the task description and proceed.
 
+## Claude execution model
+
+- User-invocable as `/b-plan`.
+- Execution: forked context.
+- Agent: `b-plan-agent`.
+- Rationale: planning benefits from isolated discovery and option comparison before returning an execution-ready plan to the main thread.
+
 ## When to use
 
-- The task is non-trivial under `AGENTS.md` section 3.
+- The task is non-trivial under `references/b-skills/runtime-contract.md` §3.
 - The goal is clear, but approach, sequencing, risk, or dependencies matter.
 - The user asks for a plan, architecture direction, or ordered implementation steps.
 - A refactor is still broad or vague and not yet a concrete mechanical transform.
@@ -42,14 +54,14 @@ If `$ARGUMENTS` is present, treat it as the task description and proceed.
 - `context7-docs` *(optional, for one narrow API check)*
 - `firecrawl-extraction` *(optional, for a user-provided issue or ticket URL)*
 
-Fallbacks: `AGENTS.md` section 4. Graceful degradation: possible with native reads and reasoning.
+Fallbacks: `references/b-skills/runtime-contract.md` §4. Graceful degradation: possible with native reads and reasoning.
 
 ## Steps
 
 ### Step 1 - Choose quick or full mode
 
 - **Quick mode:** default for low-risk scoped work. Return a short chat plan and ask for approval.
-- **Full mode:** use only for non-trivial work, real structural choice, public/sensitive risk, or durable coordination need. Save a plan under `.opencode/b-skills/b-plan/<plan-file-slug>.md` after the global `.opencode/.gitignore` guard.
+- **Full mode:** use only for non-trivial work, real structural choice, public/sensitive risk, or durable coordination need. Save a plan under `.b-skills/b-plan/<plan-file-slug>.md` after the global `.b-skills/.gitignore` guard.
 
 Default to quick mode when the plan is low/trivial risk, fits in chat, and can be executed in one coherent session. Do not promote to full mode solely because the task has several routine substeps. Use full mode when the plan needs durable approval, spans sessions, has more than about five meaningful steps, has unresolved dependencies, or discovery reveals broad references, public contracts, security-sensitive behavior, deployment risk, or a plan that is no longer readable in chat.
 
@@ -90,7 +102,7 @@ Use `reference.md` for the quick-plan template, saved-plan skeleton, supersede r
 
 ### Step 6 - Deliver and request approval
 
-Quick mode stays in chat. Full mode writes the saved plan with durable frontmatter from `AGENTS.md` section 2. Show the path and ask for approval.
+Quick mode stays in chat. Full mode writes the saved plan with durable frontmatter from `references/b-skills/runtime-contract.md` §2. Show the path and ask for approval.
 
 If approval arrives during the same run, update `status`, `approved_at`, `approved_by`, and `approved_head` when available.
 
@@ -103,6 +115,6 @@ If approval arrives during the same run, update `status`, `approved_at`, `approv
 
 - Do not implement while planning.
 - Keep quick plans lean; promote to full mode when the plan grows risk or coordination needs.
-- Use the slug, artifact, staleness, revision, and saved-plan filename rules from `AGENTS.md`.
+- Use the slug, artifact, staleness, revision, and saved-plan filename rules from `references/b-skills/runtime-contract.md`.
 - Surface blockers and assumptions explicitly.
 - Approved plans are the execution source of truth for **b-implement**.

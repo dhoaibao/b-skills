@@ -6,9 +6,14 @@ description: >
   Do NOT invoke for repo/suite audits, UI/design review, plan review, or
   research synthesis review. Unlike b-audit, b-review is diff/range-first and
   judges changed code adequacy, risk, and missing tests.
-compatibility: opencode
+user-invocable: true
+disable-model-invocation: false
+context: fork
+agent: b-review-agent
 metadata:
   suite: b-skills
+  runtime: claude
+  execution: fork
 ---
 
 # b-review
@@ -18,6 +23,13 @@ $ARGUMENTS
 Review changed code for blockers, regressions, security risk, and missing coverage. Findings first.
 
 Flags: `--skip-tests`, `--baseline=<path|url>`, `--range=<ref>..<ref>`, `--self`, `--external`.
+
+## Claude execution model
+
+- User-invocable as `/b-review`.
+- Execution: forked context.
+- Agent: `b-review-agent`.
+- Rationale: review should inspect diffs independently and return findings without contaminating the implementation thread.
 
 ## When to use
 
@@ -41,7 +53,7 @@ Flags: `--skip-tests`, `--baseline=<path|url>`, `--range=<ref>..<ref>`, `--self`
 - `context7-docs` *(optional, for suspicious third-party API usage)*
 - `brave-discovery` + `firecrawl-extraction` *(optional, for focused public CVE, advisory, or release-drift lookup)*
 
-Fallbacks: `AGENTS.md` section 4. Graceful degradation: possible with git diff, native tools, and focused reads.
+Fallbacks: `references/b-skills/runtime-contract.md` §4. Graceful degradation: possible with git diff, native tools, and focused reads.
 
 ## Steps
 

@@ -4,7 +4,7 @@ Long-form templates for `b-plan`. The SKILL.md links here so the main file stays
 
 ## Saved-plan skeleton (full mode)
 
-New saved plans include durable frontmatter from `AGENTS.md` §2 before the Markdown body. Use the path and slug conventions from `AGENTS.md` §8: save the file with an English `<plan-file-slug>` filename, while frontmatter `slug` stays the canonical `<task-slug>`.
+New saved plans include durable frontmatter from `references/b-skills/runtime-contract.md` §2 before the Markdown body. Use the path and slug conventions from `references/b-skills/runtime-contract.md` §8: save the file with an English `<plan-file-slug>` filename, while frontmatter `slug` stays the canonical `<task-slug>`.
 
 ```markdown
 ---
@@ -72,7 +72,7 @@ Quick plans stay in chat. Use this minimum shape so quick plans don't drift in f
 ### Plan: <one-line goal>
 
 **Scope:** <files or area>
-**Risk:** <trivial | low>   (per AGENTS.md §3)
+**Risk:** <trivial | low>   (per `references/b-skills/runtime-contract.md` §3)
 
 **Steps:**
 1. <imperative step> — Done when: <check>
@@ -82,13 +82,13 @@ Quick plans stay in chat. Use this minimum shape so quick plans don't drift in f
 **Verification:** <narrowest command or procedure>
 ```
 
-If a quick plan accumulates more than ~5 steps or grows risks/unknowns sections, promote it to full mode and save it under `.opencode/b-skills/b-plan/<plan-file-slug>.md`.
+If a quick plan accumulates more than ~5 steps or grows risks/unknowns sections, promote it to full mode and save it under `.b-skills/b-plan/<plan-file-slug>.md`.
 
 ## Supersede vs revise
 
 When an approved plan needs replacement (not just edits):
 
-- **Revise in place** when the goal, touch points, and most steps survive. Use the revision protocol in `AGENTS.md` §2.
+- **Revise in place** when the goal, touch points, and most steps survive. Use the revision protocol in `references/b-skills/runtime-contract.md` §2.
 - **Supersede** when the goal itself changed, or the approach is being replaced wholesale:
   1. Set the old plan's `status: superseded` and add a final `## Revisions` entry: `- <date> — superseded by <new-task-slug>`.
   2. Create a new plan with a distinct slug. Reference the superseded plan in the new plan's `Dependencies` or `Goal` section.

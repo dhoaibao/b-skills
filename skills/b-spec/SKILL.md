@@ -6,9 +6,12 @@ description: >
   the user has a rough idea that needs a concrete scope. Extract goals,
   constraints, and success criteria, then hand off to b-plan or b-implement.
   Unlike b-plan, b-spec decides the target outcome before sequencing work.
-compatibility: opencode
+user-invocable: true
+disable-model-invocation: false
 metadata:
   suite: b-skills
+  runtime: claude
+  execution: inline
 ---
 
 # b-spec
@@ -18,6 +21,12 @@ $ARGUMENTS
 Clarify the target outcome before planning or coding. Keep the loop short and make assumptions visible.
 
 If `$ARGUMENTS` is present, treat it as the rough request and proceed directly.
+
+## Claude execution model
+
+- User-invocable as `/b-spec`.
+- Execution: inline in the current conversation.
+- Rationale: clarification depends on the active user context and usually should not fork away from the current thread.
 
 ## When to use
 
@@ -38,7 +47,7 @@ If `$ARGUMENTS` is present, treat it as the rough request and proceed directly.
 - `gitnexus-radar` *(optional, for unfamiliar shared surfaces or route/tool context)*
 - `context7-docs` *(optional, for one narrow feasibility check)*
 
-Fallbacks: `AGENTS.md` section 4. Graceful degradation: possible with native reads and a short clarification loop.
+Fallbacks: `references/b-skills/runtime-contract.md` §4. Graceful degradation: possible with native reads and a short clarification loop.
 
 ## Steps
 
@@ -83,7 +92,7 @@ Return a compact chat spec by default:
 **Next:** <b-plan | b-implement | b-research>
 ```
 
-Carry confirmed decisions and assumptions into the handoff envelope from `AGENTS.md` when another skill owns the next step.
+Carry confirmed decisions and assumptions into the handoff envelope from `references/b-skills/runtime-contract.md` §9 when another skill owns the next step.
 
 ## Output format
 

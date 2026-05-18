@@ -7,9 +7,12 @@ description: >
   minimally and verifies. Unlike b-test, b-debug owns runtime behavior
   failures, not test-mechanic issues such as wrong assertions, mocks, or
   fixtures.
-compatibility: opencode
+user-invocable: true
+disable-model-invocation: false
 metadata:
   suite: b-skills
+  runtime: claude
+  execution: inline
 ---
 
 # b-debug
@@ -17,6 +20,12 @@ metadata:
 $ARGUMENTS
 
 Confirm root cause, fix minimally, verify, and remove probes. If the user asks only for diagnosis, stop after root cause and proposed fix.
+
+## Claude execution model
+
+- User-invocable as `/b-debug`.
+- Execution: inline in the current conversation.
+- Rationale: debugging must preserve repro context, probes, edits, and verification evidence in one visible thread.
 
 ## When to use
 
@@ -38,7 +47,7 @@ Confirm root cause, fix minimally, verify, and remove probes. If the user asks o
 - `brave-discovery` + `firecrawl-extraction` *(optional, for public errors, recent deprecations, or upstream advisories after the privacy gate)*
 - Native search and `bash` - exact errors, config, repro commands, profilers, and diagnostics.
 
-Fallbacks: `AGENTS.md` section 4. Graceful degradation: possible with native analysis, slower without Serena.
+Fallbacks: `references/b-skills/runtime-contract.md` §4. Graceful degradation: possible with native analysis, slower without Serena.
 
 ## Steps
 

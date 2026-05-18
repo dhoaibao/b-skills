@@ -7,9 +7,12 @@ description: >
   code, or simplify a specific target. Vague cleanups go to b-plan first.
   Unlike b-plan, which decides what to build, b-refactor owns mechanical
   edits.
-compatibility: opencode
+user-invocable: true
+disable-model-invocation: false
 metadata:
   suite: b-skills
+  runtime: claude
+  execution: inline
 ---
 
 # b-refactor
@@ -17,6 +20,12 @@ metadata:
 $ARGUMENTS
 
 Execute concrete behavior-preserving transforms: lock target, map impact, transform, verify.
+
+## Claude execution model
+
+- User-invocable as `/b-refactor`.
+- Execution: inline in the current conversation.
+- Rationale: mechanical transforms need continuous visibility over edits, references, diagnostics, and rollback decisions.
 
 ## When to use
 
@@ -38,7 +47,7 @@ Execute concrete behavior-preserving transforms: lock target, map impact, transf
 - `serena-symbol-toolkit` *(preferred for target locking, references, diagnostics, and symbol edits)*
 - `gitnexus-radar` *(optional, for broad exported/shared impact)*
 
-Fallbacks: `AGENTS.md` section 4. Graceful degradation: partial; native search plus `apply_patch` works for local refactors, cross-file work is riskier.
+Fallbacks: `references/b-skills/runtime-contract.md` §4. Graceful degradation: partial; native search plus `apply_patch` works for local refactors, cross-file work is riskier.
 
 ## Steps
 
@@ -52,7 +61,7 @@ For `simplify`, `inline`, and `extract`, state the observable behavior that must
 
 Use Serena references as the primary static map, but do not treat them as complete proof for dynamic, config-driven, generated, or prose references. Add exact text search for exported names, config keys, CLI flags, route strings, filenames, docs, and generated consumers when those surfaces could reference the target. Use GitNexus only for broad shared/exported blast-radius questions. Moves across public module boundaries, package boundaries, or published entry points require planning unless the approved scope already names the destination and verification.
 
-Classify risk with `AGENTS.md`. The local fast path is allowed when the refactor is one file, behavior-preserving, non-exported, LSP-supported, covered by direct semantics or narrow tests, has few/no external references, and has no generated-code consumers.
+Classify risk with `references/b-skills/runtime-contract.md` §3. The local fast path is allowed when the refactor is one file, behavior-preserving, non-exported, LSP-supported, covered by direct semantics or narrow tests, has few/no external references, and has no generated-code consumers.
 
 Auto-promote risk when the language is non-LSP, references are dynamic/config/prose, the target is exported/shared, or generated code consumes it. Generated consumers require checking generator source or regeneration.
 

@@ -3,12 +3,15 @@ name: b-implement
 description: >
   Execute approved or scoped work safely. ALWAYS invoke after /b-plan
   approval, when the user asks to execute or implement scoped work, or when a
-  small direct request meets the threshold in AGENTS.md section 3. Reads the
+  small direct request meets the runtime contract threshold. Reads the
   approved plan, applies the next small step, verifies it, and stops for new
   decisions. Unlike b-plan, b-implement changes code.
-compatibility: opencode
+user-invocable: true
+disable-model-invocation: false
 metadata:
   suite: b-skills
+  runtime: claude
+  execution: inline
 ---
 
 # b-implement
@@ -19,11 +22,17 @@ Execute approved or clearly scoped work one coherent step at a time.
 
 If `$ARGUMENTS` is present, treat it as a plan path, plan slug, approved chat plan, or small direct request.
 
+## Claude execution model
+
+- User-invocable as `/b-implement`.
+- Execution: inline in the current conversation.
+- Rationale: implementation edits should stay visible in the main thread so approval state, worktree changes, and verification remain coherent.
+
 ## When to use
 
 - The user approved a saved or chat plan.
 - The next action is to edit code or docs within known scope.
-- The request meets the small direct request threshold in `AGENTS.md` section 3.
+- The request meets the small direct request threshold in `references/b-skills/runtime-contract.md` §3.
 
 ## When NOT to use
 
@@ -40,7 +49,7 @@ If `$ARGUMENTS` is present, treat it as a plan path, plan slug, approved chat pl
 - `gitnexus-radar` *(optional, for shared route/tool/exported-boundary changes)*
 - `context7-docs` *(optional, for one narrow API uncertainty)*
 
-Fallbacks: `AGENTS.md` section 4. Graceful degradation: possible with native tools; broad symbol work is riskier without Serena.
+Fallbacks: `references/b-skills/runtime-contract.md` §4. Graceful degradation: possible with native tools; broad symbol work is riskier without Serena.
 
 ## Steps
 
@@ -84,7 +93,7 @@ At completion, inspect the diff, run final relevant verification, report cleanup
 Plan source -> Step progress -> Changes -> Verification -> Blockers/Decisions -> Next
 ```
 
-Close non-trivial runs with the status/handoff schemas from `AGENTS.md`.
+Close non-trivial runs with the status/handoff schemas from `references/b-skills/runtime-contract.md` §9.
 
 ## Rules
 

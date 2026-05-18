@@ -29,6 +29,11 @@ assert_no_file() {
   [ ! -e "$path" ] || fail "unexpected file: $path"
 }
 
+assert_executable() {
+  local path="$1"
+  [ -x "$path" ] || fail "expected executable file: $path"
+}
+
 assert_contains() {
   local path="$1" needle="$2"
   grep -Fq "$needle" "$path" || fail "expected '$needle' in $path"
@@ -53,11 +58,49 @@ assert_text_equals() {
   rm -f "$expected_file"
 }
 
+write_mixed_hook_settings() {
+  local path="$1"
+  cat > "$path" <<'JSON'
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "custom-hook.sh", "timeout": 7 },
+          { "type": "command", "command": "python3 ${HOME}/.claude/hooks/b-skills-guard.py", "timeout": 5 }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "ask": ["Bash(custom *)", "Bash(git commit*)"],
+    "deny": ["Bash(custom-deny *)"]
+  },
+  "env": {
+    "USER_ENV": "keep"
+  }
+}
+JSON
+}
+
+assert_hook_decision() {
+  local hook_path="$1" command_text="$2" expected_decision="$3" output
+  output="$(COMMAND_TEXT="$command_text" python3 - <<'PY' | python3 "$hook_path"
+import json
+import os
+
+print(json.dumps({"hook_event_name": "PreToolUse", "tool_input": {"command": os.environ["COMMAND_TEXT"]}}))
+PY
+)"
+  [[ "$output" == *"\"permissionDecision\": \"$expected_decision\""* ]] || fail "expected hook decision $expected_decision for command: $command_text"
+}
+
 make_repo_snapshot() {
   local snapshot_dir="$1"
   mkdir -p "$snapshot_dir"
   cp -R "$ROOT_DIR"/. "$snapshot_dir"/
-  rm -rf "$snapshot_dir/.git" "$snapshot_dir/.opencode"
+  rm -rf "$snapshot_dir/.git" "$snapshot_dir/.opencode" "$snapshot_dir/.serena"
   git -C "$snapshot_dir" init -q
   git -C "$snapshot_dir" add .
   git -C "$snapshot_dir" -c user.name='b-skills smoke' -c user.email='smoke@example.com' commit -qm 'snapshot'
@@ -66,7 +109,6 @@ make_repo_snapshot() {
 run_install_status() {
   local sandbox="$1" repo_snapshot="$2" install_mcp="$3"
   shift 3
-
   local rc=0
   set +e
   HOME="$sandbox/home" \
@@ -74,57 +116,35 @@ run_install_status() {
   B_SKILLS_DIR="$sandbox/source" \
   B_SKILLS_INSTALL_MCP="$install_mcp" \
   B_SKILLS_INSTALL_GITNEXUS=N \
+  BRAVE_API_KEY=brave-key \
+  CONTEXT7_API_KEY=context7-key \
+  FIRECRAWL_API_KEY=firecrawl-key \
   bash "$ROOT_DIR/install.sh" "$@" >/dev/null 2>&1
   rc=$?
   set -e
-
   printf '%s' "$rc"
 }
 
 run_install_output() {
   local sandbox="$1" repo_snapshot="$2" install_mcp="$3"
   shift 3
-
   HOME="$sandbox/home" \
   B_SKILLS_REPO="$repo_snapshot" \
   B_SKILLS_DIR="$sandbox/source" \
   B_SKILLS_INSTALL_MCP="$install_mcp" \
   B_SKILLS_INSTALL_GITNEXUS=N \
+  BRAVE_API_KEY=brave-key \
+  CONTEXT7_API_KEY=context7-key \
+  FIRECRAWL_API_KEY=firecrawl-key \
   bash "$ROOT_DIR/install.sh" "$@"
 }
 
 expect_install_status() {
   local expected="$1" sandbox="$2" repo_snapshot="$3" install_mcp="$4"
   shift 4
-
   local rc
   rc="$(run_install_status "$sandbox" "$repo_snapshot" "$install_mcp" "$@")"
   [ "$rc" -eq "$expected" ] || fail "expected install exit $expected, got $rc"
-}
-
-run_piped_install_with_tty_status() {
-  local sandbox="$1" repo_snapshot="$2" responses="$3"
-  local runner="$sandbox/run-piped-install.sh"
-  local rc=0
-
-  cat > "$runner" <<EOF
-#!/usr/bin/env bash
-set -euo pipefail
-export HOME="$sandbox/home"
-export B_SKILLS_REPO="$repo_snapshot"
-export B_SKILLS_DIR="$sandbox/source"
-export B_SKILLS_INSTALL_MCP=N
-export B_SKILLS_INSTALL_GITNEXUS=N
-cat "$ROOT_DIR/install.sh" | bash
-EOF
-  chmod +x "$runner"
-
-  set +e
-  printf '%s' "$responses" | script -qefc "$runner" /dev/null >/dev/null 2>&1
-  rc=$?
-  set -e
-
-  printf '%s' "$rc"
 }
 
 main() {
@@ -133,145 +153,130 @@ main() {
   local sandbox_preserve="$WORK_DIR/preserve"
   local sandbox_replace="$WORK_DIR/replace"
   local sandbox_dry_run="$WORK_DIR/dry-run"
-  local sandbox_piped="$WORK_DIR/piped"
-  local sandbox_provider_delete="$WORK_DIR/provider-delete"
+  local sandbox_conflict_skill="$WORK_DIR/conflict-skill"
+  local sandbox_conflict_agent="$WORK_DIR/conflict-agent"
+  local sandbox_conflict_hook="$WORK_DIR/conflict-hook"
   local sandbox_uninstall="$WORK_DIR/uninstall"
   local sandbox_uninstall_modified="$WORK_DIR/uninstall-modified"
-  local sandbox_uninstall_merged="$WORK_DIR/uninstall-merged"
   local sandbox_uninstall_custom="$WORK_DIR/uninstall-custom"
-  local rc
 
   require_bin git
-  require_bin script
-
   make_repo_snapshot "$snapshot_repo"
 
   mkdir -p "$sandbox_fresh/home"
   expect_install_status 0 "$sandbox_fresh" "$snapshot_repo" N
-  assert_file "$sandbox_fresh/home/.config/opencode/skills/b-plan/SKILL.md"
-  assert_file "$sandbox_fresh/home/.config/opencode/skills/b-review/reference.md"
-  assert_file "$sandbox_fresh/home/.config/opencode/skills/b-test/reference.md"
-  assert_no_file "$sandbox_fresh/home/.config/opencode/skills/b-e2e/SKILL.md"
-  assert_file "$sandbox_fresh/home/.config/opencode/commands/b-plan.md"
-  assert_no_file "$sandbox_fresh/home/.config/opencode/commands/b-e2e.md"
-  assert_file "$sandbox_fresh/home/.config/opencode/references/b-skills/domain-glossary.md"
-  assert_no_file "$sandbox_fresh/home/.config/opencode/references/b-skills/security-checklist.md"
-  assert_no_file "$sandbox_fresh/home/.config/opencode/references/b-skills/testing-patterns.md"
-  assert_no_file "$sandbox_fresh/home/.config/opencode/references/b-skills/accessibility-checklist.md"
-  assert_file "$sandbox_fresh/home/.config/opencode/AGENTS.md"
-  assert_file "$sandbox_fresh/home/.config/opencode/b-skills/AGENTS.md"
-  assert_file "$sandbox_fresh/home/.config/opencode/b-skills/install.json"
-  assert_no_file "$sandbox_fresh/home/.config/opencode/b-skills/backups"
-  assert_no_file "$sandbox_fresh/home/.config/opencode/AGENTS.b-skills.md"
-  assert_no_file "$sandbox_fresh/home/.config/opencode/b-skills-install.json"
-  assert_equal_files "$sandbox_fresh/home/.config/opencode/AGENTS.md" "$sandbox_fresh/home/.config/opencode/b-skills/AGENTS.md"
-  assert_contains "$sandbox_fresh/home/.config/opencode/b-skills/install.json" '"agentsAction": "replace"'
-  assert_contains "$sandbox_fresh/home/.config/opencode/b-skills/install.json" '"activationState": "active"'
-
+  assert_file "$sandbox_fresh/home/.claude/skills/b-plan/SKILL.md"
+  assert_file "$sandbox_fresh/home/.claude/skills/b-review/reference.md"
+  assert_file "$sandbox_fresh/home/.claude/skills/b-test/reference.md"
+  assert_file "$sandbox_fresh/home/.claude/agents/b-plan-agent.md"
+  assert_file "$sandbox_fresh/home/.claude/agents/b-research-agent.md"
+  assert_file "$sandbox_fresh/home/.claude/agents/b-review-agent.md"
+  assert_file "$sandbox_fresh/home/.claude/agents/b-audit-agent.md"
+  assert_file "$sandbox_fresh/home/.claude/hooks/b-skills-guard.py"
+  assert_executable "$sandbox_fresh/home/.claude/hooks/b-skills-guard.py"
+  assert_file "$sandbox_fresh/home/.claude/references/b-skills/runtime-contract.md"
+  assert_file "$sandbox_fresh/home/.claude/CLAUDE.md"
+  assert_equal_files "$sandbox_fresh/home/.claude/CLAUDE.md" "$snapshot_repo/global/CLAUDE.md"
+  assert_file "$sandbox_fresh/home/.claude/b-skills/CLAUDE.md"
+  assert_equal_files "$sandbox_fresh/home/.claude/b-skills/CLAUDE.md" "$snapshot_repo/global/CLAUDE.md"
+  assert_file "$sandbox_fresh/home/.claude/b-skills/b-skills.settings.json"
+  assert_file "$sandbox_fresh/home/.claude/settings.json"
+  assert_contains "$sandbox_fresh/home/.claude/settings.json" 'b-skills-guard.py'
+  assert_contains "$sandbox_fresh/home/.claude/settings.json" '"PreToolUse"'
+  assert_hook_decision "$sandbox_fresh/home/.claude/hooks/b-skills-guard.py" 'rm -r /' deny
+  assert_hook_decision "$sandbox_fresh/home/.claude/hooks/b-skills-guard.py" 'rm -R ~/' deny
+  assert_hook_decision "$sandbox_fresh/home/.claude/hooks/b-skills-guard.py" 'rm -r "$HOME"' deny
+  assert_hook_decision "$sandbox_fresh/home/.claude/hooks/b-skills-guard.py" 'rm -rf "$HOME"' deny
+  assert_hook_decision "$sandbox_fresh/home/.claude/hooks/b-skills-guard.py" 'rm -rf ${HOME}' deny
+  assert_hook_decision "$sandbox_fresh/home/.claude/hooks/b-skills-guard.py" 'rm -rf ~/' deny
+  assert_hook_decision "$sandbox_fresh/home/.claude/hooks/b-skills-guard.py" 'git reset --hard HEAD' ask
+  assert_contains "$sandbox_fresh/home/.claude/b-skills/install.json" '"runtime": "claude"'
+  assert_contains "$sandbox_fresh/home/.claude/b-skills/install.json" '"memoryAction": "replace"'
+  assert_contains "$sandbox_fresh/home/.claude/b-skills/install.json" '"activationState": "active"'
   expect_install_status 0 "$sandbox_fresh" "$snapshot_repo" N
-  assert_file "$sandbox_fresh/home/.config/opencode/b-skills/install.json"
+  assert_file "$sandbox_fresh/home/.claude/b-skills/install.json"
 
-  mkdir -p "$sandbox_preserve/home/.config/opencode"
-  printf 'user-global-rules\n' > "$sandbox_preserve/home/.config/opencode/AGENTS.md"
+  mkdir -p "$sandbox_preserve/home/.claude"
+  printf 'user-memory\n' > "$sandbox_preserve/home/.claude/CLAUDE.md"
   expect_install_status 2 "$sandbox_preserve" "$snapshot_repo" N
-  assert_text_equals "$sandbox_preserve/home/.config/opencode/AGENTS.md" $'user-global-rules\n'
-  assert_file "$sandbox_preserve/home/.config/opencode/b-skills/AGENTS.md"
-  assert_no_file "$sandbox_preserve/home/.config/opencode/AGENTS.b-skills.md"
-  assert_contains "$sandbox_preserve/home/.config/opencode/b-skills/install.json" '"agentsAction": "preserve"'
-  assert_contains "$sandbox_preserve/home/.config/opencode/b-skills/install.json" '"activationState": "pending"'
+  assert_text_equals "$sandbox_preserve/home/.claude/CLAUDE.md" $'user-memory\n'
+  assert_file "$sandbox_preserve/home/.claude/b-skills/CLAUDE.md"
+  assert_contains "$sandbox_preserve/home/.claude/b-skills/install.json" '"memoryAction": "preserve"'
+  assert_contains "$sandbox_preserve/home/.claude/b-skills/install.json" '"activationState": "pending"'
 
-  mkdir -p "$sandbox_replace/home/.config/opencode"
-  printf '{"existing": true}\n' > "$sandbox_replace/home/.config/opencode/opencode.json"
-  printf 'legacy-rules\n' > "$sandbox_replace/home/.config/opencode/AGENTS.md"
-  expect_install_status 0 "$sandbox_replace" "$snapshot_repo" Y --replace-agents
-  assert_file "$sandbox_replace/home/.config/opencode/b-skills/AGENTS.md"
-  assert_contains "$sandbox_replace/home/.config/opencode/opencode.json" '"mcp"'
-  compgen -G "$sandbox_replace/home/.config/opencode/b-skills/backups/opencode.json.bak-*" >/dev/null || fail 'expected config backup after config mutation'
-  compgen -G "$sandbox_replace/home/.config/opencode/b-skills/backups/AGENTS.md.bak-*" >/dev/null || fail 'expected AGENTS backup after replacement'
+  mkdir -p "$sandbox_replace/home/.claude"
+  printf 'legacy-memory\n' > "$sandbox_replace/home/.claude/CLAUDE.md"
+  write_mixed_hook_settings "$sandbox_replace/home/.claude/settings.json"
+  expect_install_status 0 "$sandbox_replace" "$snapshot_repo" Y --replace-memory
+  assert_file "$sandbox_replace/home/.claude/CLAUDE.md"
+  assert_contains "$sandbox_replace/home/.claude/settings.json" 'custom-hook.sh'
+  assert_contains "$sandbox_replace/home/.claude/settings.json" 'b-skills-guard.py'
+  assert_contains "$sandbox_replace/home/.claude.json" '"mcpServers"'
+  assert_contains "$sandbox_replace/home/.claude.json" '"serena"'
+  assert_contains "$sandbox_replace/home/.claude.json" 'brave-key'
+  compgen -G "$sandbox_replace/home/.claude/b-skills/backups/CLAUDE.md.bak-*" >/dev/null || fail 'expected CLAUDE.md backup after replacement'
+  compgen -G "$sandbox_replace/home/.claude/b-skills/backups/settings.json.bak-*" >/dev/null || fail 'expected settings backup after merge'
 
-  mkdir -p "$sandbox_dry_run/home/.config/opencode"
-  printf 'keep-me\n' > "$sandbox_dry_run/home/.config/opencode/AGENTS.md"
-  printf '{"dryRun": false}\n' > "$sandbox_dry_run/home/.config/opencode/opencode.json"
-  expect_install_status 0 "$sandbox_dry_run" "$snapshot_repo" Y --dry-run --replace-agents
-  assert_text_equals "$sandbox_dry_run/home/.config/opencode/AGENTS.md" $'keep-me\n'
-  assert_text_equals "$sandbox_dry_run/home/.config/opencode/opencode.json" $'{"dryRun": false}\n'
-  [ ! -e "$sandbox_dry_run/home/.config/opencode/b-skills/install.json" ] || fail 'dry-run should not write install manifest'
+  mkdir -p "$sandbox_dry_run/home/.claude"
+  printf 'keep-memory\n' > "$sandbox_dry_run/home/.claude/CLAUDE.md"
+  printf '{"dryRun": false}\n' > "$sandbox_dry_run/home/.claude/settings.json"
+  expect_install_status 0 "$sandbox_dry_run" "$snapshot_repo" Y --dry-run --replace-memory
+  assert_text_equals "$sandbox_dry_run/home/.claude/CLAUDE.md" $'keep-memory\n'
+  assert_text_equals "$sandbox_dry_run/home/.claude/settings.json" $'{"dryRun": false}\n'
+  assert_no_file "$sandbox_dry_run/home/.claude/b-skills/install.json"
 
-  mkdir -p "$sandbox_piped/home/.config/opencode"
-  printf 'legacy-rules\n' > "$sandbox_piped/home/.config/opencode/AGENTS.md"
-  rc="$(run_piped_install_with_tty_status "$sandbox_piped" "$snapshot_repo" $'y\nn\n')"
-  [ "$rc" -eq 0 ] || fail "expected piped install exit 0, got $rc"
-  assert_equal_files "$sandbox_piped/home/.config/opencode/AGENTS.md" "$sandbox_piped/home/.config/opencode/b-skills/AGENTS.md"
-  assert_contains "$sandbox_piped/home/.config/opencode/b-skills/install.json" '"agentsAction": "replace"'
-  assert_contains "$sandbox_piped/home/.config/opencode/b-skills/install.json" '"activationState": "active"'
-  compgen -G "$sandbox_piped/home/.config/opencode/b-skills/backups/AGENTS.md.bak-*" >/dev/null || fail 'expected AGENTS backup after prompted replacement'
+  mkdir -p "$sandbox_conflict_skill/home/.claude/skills/b-plan"
+  printf '%s\n' 'custom skill' > "$sandbox_conflict_skill/home/.claude/skills/b-plan/SKILL.md"
+  expect_install_status 1 "$sandbox_conflict_skill" "$snapshot_repo" N --replace-memory
+  assert_text_equals "$sandbox_conflict_skill/home/.claude/skills/b-plan/SKILL.md" $'custom skill\n'
+  assert_no_file "$sandbox_conflict_skill/home/.claude/skills/b-audit/SKILL.md"
 
-  mkdir -p "$sandbox_provider_delete/home/.config/opencode"
-  cat > "$sandbox_provider_delete/home/.config/opencode/opencode.json" <<'EOF'
-{
-  "provider": {
-    "openrouter": {
-      "npm": "@ai-sdk/openai-compatible",
-      "name": "OpenRouter",
-      "options": {
-        "baseURL": "https://openrouter.ai/api/v1",
-        "apiKey": "saved-key"
-      },
-      "models": {
-        "remove-me": {
-          "name": "Remove Me"
-        },
-        "keep-me": {
-          "name": "Keep Me"
-        }
-      }
-    }
-  }
-}
-EOF
-  rc="$(run_piped_install_with_tty_status "$sandbox_provider_delete" "$snapshot_repo" $'y\nopenrouter\n\n\n\ny\ny\nn\n\n')"
-  [ "$rc" -eq 0 ] || fail "expected provider-delete install exit 0, got $rc"
-  assert_contains "$sandbox_provider_delete/home/.config/opencode/opencode.json" '"keep-me"'
-  assert_not_contains "$sandbox_provider_delete/home/.config/opencode/opencode.json" '"remove-me"'
-  assert_contains "$sandbox_provider_delete/home/.config/opencode/b-skills/install.json" '"customProvider": "openrouter"'
+  mkdir -p "$sandbox_conflict_agent/home/.claude/agents"
+  printf '%s\n' 'custom agent' > "$sandbox_conflict_agent/home/.claude/agents/b-plan-agent.md"
+  expect_install_status 1 "$sandbox_conflict_agent" "$snapshot_repo" N --replace-memory
+  assert_text_equals "$sandbox_conflict_agent/home/.claude/agents/b-plan-agent.md" $'custom agent\n'
+  assert_no_file "$sandbox_conflict_agent/home/.claude/skills/b-audit/SKILL.md"
 
-  mkdir -p "$sandbox_uninstall/home/.config/opencode"
-  printf 'legacy-rules\n' > "$sandbox_uninstall/home/.config/opencode/AGENTS.md"
-  expect_install_status 0 "$sandbox_uninstall" "$snapshot_repo" N --replace-agents
-  compgen -G "$sandbox_uninstall/home/.config/opencode/b-skills/backups/AGENTS.md.bak-*" >/dev/null || fail 'expected AGENTS backup before uninstall'
+  mkdir -p "$sandbox_conflict_hook/home/.claude/hooks"
+  printf '%s\n' 'custom hook' > "$sandbox_conflict_hook/home/.claude/hooks/b-skills-guard.py"
+  expect_install_status 1 "$sandbox_conflict_hook" "$snapshot_repo" N --replace-memory
+  assert_text_equals "$sandbox_conflict_hook/home/.claude/hooks/b-skills-guard.py" $'custom hook\n'
+  assert_no_file "$sandbox_conflict_hook/home/.claude/skills/b-audit/SKILL.md"
+
+  mkdir -p "$sandbox_uninstall/home/.claude"
+  printf 'legacy-memory\n' > "$sandbox_uninstall/home/.claude/CLAUDE.md"
+  write_mixed_hook_settings "$sandbox_uninstall/home/.claude/settings.json"
+  expect_install_status 0 "$sandbox_uninstall" "$snapshot_repo" N --replace-memory
+  compgen -G "$sandbox_uninstall/home/.claude/b-skills/backups/CLAUDE.md.bak-*" >/dev/null || fail 'expected CLAUDE.md backup before uninstall'
+  printf 'dirty\n' > "$sandbox_uninstall/source/dirty.txt"
   run_install_output "$sandbox_uninstall" "$snapshot_repo" N --uninstall >/dev/null
-  assert_no_file "$sandbox_uninstall/home/.config/opencode/skills/b-plan/SKILL.md"
-  assert_no_file "$sandbox_uninstall/home/.config/opencode/commands/b-plan.md"
-  assert_no_file "$sandbox_uninstall/home/.config/opencode/references/b-skills/runtime-contract.md"
-  assert_no_file "$sandbox_uninstall/home/.config/opencode/b-skills/AGENTS.md"
-  assert_no_file "$sandbox_uninstall/home/.config/opencode/b-skills/install.json"
-  compgen -G "$sandbox_uninstall/home/.config/opencode/b-skills/backups/AGENTS.md.bak-*" >/dev/null || fail 'expected AGENTS backup to remain after uninstall'
-  assert_text_equals "$sandbox_uninstall/home/.config/opencode/AGENTS.md" $'legacy-rules\n'
+  assert_no_file "$sandbox_uninstall/home/.claude/skills/b-plan/SKILL.md"
+  assert_no_file "$sandbox_uninstall/home/.claude/agents/b-plan-agent.md"
+  assert_no_file "$sandbox_uninstall/home/.claude/hooks/b-skills-guard.py"
+  assert_no_file "$sandbox_uninstall/home/.claude/references/b-skills/runtime-contract.md"
+  assert_no_file "$sandbox_uninstall/home/.claude/b-skills/CLAUDE.md"
+  assert_no_file "$sandbox_uninstall/home/.claude/b-skills/install.json"
+  assert_text_equals "$sandbox_uninstall/home/.claude/CLAUDE.md" $'legacy-memory\n'
+  assert_contains "$sandbox_uninstall/home/.claude/settings.json" 'custom-hook.sh'
+  assert_contains "$sandbox_uninstall/home/.claude/settings.json" 'Bash(git commit*)'
+  assert_not_contains "$sandbox_uninstall/home/.claude/settings.json" 'Bash(npm install*)'
+  assert_not_contains "$sandbox_uninstall/home/.claude/settings.json" 'b-skills-guard.py'
 
-  mkdir -p "$sandbox_uninstall/home/.config/opencode"
-  printf 'manual backup\n' > "$sandbox_uninstall/home/.config/opencode/AGENTS.md.bak-manual"
-  expect_install_status 2 "$sandbox_uninstall" "$snapshot_repo" N
-  assert_file "$sandbox_uninstall/home/.config/opencode/AGENTS.md.bak-manual"
-  assert_no_file "$sandbox_uninstall/home/.config/opencode/b-skills/backups/AGENTS.md.bak-manual"
-
-  mkdir -p "$sandbox_uninstall_modified/home/.config/opencode"
-  printf 'legacy-rules\n' > "$sandbox_uninstall_modified/home/.config/opencode/AGENTS.md"
-  expect_install_status 0 "$sandbox_uninstall_modified" "$snapshot_repo" N --replace-agents
-  printf 'user-edited-rules\n' > "$sandbox_uninstall_modified/home/.config/opencode/AGENTS.md"
+  mkdir -p "$sandbox_uninstall_modified/home/.claude"
+  printf 'legacy-memory\n' > "$sandbox_uninstall_modified/home/.claude/CLAUDE.md"
+  expect_install_status 0 "$sandbox_uninstall_modified" "$snapshot_repo" N --replace-memory
+  printf 'user-edited-memory\n' > "$sandbox_uninstall_modified/home/.claude/CLAUDE.md"
   run_install_output "$sandbox_uninstall_modified" "$snapshot_repo" N --uninstall >/dev/null
-  assert_text_equals "$sandbox_uninstall_modified/home/.config/opencode/AGENTS.md" $'user-edited-rules\n'
+  assert_text_equals "$sandbox_uninstall_modified/home/.claude/CLAUDE.md" $'user-edited-memory\n'
 
-  mkdir -p "$sandbox_uninstall_merged/home/.config/opencode"
-  printf '# b-skills — OpenCode Runtime Kernel\ncustom-user-rules\n' > "$sandbox_uninstall_merged/home/.config/opencode/AGENTS.md"
-  run_install_output "$sandbox_uninstall_merged" "$snapshot_repo" N --uninstall >/dev/null
-  assert_text_equals "$sandbox_uninstall_merged/home/.config/opencode/AGENTS.md" $'# b-skills — OpenCode Runtime Kernel\ncustom-user-rules\n'
-
-  mkdir -p "$sandbox_uninstall_custom/home/.config/opencode/skills/b-plan" "$sandbox_uninstall_custom/home/.config/opencode/commands"
-  printf '%s\n' 'custom skill' > "$sandbox_uninstall_custom/home/.config/opencode/skills/b-plan/SKILL.md"
-  printf '%s\n' 'custom command' > "$sandbox_uninstall_custom/home/.config/opencode/commands/b-plan.md"
+  mkdir -p "$sandbox_uninstall_custom/home/.claude/skills/b-plan" "$sandbox_uninstall_custom/home/.claude/agents" "$sandbox_uninstall_custom/home/.claude/hooks"
+  printf '%s\n' 'custom skill' > "$sandbox_uninstall_custom/home/.claude/skills/b-plan/SKILL.md"
+  printf '%s\n' 'custom agent' > "$sandbox_uninstall_custom/home/.claude/agents/b-plan-agent.md"
+  printf '%s\n' 'custom hook' > "$sandbox_uninstall_custom/home/.claude/hooks/b-skills-guard.py"
   run_install_output "$sandbox_uninstall_custom" "$snapshot_repo" N --uninstall >/dev/null
-  assert_text_equals "$sandbox_uninstall_custom/home/.config/opencode/skills/b-plan/SKILL.md" $'custom skill\n'
-  assert_text_equals "$sandbox_uninstall_custom/home/.config/opencode/commands/b-plan.md" $'custom command\n'
+  assert_text_equals "$sandbox_uninstall_custom/home/.claude/skills/b-plan/SKILL.md" $'custom skill\n'
+  assert_text_equals "$sandbox_uninstall_custom/home/.claude/agents/b-plan-agent.md" $'custom agent\n'
+  assert_text_equals "$sandbox_uninstall_custom/home/.claude/hooks/b-skills-guard.py" $'custom hook\n'
 
   printf 'smoke-install.sh: PASS\n'
 }
