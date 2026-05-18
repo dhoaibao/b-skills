@@ -220,6 +220,7 @@ main() {
   assert_hook_decision "$sandbox_fresh/home/.claude/hooks/b-skills-guard.py" 'rm -rf ${HOME}' deny
   assert_hook_decision "$sandbox_fresh/home/.claude/hooks/b-skills-guard.py" 'rm -rf ${HOME:?}' deny
   assert_hook_decision "$sandbox_fresh/home/.claude/hooks/b-skills-guard.py" 'rm -rf ~/' deny
+  assert_hook_decision "$sandbox_fresh/home/.claude/hooks/b-skills-guard.py" 'rm -rf ~/myproject' ask
   assert_hook_decision "$sandbox_fresh/home/.claude/hooks/b-skills-guard.py" 'git reset --hard HEAD' ask
   assert_permission_request_decision "$sandbox_fresh/home/.claude/hooks/b-skills-guard.py" 'rm -rf /' deny
   assert_permission_request_no_decision "$sandbox_fresh/home/.claude/hooks/b-skills-guard.py" 'git reset --hard HEAD'
@@ -230,6 +231,9 @@ main() {
   assert_file "$sandbox_fresh/home/.claude/b-skills/install.json"
   run_install_output "$sandbox_fresh" "$snapshot_repo" N --uninstall >/dev/null
   assert_no_file "$sandbox_fresh/home/.claude/settings.json"
+  assert_no_file "$sandbox_fresh/home/.claude/skills"
+  assert_no_file "$sandbox_fresh/home/.claude/agents"
+  assert_no_file "$sandbox_fresh/home/.claude/hooks"
 
   mkdir -p "$sandbox_preserve/home/.claude"
   printf 'user-memory\n' > "$sandbox_preserve/home/.claude/CLAUDE.md"

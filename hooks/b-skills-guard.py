@@ -50,18 +50,35 @@ def split_command(command: str) -> list[str]:
         return command.split()
 
 
-def is_dangerous_rm_target(token: str) -> bool:
+def is_deny_rm_target(token: str) -> bool:
     target = token.strip().strip("'\"")
-    root_targets = {"/", "/.", "/.."}
-    home_targets = {"~", "$HOME", "${HOME}"}
-    return target in root_targets or target in home_targets or target.startswith(("/*", "/.*", "~/", "$HOME/", "${HOME", "$HOME"))
+    exact_deny = {"/", "/.", "/..", "~", "~/", "$HOME", "$HOME/", "${HOME}", "${HOME}/"}
+    if target in exact_deny:
+        return True
+    if target.startswith(("/*", "/.*")):
+        return True
+    # ${HOME...} parameter expansion variants that still refer to the home dir (e.g., ${HOME:?})
+    if target.startswith("${HOME") and "/" not in target:
+        return True
+    return False
+
+
+def is_ask_rm_target(token: str) -> bool:
+    target = token.strip().strip("'\"")
+    if target.startswith("~/") and target != "~/":
+        return True
+    if target.startswith("$HOME/") and target != "$HOME/":
+        return True
+    if re.match(r"^\$\{HOME[^}]*\}/(.+)", target):
+        return True
+    return False
 
 
 def is_rm_command(token: str) -> bool:
     return os.path.basename(token) == "rm"
 
 
-def has_dangerous_recursive_rm(command: str) -> bool:
+def has_dangerous_recursive_rm(command: str) -> tuple[str | None, str | None]:
     tokens = split_command(command)
     for index, token in enumerate(tokens):
         if token in {"command", "builtin"}:
@@ -78,9 +95,12 @@ def has_dangerous_recursive_rm(command: str) -> bool:
                 flags = arg.lstrip("-")
                 recursive = recursive or "r" in flags or "R" in flags
                 continue
-            if recursive and is_dangerous_rm_target(arg):
-                return True
-    return False
+            if recursive:
+                if is_deny_rm_target(arg):
+                    return "deny", "recursive removal of root or home directory is destructive"
+                if is_ask_rm_target(arg):
+                    return "ask", "recursive removal of a home subdirectory requires approval"
+    return None, None
 
 
 def emit_decision(event_name: str, decision: str, reason: str) -> None:
@@ -130,8 +150,9 @@ def get_command(payload: dict) -> str:
 
 def classify(command: str) -> tuple[str | None, str | None]:
     normalized = re.sub(r"\s+", " ", command.strip())
-    if has_dangerous_recursive_rm(normalized):
-        return "deny", "recursive removal of root, home, or HOME is destructive"
+    rm_decision, rm_reason = has_dangerous_recursive_rm(normalized)
+    if rm_decision:
+        return rm_decision, rm_reason
     for pattern, reason in DENY_PATTERNS:
         if re.search(pattern, normalized):
             return "deny", reason

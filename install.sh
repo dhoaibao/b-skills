@@ -1078,6 +1078,16 @@ install_assets() {
   done
   log "OK: skills synced: $synced_skills"
 
+  # Prune b-skills-managed skill dirs that are no longer in source (update path cleanup)
+  for stale_dir in "$SKILLS_DST"/b-*/; do
+    [ -d "$stale_dir" ] || continue
+    stale_name="$(basename "$stale_dir")"
+    [ -d "$SKILLS_SRC/$stale_name" ] && continue
+    if is_b_skills_skill_dir "$stale_dir"; then
+      remove_path_if_exists "$stale_dir" "stale skill $stale_name"
+    fi
+  done
+
   section "Install Claude agents"
   [ -d "$AGENTS_SRC" ] || die "Missing agents source directory: $AGENTS_SRC"
   ensure_dir "$AGENTS_DST"
@@ -1178,6 +1188,9 @@ uninstall_b_skills() {
   remove_dir_if_empty "$B_SKILLS_BACKUPS_DIR" "b-skills backups directory"
   remove_dir_if_empty "$B_SKILLS_METADATA_DIR" "b-skills metadata directory"
   remove_dir_if_empty "$CLAUDE_DIR/references" "Claude references directory"
+  remove_dir_if_empty "$SKILLS_DST" "Claude skills directory"
+  remove_dir_if_empty "$AGENTS_DST" "Claude agents directory"
+  remove_dir_if_empty "$HOOKS_DST" "Claude hooks directory"
   remove_dir_if_empty "$CLAUDE_DIR" "Claude config directory"
 
   section "Done"
