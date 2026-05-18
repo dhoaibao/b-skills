@@ -69,6 +69,7 @@ SETTINGS_BACKUP_PATH="none"
 MCP_BACKUP_PATH="none"
 LAST_BACKUP_PATH="none"
 SETTINGS_ADDED_PERMISSIONS_JSON='{}'
+MCP_ADDED_SERVERS_JSON='[]'
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -810,6 +811,97 @@ print(json.dumps(config, indent=2))
 PYEOF
 }
 
+json_mcp_added_servers() {
+  env CLAUDE_JSON="$CLAUDE_JSON" INSTALL_MANIFEST="$INSTALL_MANIFEST" INSTALL_GITNEXUS_VALUE="$INSTALL_GITNEXUS_VALUE" python3 - <<'PYEOF'
+import json
+import os
+from pathlib import Path
+
+config_path = Path(os.environ["CLAUDE_JSON"])
+manifest_path = Path(os.environ["INSTALL_MANIFEST"])
+
+def load_json(path):
+    try:
+        text = path.read_text().strip()
+    except FileNotFoundError:
+        return {}
+    if not text:
+        return {}
+    return json.loads(text)
+
+def dedupe(values):
+    result = []
+    for value in values:
+        if value not in result:
+            result.append(value)
+    return result
+
+config = load_json(config_path)
+manifest = load_json(manifest_path)
+if not isinstance(config, dict):
+    config = {}
+if not isinstance(manifest, dict):
+    manifest = {}
+
+mcp = config.get("mcpServers", {})
+if not isinstance(mcp, dict):
+    mcp = {}
+
+defaults = ["serena", "context7", "brave-search", "firecrawl"]
+if (os.environ.get("INSTALL_GITNEXUS_VALUE") or "").lower() in {"y", "yes"}:
+    defaults.append("gitnexus")
+
+previous = manifest.get("managedConfig", {}).get("mcpAddedServers", [])
+if not isinstance(previous, list):
+    previous = []
+
+added = [name for name in previous if isinstance(name, str) and name in mcp]
+added.extend(name for name in defaults if name not in mcp)
+print(json.dumps(dedupe(added), separators=(",", ":")))
+PYEOF
+}
+
+json_unmerge_mcp_config() {
+  env CLAUDE_JSON="$CLAUDE_JSON" INSTALL_MANIFEST="$INSTALL_MANIFEST" python3 - <<'PYEOF'
+import json
+import os
+from pathlib import Path
+
+config_path = Path(os.environ["CLAUDE_JSON"])
+manifest_path = Path(os.environ["INSTALL_MANIFEST"])
+
+def load_json(path):
+    try:
+        text = path.read_text().strip()
+    except OSError:
+        return {}
+    if not text:
+        return {}
+    return json.loads(text)
+
+config = load_json(config_path)
+manifest = load_json(manifest_path)
+if not isinstance(config, dict):
+    config = {}
+if not isinstance(manifest, dict):
+    manifest = {}
+
+added_servers = manifest.get("managedConfig", {}).get("mcpAddedServers", [])
+if not isinstance(added_servers, list):
+    added_servers = []
+
+mcp = config.get("mcpServers", {})
+if isinstance(mcp, dict):
+    for server in added_servers:
+        if isinstance(server, str):
+            mcp.pop(server, None)
+    if not mcp:
+        config.pop("mcpServers", None)
+
+print(json.dumps(config, indent=2))
+PYEOF
+}
+
 merge_claude_settings() {
   [ -f "$SETTINGS_TEMPLATE_SRC" ] || die "Missing settings template: $SETTINGS_TEMPLATE_SRC"
   local merged
@@ -825,6 +917,7 @@ merge_mcp_config() {
     return 0
   fi
   local merged
+  MCP_ADDED_SERVERS_JSON="$(json_mcp_added_servers)"
   merged="$(json_merge_mcp_config)"
   write_text_file "$CLAUDE_JSON" "$merged" "Claude MCP config" Y
   MCP_BACKUP_PATH="$LAST_BACKUP_PATH"
@@ -832,7 +925,7 @@ merge_mcp_config() {
 
 write_install_manifest() {
   local manifest_content
-  manifest_content="$(env TIMESTAMP="$TIMESTAMP" DRY_RUN_VALUE="$DRY_RUN_VALUE" MEMORY_INSTALL_ACTION="$MEMORY_INSTALL_ACTION" RUNTIME_ACTIVATION_STATE="$RUNTIME_ACTIVATION_STATE" MEMORY_BACKUP_PATH="$MEMORY_BACKUP_PATH" SETTINGS_BACKUP_PATH="$SETTINGS_BACKUP_PATH" MCP_BACKUP_PATH="$MCP_BACKUP_PATH" INSTALL_MCPS_VALUE="$INSTALL_MCPS_VALUE" INSTALL_GITNEXUS_VALUE="$INSTALL_GITNEXUS_VALUE" SETTINGS_ADDED_PERMISSIONS_JSON="$SETTINGS_ADDED_PERMISSIONS_JSON" CLAUDE_DIR="$CLAUDE_DIR" CLAUDE_JSON="$CLAUDE_JSON" MEMORY_DST="$MEMORY_DST" MEMORY_SNAPSHOT_DST="$MEMORY_SNAPSHOT_DST" SETTINGS_DST="$SETTINGS_DST" INSTALL_MANIFEST="$INSTALL_MANIFEST" python3 - <<'PYEOF'
+  manifest_content="$(env TIMESTAMP="$TIMESTAMP" DRY_RUN_VALUE="$DRY_RUN_VALUE" MEMORY_INSTALL_ACTION="$MEMORY_INSTALL_ACTION" RUNTIME_ACTIVATION_STATE="$RUNTIME_ACTIVATION_STATE" MEMORY_BACKUP_PATH="$MEMORY_BACKUP_PATH" SETTINGS_BACKUP_PATH="$SETTINGS_BACKUP_PATH" MCP_BACKUP_PATH="$MCP_BACKUP_PATH" INSTALL_MCPS_VALUE="$INSTALL_MCPS_VALUE" INSTALL_GITNEXUS_VALUE="$INSTALL_GITNEXUS_VALUE" SETTINGS_ADDED_PERMISSIONS_JSON="$SETTINGS_ADDED_PERMISSIONS_JSON" MCP_ADDED_SERVERS_JSON="$MCP_ADDED_SERVERS_JSON" CLAUDE_DIR="$CLAUDE_DIR" CLAUDE_JSON="$CLAUDE_JSON" MEMORY_DST="$MEMORY_DST" MEMORY_SNAPSHOT_DST="$MEMORY_SNAPSHOT_DST" SETTINGS_DST="$SETTINGS_DST" INSTALL_MANIFEST="$INSTALL_MANIFEST" python3 - <<'PYEOF'
 import json
 import os
 
@@ -867,6 +960,7 @@ payload = {
         "settingsTemplate": True,
         "settingsAddedPermissions": json.loads(os.environ.get("SETTINGS_ADDED_PERMISSIONS_JSON") or "{}"),
         "mcpDefaults": yes(os.environ.get("INSTALL_MCPS_VALUE")),
+        "mcpAddedServers": json.loads(os.environ.get("MCP_ADDED_SERVERS_JSON") or "[]"),
         "gitnexus": yes(os.environ.get("INSTALL_GITNEXUS_VALUE")),
     },
 }
@@ -934,7 +1028,25 @@ unmerge_claude_settings() {
     log "WARN: b-skills settings template unavailable; removing hook entries and recorded permissions only"
   fi
   cleaned="$(json_unmerge_claude_settings "$settings_template_path")"
-  write_text_file "$SETTINGS_DST" "$cleaned" "Claude settings" Y
+  if [ "$cleaned" = "{}" ]; then
+    remove_path_if_exists "$SETTINGS_DST" "Claude settings"
+  else
+    write_text_file "$SETTINGS_DST" "$cleaned" "Claude settings" Y
+  fi
+}
+
+unmerge_mcp_config() {
+  [ -f "$CLAUDE_JSON" ] || {
+    log "OK: Claude MCP config already absent"
+    return 0
+  }
+  local cleaned
+  cleaned="$(json_unmerge_mcp_config)"
+  if [ "$cleaned" = "{}" ]; then
+    remove_path_if_exists "$CLAUDE_JSON" "Claude MCP config"
+  else
+    write_text_file "$CLAUDE_JSON" "$cleaned" "Claude MCP config" Y
+  fi
 }
 
 sync_repo() {
@@ -1059,6 +1171,7 @@ uninstall_b_skills() {
   remove_hook_if_managed b-skills-guard.py
   remove_path_if_exists "$REFERENCES_DST" "shared references"
   unmerge_claude_settings
+  unmerge_mcp_config
 
   if ! restore_memory_backup_if_available; then
     remove_memory_if_b_skills_managed

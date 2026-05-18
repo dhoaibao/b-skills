@@ -159,6 +159,7 @@ main() {
   local sandbox_uninstall="$WORK_DIR/uninstall"
   local sandbox_uninstall_modified="$WORK_DIR/uninstall-modified"
   local sandbox_uninstall_custom="$WORK_DIR/uninstall-custom"
+  local sandbox_mcp_existing="$WORK_DIR/mcp-existing"
 
   require_bin git
   make_repo_snapshot "$snapshot_repo"
@@ -195,6 +196,8 @@ main() {
   assert_contains "$sandbox_fresh/home/.claude/b-skills/install.json" '"activationState": "active"'
   expect_install_status 0 "$sandbox_fresh" "$snapshot_repo" N
   assert_file "$sandbox_fresh/home/.claude/b-skills/install.json"
+  run_install_output "$sandbox_fresh" "$snapshot_repo" N --uninstall >/dev/null
+  assert_no_file "$sandbox_fresh/home/.claude/settings.json"
 
   mkdir -p "$sandbox_preserve/home/.claude"
   printf 'user-memory\n' > "$sandbox_preserve/home/.claude/CLAUDE.md"
@@ -216,6 +219,10 @@ main() {
   assert_contains "$sandbox_replace/home/.claude.json" 'brave-key'
   compgen -G "$sandbox_replace/home/.claude/b-skills/backups/CLAUDE.md.bak-*" >/dev/null || fail 'expected CLAUDE.md backup after replacement'
   compgen -G "$sandbox_replace/home/.claude/b-skills/backups/settings.json.bak-*" >/dev/null || fail 'expected settings backup after merge'
+  run_install_output "$sandbox_replace" "$snapshot_repo" N --uninstall >/dev/null
+  assert_no_file "$sandbox_replace/home/.claude.json"
+  assert_contains "$sandbox_replace/home/.claude/settings.json" 'custom-hook.sh'
+  assert_not_contains "$sandbox_replace/home/.claude/settings.json" 'b-skills-guard.py'
 
   mkdir -p "$sandbox_dry_run/home/.claude"
   printf 'keep-memory\n' > "$sandbox_dry_run/home/.claude/CLAUDE.md"
@@ -277,6 +284,28 @@ main() {
   assert_text_equals "$sandbox_uninstall_custom/home/.claude/skills/b-plan/SKILL.md" $'custom skill\n'
   assert_text_equals "$sandbox_uninstall_custom/home/.claude/agents/b-plan-agent.md" $'custom agent\n'
   assert_text_equals "$sandbox_uninstall_custom/home/.claude/hooks/b-skills-guard.py" $'custom hook\n'
+
+  mkdir -p "$sandbox_mcp_existing/home"
+  cat > "$sandbox_mcp_existing/home/.claude.json" <<'JSON'
+{
+  "mcpServers": {
+    "custom": { "type": "stdio", "command": "custom-mcp" },
+    "serena": { "type": "stdio", "command": "custom-serena" }
+  }
+}
+JSON
+  expect_install_status 0 "$sandbox_mcp_existing" "$snapshot_repo" Y --replace-memory
+  assert_contains "$sandbox_mcp_existing/home/.claude.json" 'custom-mcp'
+  assert_contains "$sandbox_mcp_existing/home/.claude.json" 'custom-serena'
+  assert_contains "$sandbox_mcp_existing/home/.claude/b-skills/install.json" '"mcpAddedServers": ['
+  assert_contains "$sandbox_mcp_existing/home/.claude/b-skills/install.json" '"context7"'
+  assert_contains "$sandbox_mcp_existing/home/.claude/b-skills/install.json" '"brave-search"'
+  assert_contains "$sandbox_mcp_existing/home/.claude/b-skills/install.json" '"firecrawl"'
+  run_install_output "$sandbox_mcp_existing" "$snapshot_repo" N --uninstall >/dev/null
+  assert_contains "$sandbox_mcp_existing/home/.claude.json" 'custom-mcp'
+  assert_contains "$sandbox_mcp_existing/home/.claude.json" 'custom-serena'
+  assert_not_contains "$sandbox_mcp_existing/home/.claude.json" 'brave-search'
+  assert_not_contains "$sandbox_mcp_existing/home/.claude.json" 'firecrawl'
 
   printf 'smoke-install.sh: PASS\n'
 }
