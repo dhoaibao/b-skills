@@ -57,7 +57,7 @@ Fast path is allowed only for a single non-sensitive area with no public contrac
 
 ### Step 3 - Establish baseline and inspect risk
 
-Use arguments, `--baseline`, approved plan, checkpoint handoff, or short clarification to identify intended behavior. Without a baseline, run a `baseline-missing` diff-only risk review and do not claim requirements coverage.
+Use arguments, `--baseline`, approved plan, checkpoint handoff, or short clarification to identify intended behavior, applying the global baseline source taxonomy. Without a sufficient baseline, run a `baseline-missing` diff-only risk review and do not claim requirements coverage.
 
 Inspect highest-risk changed symbols and boundaries first. Name sampled files/symbols, skipped changed surfaces, and residual risk so a no-findings review is not mistaken for exhaustive proof.
 

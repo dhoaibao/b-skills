@@ -2,6 +2,8 @@
 
 A lean 9-skill suite for **OpenCode**, optimized around scoped workflows, Serena-backed symbol work, optional GitNexus graph radar, and explicit safety rules when work crosses risky boundaries.
 
+Browser, DOM-rendered, visual, and e2e tests are intentionally unsupported. The suite handles non-browser unit, integration, and contract tests, but it does not add or drive jsdom, Playwright, Cypress, Puppeteer, WebDriver, or equivalent browser/DOM tooling.
+
 ## Install & Update
 
 ```bash
@@ -39,7 +41,7 @@ This repository is an install-only source layout. OpenCode does not load the che
 | `/b-implement` | Build | Execute approved or clearly scoped work in coherent verified steps |
 | `/b-refactor` | Build | Execute concrete behavior-preserving transforms: rename, extract, move, inline, simplify, or delete |
 | `/b-debug` | Validate | Confirm runtime root cause, fix minimally, verify, and remove probes |
-| `/b-test` | Validate | Write tests, fix test-only failures, evaluate coverage gaps, and route product bugs out of the test lane |
+| `/b-test` | Validate | Write non-browser unit/integration/contract tests, fix test-only failures, evaluate coverage gaps, and route product bugs out of the test lane |
 | `/b-review` | Validate | Review changed-code diffs, ranges, or checkpoints for blockers, regressions, security, and coverage |
 | `/b-audit` | Validate | Audit named repository or suite surfaces for systemic risk, sampled coverage, and residual risk |
 

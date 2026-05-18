@@ -49,7 +49,7 @@ Fallbacks: `AGENTS.md` section 4. Graceful degradation: possible with native too
 
 Lock the requested surface from arguments or `--surface`. If the surface is absent or too broad, ask for the smallest clarification that names the target area. Do not default to a whole-repository audit.
 
-State mode: self-audit or external audit. Use arguments, `--baseline`, approved plan, checkpoint handoff, or short clarification to identify intended behavior. Without a baseline, label the run `baseline-missing` and do not claim requirements coverage.
+State mode: self-audit or external audit. Use arguments, `--baseline`, approved plan, checkpoint handoff, or short clarification to identify intended behavior, applying the global baseline source taxonomy. Without a sufficient baseline, label the run `baseline-missing` and do not claim requirements coverage.
 
 ### Step 2 - Pick the checklist
 

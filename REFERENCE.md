@@ -4,6 +4,8 @@ Reference guide for each skill in the maintained 9-skill suite. For install and 
 
 When this document cites `global/AGENTS.md`, that is the source-repo runtime kernel path. Installed skill prose should reference the runtime path `AGENTS.md`; detailed runtime behavior lives at `references/runtime-contract.md` in this repo and `references/b-skills/runtime-contract.md` after install.
 
+Browser, DOM-rendered, visual, and e2e tests are unsupported by this suite. Do not route jsdom, Playwright, Cypress, Puppeteer, WebDriver, or equivalent browser/DOM work to `b-test`; narrow the task to repo-local code review, non-browser tests, or static analysis that does not render through a DOM or drive a browser.
+
 ---
 
 ## Skill reference
@@ -103,6 +105,7 @@ Owns runtime and behavior failures.
 
 **Core behavior**
 - Starts from concrete symptoms, stack traces, repro notes, determinism, and perf baseline when relevant.
+- Uses the shared baseline source taxonomy when expected behavior is disputed or weak.
 - Checks the regression window when available: recent commits, dependency/lockfile changes, config drift, feature flags, data shape changes, and environment differences.
 - Keeps a repro record for non-trivial or blocked bugs: command or interaction, target/workspace, versions/config flags, data mode, expected/actual behavior, determinism, and evidence without secret values.
 - Uses fast path when a trace strongly implicates one file/function.
@@ -129,7 +132,7 @@ Reviews diffs, ranges, or checkpoints.
 - Defaults to `git diff HEAD` and supports `--range` for changed-code review.
 - Reviews cumulative WIP diffs from the best available base when appropriate.
 - Uses fast path only for low-risk single-area changes; contract/auth/security/migration/dependency changes force standard review.
-- Establishes a baseline from arguments, plan, checkpoint, or clarification; otherwise labels the review diff-only.
+- Establishes a sufficient baseline from arguments, plan, checkpoint, clarification, or the shared baseline source taxonomy; otherwise labels the review diff-only.
 - Labels no-baseline reviews as `baseline-missing` and avoids requirements-coverage claims.
 - Inspects highest-risk symbols and boundaries first.
 - Names relevant security checklist sections when they affect findings or confidence.
@@ -154,7 +157,7 @@ Audits named repository or suite surfaces outside diff-first review.
 
 **Core behavior**
 - Locks a named surface from arguments or `--surface` and refuses to default to a whole-repository audit.
-- Establishes a baseline from arguments, `--baseline`, approved plan, checkpoint, or clarification; otherwise labels the audit `baseline-missing`.
+- Establishes a sufficient baseline from arguments, `--baseline`, approved plan, checkpoint, clarification, or the shared baseline source taxonomy; otherwise labels the audit `baseline-missing`.
 - Chooses a surface-specific checklist: installer/update path, runtime contract, validator, route/tool boundary, dependency/lockfile, generated artifact, or security-sensitive rule.
 - For b-skills suite audits, checks routing boundaries, skill-command wrapper alignment, runtime-contract consistency, docs sync, validator coverage, artifact paths, and safety-gate drift.
 - Names sampled files/symbols, skipped surfaces, and residual risk so no-findings audits are not mistaken for exhaustive proof.
@@ -172,18 +175,19 @@ Audits named repository or suite surfaces outside diff-first review.
 
 ### b-test
 
-Owns code-level testing work.
+Owns non-browser code-level testing work.
 
 **Core behavior**
 - Discovers framework and narrowest runnable command from manifests/CI.
 - Routes red tests through the global test-vs-bug decision.
+- Uses the shared baseline source taxonomy before changing assertions, snapshots, or behavior-defining tests.
 - Confirms intended behavior from user-confirmed intent, an approved spec/plan, product contract, existing passing tests, intentional source changes, or fetched framework docs before changing assertions or snapshots.
 - Stops or hands off to `b-spec` for unclear intended behavior or `b-debug` for uncertain product behavior unless the user explicitly asks for structural coverage only.
 - Handles failing tests, new tests, coverage review, and flaky tests.
 - Uses red-first behavior when feasible for TDD or regression tests, then hands off with intended behavior, failing test path, command, current failure, likely source area, and verification target before production changes.
-- Chooses test type by boundary: pure logic unit, component DOM, and existing integration/contract tests for cross-module contracts.
+- Chooses test type by boundary: pure logic unit tests and existing integration/contract tests for cross-module contracts.
 - Ranks coverage gaps by user impact, changed behavior, risk boundary, and edge-case value.
-- Keeps DOM-rendered and hybrid component tests here; real-browser automation is outside this suite.
+- Treats browser, DOM-rendered, visual, and e2e tests as unsupported by this suite.
 - Updates snapshots/goldens only after intended behavior is confirmed.
 - Uses `baseline-missing` tests only for explicitly requested structural coverage and limits claims to structural coverage.
 - Bounds coverage work and avoids introducing new frameworks without approval.

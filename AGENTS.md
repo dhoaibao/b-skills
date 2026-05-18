@@ -154,7 +154,7 @@ Graceful degradation: [✅ Possible / ⚠️ Partial / ❌ Not possible] — [br
 - [Bullet list of constraints and guardrails. Do NOT restate severity,
   risk, iteration cap, privacy gate, onboarding rule, confidence signal,
   run-id format, artifact paths, slug algorithm, status block, handoff
-  envelope, manifest schema, test-vs-bug decision, DOM/browser boundary,
+  envelope, manifest schema, test-vs-bug decision, unsupported browser/DOM test boundary,
   or canonical approval ask — those live in AGENTS.md and skills
   reference them.]
 ```
@@ -181,7 +181,7 @@ Keep command wrappers thin. They are entrypoints, not duplicate logic stores.
 
 ## MCP selection criteria
 
-Skills declare MCP usage by referencing **bundles** summarized in `global/AGENTS.md` §4 and fully defined in `references/runtime-contract.md` §4 — not by enumerating individual tool names. Bundle definitions own session-init steps, fallback behavior, cost/approval caveats, and language-coverage caveats.
+Skills declare MCP usage by referencing **bundles** summarized in `global/AGENTS.md` §4 and fully defined in `references/runtime-contract.md` §4 — not by enumerating individual MCP tool names. Native tools such as Glob/Grep/Read/Bash are not MCP bundles and may be listed separately when they are required by the workflow. Bundle definitions own session-init steps, fallback behavior, cost/approval caveats, and language-coverage caveats.
 
 | Role | When to add | Example |
 |---|---|---|
@@ -191,7 +191,7 @@ Skills declare MCP usage by referencing **bundles** summarized in `global/AGENTS
 
 **Rules:**
 - Never add a bundle just to increase coverage — every bundle must have a clear use case in the Steps section.
-- Reference the bundle name. Do not paste the per-tool list into the skill; that list belongs in `references/runtime-contract.md` §4.
+- Reference the bundle name. Do not paste the per-tool MCP list into the skill; that list belongs in `references/runtime-contract.md` §4. List native tools separately when useful.
 - Label each bundle in "Tools required" with its role: required vs `*(optional, for [condition])`*.
 - Always include a `Graceful degradation:` line summarizing skill-specific fallback (the generic MCP fallback ladder lives in `references/runtime-contract.md` §4 and is not restated).
 - Write skill prose to prefer the lightest capable tool. Do not force MCP-first behavior for exact strings, manifests, prose, small file reads, or other cases where native tools are cheaper and equally reliable.
@@ -249,4 +249,4 @@ Before merging any skill file change, verify:
 5. **No trigger keyword regression** — before rewriting a description, list all current trigger keywords and verify all survive in the new version
 6. **Suite validator passes** — run `scripts/validate-skills.sh` before installing or committing skill changes
 7. **No avoidable churn** — steps should not force repeated Serena preflights, optional MCP escalation, or skill switches when the current skill can complete with bounded evidence
-8. **No duplicated global concepts** — slug algorithm, status block, handoff envelope, manifest schema, approval ask, fallback labeling, tool-use heuristics, empty-state defaults, plan staleness gates, workspace isolation preference, review checkpoint cadence, completion closure protocol, and the DOM-unit vs browser boundary all live in `global/AGENTS.md` or `references/runtime-contract.md`. Skills reference them; they do not restate them.
+8. **No duplicated global concepts** — slug algorithm, status block, handoff envelope, manifest schema, approval ask, fallback labeling, tool-use heuristics, empty-state defaults, plan staleness gates, workspace isolation preference, review checkpoint cadence, completion closure protocol, and the unsupported browser/DOM test boundary all live in `global/AGENTS.md` or `references/runtime-contract.md`. Skills reference them; they do not restate them.

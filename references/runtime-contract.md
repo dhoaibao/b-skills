@@ -48,7 +48,7 @@ Match the user's intent to one active skill before acting. If a request spans ph
 - Unclear user goal, end state, or acceptance criteria beats `b-plan`; use `b-spec`.
 - Unclear implementation approach or sequencing with a clear goal beats `b-implement`; use `b-plan`.
 - `b-research` is for genuine external-knowledge blockers, not for questions the codebase or repo docs can answer locally.
-- DOM-rendered unit tests (jsdom, React Testing Library, Vue Test Utils) stay in `b-test`; real-browser automation is outside this suite.
+- Browser, DOM-rendered, visual, and e2e tests are unsupported by this suite and must not trigger adding jsdom, Playwright, Cypress, Puppeteer, WebDriver, or equivalent tooling as a side effect.
 - Explicit repository or suite-slice audits use `b-audit`; changed-code diff/range reviews stay in `b-review`.
 
 ### One active skill
@@ -229,7 +229,7 @@ Skip the line on trivial high-confidence answers (a single docs lookup with a di
 
 ### Tool priority
 
-Use the lightest reliable tool. Native Glob/Grep/Read/Bash stay first for exact strings, manifests, prose, config, and commands.
+Use the lightest reliable tool. Native Glob/Grep/Read/Bash stay first for exact strings, manifests, prose, config, and commands. Native tools are not MCP bundles; skill files may name them separately when they are part of the workflow.
 
 | Task shape | First choice | Then narrow with |
 |---|---|---|
@@ -259,7 +259,7 @@ Rely on GitNexus only when the repo is indexed, not stale, and the target file o
 
 ### MCP bundles
 
-Skills reference bundles by name instead of repeating tool lists.
+Skills reference MCP bundles by name instead of repeating per-tool MCP lists. Native tools such as Glob/Grep/Read/Bash are not MCP bundles and may be listed separately in a skill when they are workflow requirements.
 
 #### `serena-symbol-toolkit`
 
@@ -357,9 +357,13 @@ Only include counters that were actually used. Skip entirely on trivial runs. Th
 
 ## 5. Evidence standards
 
-Evidence hierarchy: **runtime** (tests, builds, logs, browser/network) > **symbol** (Serena bodies, declarations, references, diagnostics, edits) > **graph** (GitNexus routes, processes, impact, consumers) > **text** (exact native matches) > **search snippets** (triage only).
+Evidence hierarchy depends on the claim:
 
-Graph evidence helps review/exploration but does not prove edits are safe. Stale graph output is not evidence (see §4 freshness gate). Search snippets are discovery only; if they are the final source after fallbacks, label snippet-only with `Confidence: low` and name the missing primary source or extraction step.
+- **Code behavior:** runtime evidence (tests, builds, logs, browser/network) > symbol evidence (Serena bodies, declarations, references, diagnostics, edits) > graph evidence (GitNexus routes, processes, impact, consumers) > exact text > search snippets.
+- **Prose, config, command wrappers, contracts, manifests, and docs:** exact text from the current repository > runtime validation that consumes that text > symbol evidence when applicable > graph evidence for impact/radar only > search snippets.
+- **Blast radius and architecture:** fresh, target-aware graph evidence can scope impact, but exact source/symbol/runtime evidence must confirm any final safety claim.
+
+Graph evidence helps review/exploration but does not prove edits are safe. Stale graph output is not evidence (see §4 freshness gate). Exact text is authoritative for current prose/config/contract content. Search snippets are discovery only; if they are the final source after fallbacks, label snippet-only with `Confidence: low` and name the missing primary source or extraction step.
 
 When two authoritative sources disagree (e.g., two versions of vendor docs), prefer the one matching the pinned version (§4); if still ambiguous, present both with the conflict labeled and a `Confidence: medium` line.
 
@@ -376,6 +380,18 @@ When framework, library, or vendor API docs materially influence an implementati
 ### Baseline and freshness labels
 
 When intended behavior, requirements, or expected output are missing, label the result `baseline-missing` and restrict claims to observed code, diff, repro, or source evidence. Do not claim requirements coverage, product correctness, or `READY FOR PR` from a baseline-missing review or test pass.
+
+### Baseline source taxonomy
+
+A baseline is sufficient only when it states intended behavior, acceptance criteria, or an explicit contract for the surface under review. Prefer the most specific available source:
+
+- **User-confirmed intent:** current-chat instruction, explicit approval, or direct answer to a clarification question.
+- **Approved work artifact:** approved saved plan, approved chat plan, accepted spec, or checkpoint handoff.
+- **Project contract:** tests that intentionally define behavior, API/CLI/schema docs, ADRs, release notes, migration docs, security policy, or documented operational contract.
+- **External contract:** fetched vendor/framework docs, standards, or source-repo documentation matching the relevant version.
+- **Runtime reproduction:** exact symptom, logs, command output, or repro steps for debug/test work.
+
+Weak baselines include filenames, branch names, commit messages without behavior detail, issue titles without body, stale docs that conflict with code, comments that contradict current behavior, and search snippets. Use weak baselines only as discovery evidence and label remaining requirements coverage `baseline-missing`.
 
 For recency-sensitive, pricing, security, licensing, production-compatibility, and migration answers, include `as of <date>` or the publication/retrieval date of the decisive source. If the source date is unavailable, say so and lower confidence when freshness matters.
 
@@ -527,7 +543,7 @@ Security, data-loss, or production-impacting issues found in touched code may be
 
 - Prefer one narrow verification command per fix loop, then one broader command only when risk justifies it.
 - Before starting a broad, slow, or repeated suite command, state why the narrow checks are insufficient. If it is likely to exceed the current timeout or materially slow the run, ask before continuing unless the user already requested that exact check.
-- When a blocked debug/test/e2e run depends on environment differences, report an environment snapshot: command, workspace root, package manager/runtime versions when available, relevant flags/config, and what differs or remains unknown.
+- When a blocked debug/test run depends on environment differences, report an environment snapshot: command, workspace root, package manager/runtime versions when available, relevant flags/config, and what differs or remains unknown.
 
 ### Long-running commands
 
@@ -612,7 +628,7 @@ When the expected input is missing, do not silently fall back; ask once with a c
 - No git diff → ask which commit, branch, or range to review.
 - No approved plan → check if the request meets the small-direct-request threshold (§3); otherwise route to `/b-plan`.
 - No test framework in the repo → ask before adding one; never introduce a framework as a side effect.
-- No browser-test framework → browser-driven automation is outside this suite; do not add Playwright as a side effect.
+- Browser or DOM test request → unsupported by this suite; do not add jsdom, Playwright, Cypress, Puppeteer, WebDriver, or equivalent tooling as a side effect.
 - No MCP for the requested bundle → see the fallback ladder (§4) and label the run as `[degraded: <bundle> unavailable]`.
 
 ### Generated artifact provenance
@@ -787,7 +803,7 @@ When `state: blocked`, the `cause` field uses one of these canonical classes so 
 | `policy_block` | Action was refused by a safety gate (§6) without approval. |
 | `evidence_gap` | Required evidence (test, repro, baseline) is missing and cannot be synthesized. |
 | `conflict` | Approved plan conflicts with current repo state or another active artifact. |
-| `unsupported` | The request is outside the suite's capability (e.g., browser-driven automation is out of scope). |
+| `unsupported` | The request is outside the suite's capability (e.g., browser, DOM, visual, or e2e testing). |
 
 A single `cause` per status block. If multiple classes apply, pick the one the user can act on first; mention the others in `blockers`.
 
@@ -876,12 +892,11 @@ Never modify production code purely because a test is red. Never modify an asser
 
 Rerun the suspected test up to 2 times in isolation. If it passes some runs and fails others without any code change, mark it `flaky`, capture the failing output under `/tmp/opencode/b-skills/b-test/`, and investigate ordering, shared state, async timing, or external time/network dependence before either skipping or rewriting it.
 
-### DOM-unit vs browser-flow boundary
+### Unsupported browser and DOM testing boundary
 
-- jsdom, happy-dom, React Testing Library, Vue Test Utils, Svelte testing-library, and any test that renders components without launching a real browser → `b-test`.
-- Playwright, Cypress, WebdriverIO, Puppeteer, or anything driving a real Chromium/Firefox/WebKit instance → outside this suite.
-- A test file that boots Playwright but is invoked through the unit-test runner is still outside this suite because a real browser is launched.
-- **Hybrid component tests** (component-scoped tests that mount a real router, real store, real query client, or other non-trivial provider chain) stay in `b-test` as long as the runner is jsdom/happy-dom/node. Promote them out of suite scope only when a real browser engine drives the flow, or when the test starts requiring real network, real cookies, or visual assertions.
+- jsdom, happy-dom, React Testing Library, Vue Test Utils, Svelte testing-library, Playwright, Cypress, WebdriverIO, Puppeteer, and any test that renders UI through a DOM or drives a real browser → unsupported by this suite.
+- Visual, screenshot, browser-cookie, browser-session, real-network UI, and e2e flows are unsupported by this suite.
+- Stop with `cause: unsupported` when this is the requested work, unless the user narrows the task to repo-local code review, non-browser tests, or static analysis that does not render through a DOM or drive a browser.
 
 ### Agent-cannot-reproduce protocol (shared across `b-debug` and `b-test`)
 
@@ -931,7 +946,7 @@ When the user can reproduce a symptom but the agent cannot in the current enviro
 - Debug and test skills share the test data lifecycle rule in §7.
 - Skills must not redefine any of the items below. Reference the canonical section instead.
   - **Rubrics (§3):** severity, risk, "non-trivial", "small direct request", confidence signal.
-  - **Routing (§1, §10):** test-vs-bug decision, DOM-unit vs browser-flow boundary, hybrid component test boundary, self/external review boundary.
+  - **Routing (§1, §10):** test-vs-bug decision, unsupported browser/DOM test boundary, self/external review boundary.
   - **Protocols (§5, §6, §7, §10):** citation provenance, privacy gate, onboarding rule, patch discipline, iteration cap, transform rollback, cascading failures, agent-cannot-reproduce protocol, completion contract, snapshot confirmation, flake handling.
   - **Schemas (§8, §9):** run-id format, slug algorithm, artifact paths, manifest schema, status block, handoff envelope, output verbosity caps.
   - **Anti-patterns (§12):** common rationalizations table — skills reference it; they do not maintain their own copies.

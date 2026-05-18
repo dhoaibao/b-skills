@@ -4,9 +4,9 @@ description: >
   Test-driven development, test debugging, and test coverage evaluation.
   ALWAYS invoke when the user asks to write tests, fix failing tests,
   evaluate coverage, or work TDD-style. Unlike b-debug, which traces runtime
-  bugs, b-test owns test-specific failures: wrong assertions, missing mocks,
-  fixture or setup issues, and coverage gaps. Use the test-vs-bug decision in
-  AGENTS.md section 10 when a red test could go either way.
+  bugs, b-test owns non-browser test-specific failures: wrong assertions,
+  missing mocks, fixture or setup issues, and coverage gaps. Browser, DOM,
+  visual, and e2e tests are unsupported by this suite.
 compatibility: opencode
 metadata:
   suite: b-skills
@@ -16,18 +16,18 @@ metadata:
 
 $ARGUMENTS
 
-Own code-level tests: add coverage, fix test-only failures, and avoid confusing red tests with product bugs.
+Own non-browser code-level tests: add coverage, fix test-only failures, and avoid confusing red tests with product bugs.
 
 ## When to use
 
 - The user asks to write tests, fix failing tests, evaluate coverage, or work TDD-style.
 - The global test-vs-bug decision routes a failing test to the test lane.
-- DOM-rendered unit tests and hybrid component tests are in scope.
+- Non-browser unit, integration, and contract tests are in scope when the repo already has the relevant test style.
 
 ## When NOT to use
 
 - The failing test likely exposes real runtime behavior -> use **b-debug**.
-- The task drives a real browser or browser-only test runner -> outside this suite.
+- The task renders through a DOM, drives a browser, performs visual testing, or runs e2e/browser-only tooling -> unsupported by this suite; stop rather than adding browser or DOM tooling.
 - Scope, acceptance, or intended behavior is unclear -> use **b-spec** or **b-debug** per the global test-vs-bug decision.
 - The task is pre-PR logic review -> use **b-review**.
 - The task needs a new test strategy/framework -> use **b-plan** first.
@@ -49,14 +49,14 @@ Find relevant test files and project commands from manifests or CI. If a failing
 
 ### Step 2 - Choose the lane
 
-Use the global test-vs-bug decision. Acceptable behavior confirmation sources are user-confirmed intent, an approved spec/plan, existing product contract, existing passing tests that define the behavior, source change that intentionally updates behavior, or fetched framework docs for API semantics. If no behavior baseline exists, stop and hand off to **b-spec** for unclear intent or **b-debug** for uncertain product behavior, unless the user explicitly asks for structural coverage only.
+Use the global test-vs-bug decision and baseline source taxonomy. Acceptable behavior confirmation sources are user-confirmed intent, an approved spec/plan, existing product contract, existing passing tests that define the behavior, source change that intentionally updates behavior, or fetched framework docs for API semantics. If no behavior baseline exists, stop and hand off to **b-spec** for unclear intent or **b-debug** for uncertain product behavior, unless the user explicitly asks for structural coverage only.
 
 - **Failing test:** fix assertion, mock, fixture, setup, async, snapshot, or harness drift only after intended behavior is confirmed.
 - **Write tests:** add regression/unit/integration coverage for known behavior. For TDD or regression work, make the test fail first when feasible, then hand off with the intended behavior, failing test path, command, current failure, likely source area, and verification target before production changes.
 - **Coverage review:** rank missing tests by user impact, changed behavior, risk boundary, and edge-case value; add only the requested/highest-value gaps.
 - **Flaky test:** use the global flake procedure before rewriting or skipping.
 
-Choose test type by the behavior boundary: pure logic gets unit tests, component behavior gets DOM-rendered tests, and cross-module contracts get integration or contract tests if the repo already has them. Real-browser behavior is outside this suite.
+Choose test type by the behavior boundary: pure logic gets unit tests, and cross-module contracts get integration or contract tests if the repo already has them. Browser, DOM-rendered, visual, and e2e behavior is unsupported by this suite; stop rather than adding browser or DOM tooling.
 
 If product behavior is uncertain, hand off to **b-debug**.
 
@@ -85,7 +85,7 @@ Type -> Framework -> Findings -> Changes -> Verification -> Remaining gaps
 - Never change production code just because a test is red.
 - Never update assertions, snapshots, or goldens without confirming intended behavior.
 - Add `baseline-missing` tests only when the user explicitly asks for structural coverage; otherwise stop or hand off before writing them.
-- Real-browser flows are outside this suite.
+- Browser, DOM-rendered, visual, and e2e tests are unsupported by this suite; do not add browser or DOM tooling as a side effect.
 - Do not introduce test, coverage, property-based, fuzzing, or contract-test frameworks without approval.
 - Keep fixture and mock changes local when practical.
 - Use global patch discipline, verification ladder, and iteration cap.
