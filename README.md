@@ -37,6 +37,8 @@ The installer deploys this suite into Claude Code user-level config:
 - `~/.claude/b-skills/install.json`
 - `~/.claude/b-skills/backups/` *(created on demand when a suite-managed backup is written or migrated)*
 
+Phase 1 does not migrate OpenCode-only custom provider settings into Claude Code, and it does not remove a previous `~/.config/opencode/` installation. Keep or remove old OpenCode config separately after verifying you no longer need it.
+
 If `~/.claude/CLAUDE.md` already exists and you do **not** approve replacement, the installer keeps that file, writes the suite snapshot to `~/.claude/b-skills/CLAUDE.md`, and exits with an activation-pending status plus next steps. Full suite behavior requires either replacing `CLAUDE.md` or manually merging the snapshot into the active file.
 
 This repository is the **install-only source layout** for that deployment. Claude Code does **not** load the checked-in `skills/`, `agents/`, `hooks/`, `settings/`, or `references/` directories directly from this repo root; `install.sh` copies them into the correct `~/.claude/` paths.
@@ -116,7 +118,7 @@ Claude governance assets added for phase 1:
 | `hooks/b-skills-guard.py` | SessionStart context plus Bash risk guard for destructive, dependency, git-history, production-like, and broad in-place mutation commands |
 | `settings/b-skills.settings.json` | Claude settings template wiring `SessionStart`, `PreToolUse`, and `PermissionRequest` hooks plus ask/deny permission rules |
 
-The hook denies only clearly catastrophic disk or root/home removal commands. Commands that are legitimate with explicit approval, such as dependency writes, commits, force pushes, infrastructure changes, and bulk rewrites, are routed through Claude's approval flow.
+The hook denies only clearly catastrophic disk or root/home removal commands. Commands that are legitimate with explicit approval, such as dependency writes, commits, force pushes, infrastructure changes, and bulk rewrites, are routed through Claude's approval flow. `PreToolUse` returns Claude's `permissionDecision` shape; `PermissionRequest` only emits Claude's native `decision.behavior` shape for hard denies and otherwise lets Claude's normal approval prompt continue.
 
 Claude execution choices for the 9-skill surface:
 
@@ -225,6 +227,7 @@ Default installer MCPs, when `B_SKILLS_INSTALL_MCP=Y` or the user opts in intera
 - Forked skills set `context: fork` and point at concrete agents in `agents/`; each agent documents tool, permission, and memory boundaries.
 - Shared references live in `references/*.md` and install to `~/.claude/references/b-skills/`; single-skill references live at `skills/<name>/reference.md` and install with their owning skill.
 - `install.sh` is responsible for deploying and pruning suite-managed files under `~/.claude/` and intentionally merging `~/.claude/settings.json` and optional `~/.claude.json` MCP config.
+- OpenCode custom provider setup and `~/.config/opencode/` cleanup are intentionally outside the phase 1 Claude-native installer. They are not runtime dependencies for Claude Code and should be handled manually or by a later explicit migration tool.
 - `install.sh --uninstall` removes b-skills-managed skills, agents, hooks, shared references, settings entries added by b-skills, and metadata; it restores a recorded `CLAUDE.md` backup only when the active file still matches the b-skills memory snapshot, otherwise it preserves the active file. Backup files are kept under `~/.claude/b-skills/backups/` for manual rollback.
 - `scripts/smoke-install.sh` runs isolated installer smoke tests against a temp HOME and repo snapshot.
 - `scripts/validate-skills.sh` checks Claude-native skill frontmatter, required sections, stale tool names, old artifact paths, GitNexus scope drift, runtime-kernel/detailed-contract split, runtime-global leakage, and README/REFERENCE coverage.

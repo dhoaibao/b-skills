@@ -54,6 +54,6 @@ Use this reference to make audits repeatable without turning `SKILL.md` into a l
 ### b-skills Suite Audit
 
 - Check every `skills/*/SKILL.md` for trigger boundary, stop conditions, task-specific workflow, and global-rule duplication.
-- Check `CLAUDE.md`, agents, hooks, settings, and `references/runtime-contract.md` for conflicting schemas, paths, tool priorities, and safety gates.
+- Check `CLAUDE.md`, agents, hooks, settings, and `references/b-skills/runtime-contract.md` for conflicting schemas, paths, tool priorities, and safety gates.
 - Cross-check `README.md` and `REFERENCE.md` only for consistency with runtime-facing files.
 - Run `scripts/validate-skills.sh` unless explicitly skipped.

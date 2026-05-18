@@ -84,6 +84,25 @@ def has_dangerous_recursive_rm(command: str) -> bool:
 
 
 def emit_decision(event_name: str, decision: str, reason: str) -> None:
+    if event_name == "PermissionRequest":
+        if decision != "deny":
+            return
+        print(
+            json.dumps(
+                {
+                    "hookSpecificOutput": {
+                        "hookEventName": event_name,
+                        "decision": {
+                            "behavior": "deny",
+                            "message": reason,
+                            "interrupt": True,
+                        },
+                    }
+                }
+            )
+        )
+        return
+
     print(
         json.dumps(
             {

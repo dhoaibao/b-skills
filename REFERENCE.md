@@ -33,6 +33,8 @@ Governance assets:
 
 The hook/settings layer intentionally enforces only high-value gates in phase 1. Detailed safety policy remains in this reference while hook coverage stays intentionally narrow.
 
+OpenCode-only custom provider configuration and cleanup of old `~/.config/opencode/` installs are intentionally outside phase 1. The Claude-native installer manages Claude Code user-level runtime files only; any OpenCode config retirement should be manual or handled by a later explicit migration tool.
+
 Execution choices:
 
 | Skill | Claude execution | Agent | Rationale |
@@ -299,6 +301,7 @@ Key maintainer rules:
 - `baseline-missing` label when expected behavior is absent; no requirements-coverage claims from baseline-missing evidence.
 - Serena is primary hands; GitNexus is optional radar. Cited URLs must come from the current session.
 - Installer behavior: see `README.md` §Repository maintenance. Managed config metadata lives under `~/.claude/b-skills/`, with backups under `~/.claude/b-skills/backups/`.
+- OpenCode custom provider setup and old `~/.config/opencode/` cleanup are non-goals for the phase 1 Claude-native installer unless a future explicit migration tool is added.
 
 ### Tool model
 - Native tools first for exact strings, manifests, prose, configs, and small reads.

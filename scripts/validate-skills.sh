@@ -14,6 +14,7 @@ root = Path('.')
 errors = []
 
 skill_paths = sorted(root.glob('skills/*/SKILL.md'))
+skill_runtime_paths = sorted(root.glob('skills/*/*.md'))
 skill_names = [path.parent.name for path in skill_paths]
 agent_paths = sorted(root.glob('agents/*.md'))
 agent_names = [path.stem for path in agent_paths]
@@ -139,6 +140,11 @@ for path in skill_paths:
 
     if name in {'b-research', 'b-test'} and re.search(r'gitnexus', text, re.IGNORECASE):
         errors.append(f'{path}: GitNexus should stay out of this skill workflow')
+
+for path in skill_runtime_paths:
+    text = path.read_text()
+    if 'references/runtime-contract.md' in text:
+        errors.append(f'{path}: installed skill runtime files must reference references/b-skills/runtime-contract.md, not source-repo references/runtime-contract.md')
 
 readme = (root / 'README.md').read_text()
 reference = (root / 'REFERENCE.md').read_text()
@@ -269,10 +275,13 @@ for required in [
     '## Routing',
     '## Tool Priority',
     '## Safety And Execution',
-    'references/runtime-contract.md',
+    'references/b-skills/runtime-contract.md',
 ]:
     if required not in claude_memory:
         errors.append(f'global/CLAUDE.md: missing runtime memory marker {required!r}')
+
+if 'references/runtime-contract.md' in claude_memory:
+    errors.append('global/CLAUDE.md: installed runtime memory must reference references/b-skills/runtime-contract.md, not source-repo references/runtime-contract.md')
 
 for required in [
     'CLAUDE_DIR="$HOME/.claude"',
@@ -313,15 +322,19 @@ for doc_path, doc_text in [('README.md', readme), ('REFERENCE.md', reference), (
     for required in ['~/.claude/', 'CLAUDE.md', 'global/CLAUDE.md', 'settings/b-skills.settings.json', 'hooks/b-skills-guard.py']:
         if required not in doc_text:
             errors.append(f'{doc_path}: missing Claude-native layout marker {required!r}')
-    for forbidden in ['~/.config/opencode', 'opencode.json', 'compatibility: opencode']:
+    for forbidden in ['opencode.json', 'compatibility: opencode']:
         if forbidden in doc_text:
             errors.append(f'{doc_path}: stale OpenCode path/field remains: {forbidden!r}')
+
+for doc_path, doc_text in [('README.md', readme), ('REFERENCE.md', reference)]:
+    if '~/.config/opencode' in doc_text and 'phase 1 Claude-native installer' not in doc_text:
+        errors.append(f'{doc_path}: ~/.config/opencode may appear only in the explicit phase-1 non-goal decision')
 
 if not hook_guard_path.exists():
     errors.append('hooks/b-skills-guard.py: missing Claude governance hook guard')
 else:
     hook_guard = hook_guard_path.read_text()
-    for required in ['DENY_PATTERNS', 'ASK_PATTERNS', 'permissionDecision', '--session-start']:
+    for required in ['DENY_PATTERNS', 'ASK_PATTERNS', 'permissionDecision', 'PermissionRequest', 'decision', 'behavior', '--session-start']:
         if required not in hook_guard:
             errors.append(f'hooks/b-skills-guard.py: missing governance marker {required!r}')
 

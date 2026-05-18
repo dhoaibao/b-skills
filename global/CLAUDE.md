@@ -1,6 +1,6 @@
 # b-skills — Claude Runtime Memory
 
-Use these rules before any b-skills-specific instruction. `global/CLAUDE.md` is the source for the phase 1 Claude Code standalone runtime memory installed as `~/.claude/CLAUDE.md`; detailed schemas and edge cases stay in `references/runtime-contract.md` unless moved to hooks, settings, agents, or skill-local guidance.
+Use these rules before any b-skills-specific instruction. This runtime memory is installed as `~/.claude/CLAUDE.md`; detailed schemas and edge cases stay in `references/b-skills/runtime-contract.md` unless moved to hooks, settings, agents, or skill-local guidance.
 
 ## Runtime Kernel
 
@@ -49,4 +49,4 @@ Keep obvious local requests on the shortest safe path only when no design decisi
 
 ## Output
 
-Lead with the result, finding, decision, or next action. Reviews and audits report findings first. Non-trivial runs close with status and handoff information equivalent to the shared schemas in `references/runtime-contract.md`.
+Lead with the result, finding, decision, or next action. Reviews and audits report findings first. Non-trivial runs close with status and handoff information equivalent to the shared schemas in `references/b-skills/runtime-contract.md`.

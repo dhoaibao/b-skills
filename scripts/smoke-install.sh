@@ -96,6 +96,31 @@ PY
   [[ "$output" == *"\"permissionDecision\": \"$expected_decision\""* ]] || fail "expected hook decision $expected_decision for command: $command_text"
 }
 
+assert_permission_request_decision() {
+  local hook_path="$1" command_text="$2" expected_behavior="$3" output
+  output="$(COMMAND_TEXT="$command_text" python3 - <<'PY' | python3 "$hook_path"
+import json
+import os
+
+print(json.dumps({"hook_event_name": "PermissionRequest", "tool_input": {"command": os.environ["COMMAND_TEXT"]}}))
+PY
+)"
+  [[ "$output" == *"\"decision\":"* ]] || fail "expected PermissionRequest decision for command: $command_text"
+  [[ "$output" == *"\"behavior\": \"$expected_behavior\""* ]] || fail "expected PermissionRequest behavior $expected_behavior for command: $command_text"
+}
+
+assert_permission_request_no_decision() {
+  local hook_path="$1" command_text="$2" output
+  output="$(COMMAND_TEXT="$command_text" python3 - <<'PY' | python3 "$hook_path"
+import json
+import os
+
+print(json.dumps({"hook_event_name": "PermissionRequest", "tool_input": {"command": os.environ["COMMAND_TEXT"]}}))
+PY
+)"
+  [ -z "$output" ] || fail "expected no PermissionRequest override for command: $command_text"
+}
+
 make_repo_snapshot() {
   local snapshot_dir="$1"
   mkdir -p "$snapshot_dir"
@@ -196,6 +221,8 @@ main() {
   assert_hook_decision "$sandbox_fresh/home/.claude/hooks/b-skills-guard.py" 'rm -rf ${HOME:?}' deny
   assert_hook_decision "$sandbox_fresh/home/.claude/hooks/b-skills-guard.py" 'rm -rf ~/' deny
   assert_hook_decision "$sandbox_fresh/home/.claude/hooks/b-skills-guard.py" 'git reset --hard HEAD' ask
+  assert_permission_request_decision "$sandbox_fresh/home/.claude/hooks/b-skills-guard.py" 'rm -rf /' deny
+  assert_permission_request_no_decision "$sandbox_fresh/home/.claude/hooks/b-skills-guard.py" 'git reset --hard HEAD'
   assert_contains "$sandbox_fresh/home/.claude/b-skills/install.json" '"runtime": "claude"'
   assert_contains "$sandbox_fresh/home/.claude/b-skills/install.json" '"memoryAction": "replace"'
   assert_contains "$sandbox_fresh/home/.claude/b-skills/install.json" '"activationState": "active"'
