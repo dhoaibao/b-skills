@@ -60,6 +60,7 @@ Match the user's intent to one active skill before acting. If a request spans ph
 
 | Intent | Skill |
 |---|---|
+| End-to-end PR readiness workflow across phases | `/b-orchestrate` |
 | Clarify what to build, lock goals/constraints | `/b-spec` |
 | Decide how to build, decompose work | `/b-plan` |
 | External docs, API facts, comparisons | `/b-research` |
@@ -72,6 +73,7 @@ Match the user's intent to one active skill before acting. If a request spans ph
 
 ### Trigger precedence (when intents overlap)
 
+- Explicit end-to-end PR-readiness workflows use `b-orchestrate`; single-phase asks stay with the phase owner.
 - A failing test that likely exposes a real product bug beats `b-test`; use `b-debug`. See §10.
 - A named behavior-preserving rename/extract/move beats `b-implement`; use `b-refactor`.
 - Unclear user goal, end state, or acceptance criteria beats `b-plan`; use `b-spec`.
@@ -101,6 +103,7 @@ Match intent regardless of language. The phrases below are routing aids only; do
 
 | Skill | English triggers | Vietnamese triggers |
 |---|---|---|
+| `/b-orchestrate` | orchestrate, workflow, end-to-end, ready for PR, full cycle | điều phối, workflow, quy trinh day du, san sang PR |
 | `/b-spec` | clarify, requirements, scope, rough idea, "what exactly should we build" | làm rõ, yêu cầu, phạm vi, ý tưởng thô, chưa rõ cần gì |
 | `/b-plan` | plan, design, decompose, approach, "how should I" | lập kế hoạch, thiết kế, hướng tiếp cận, chia nhỏ |
 | `/b-research` | docs, library, API, compare, look up, "what is" | tra cứu, tài liệu, so sánh, tìm hiểu |

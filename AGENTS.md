@@ -14,6 +14,7 @@ Guidelines for creating, editing, and maintaining the install-only OpenCode skil
 ## Quick links
 
 - `skills/b-spec/SKILL.md` — Clarify underspecified requests before planning
+- `skills/b-orchestrate/SKILL.md` — Coordinate full PR-readiness workflows across phase skills
 - `skills/b-plan/SKILL.md` — Task decomposition and planning
 - `skills/b-research/SKILL.md` — Library docs and multi-source research
 - `skills/b-implement/SKILL.md` — Approved-plan execution

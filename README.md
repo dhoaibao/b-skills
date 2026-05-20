@@ -1,6 +1,6 @@
 # b-skills
 
-A lean 9-skill suite for **OpenCode**, optimized around scoped workflows, Serena-backed symbol work, optional GitNexus graph radar, and explicit safety rules when work crosses risky boundaries.
+A lean 10-skill suite for **OpenCode**, optimized around scoped workflows, Serena-backed symbol work, optional GitNexus graph radar, and explicit safety rules when work crosses risky boundaries.
 
 Browser, DOM-rendered, visual, and e2e tests are intentionally unsupported. The suite handles non-browser unit, integration, and contract tests, but it does not add or drive jsdom, Playwright, Cypress, Puppeteer, WebDriver, or equivalent browser/DOM tooling.
 
@@ -52,6 +52,7 @@ This repository is an install-only source layout. OpenCode does not load the che
 
 | Skill | Phase | When to use |
 |---|---|---|
+| `/b-orchestrate` | End-to-end | Coordinate spec, plan, implementation, optional tests, review, and review-fix loops until PR-ready or blocked |
 | `/b-spec` | Clarify | Clarify unclear end states, constraints, acceptance criteria, non-goals, and assumptions before planning or coding |
 | `/b-plan` | Decide | Turn a clear goal into a short chat plan or saved execution plan |
 | `/b-research` | Decide | Fetch external docs, API facts, config keys, method signatures, comparisons, recency-sensitive evidence, or approved local document evidence with structured extraction when specific fields are enough |
@@ -65,6 +66,7 @@ This repository is an install-only source layout. OpenCode does not load the che
 Typical flow:
 
 ```text
+/b-orchestrate [feature/fix request]  # full PR-readiness workflow
 /b-spec [rough idea] -> /b-plan [scoped task] -> approve plan -> /b-implement -> /b-test -> /b-review
 /b-research [question]  # external docs, API facts, comparisons, or recent information
 /b-debug [symptom]      # runtime bugs, errors, broken behavior, slow paths

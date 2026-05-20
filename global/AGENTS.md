@@ -36,6 +36,7 @@ Match the user's intent to one active skill. If a request spans phases, sequence
 
 | Intent | Skill |
 |---|---|
+| End-to-end PR readiness workflow across phases | `/b-orchestrate` |
 | Clarify what to build, lock goals/constraints | `/b-spec` |
 | Decide how to build, decompose work | `/b-plan` |
 | External docs, API facts, comparisons | `/b-research` |
@@ -48,6 +49,7 @@ Match the user's intent to one active skill. If a request spans phases, sequence
 
 ### Trigger Precedence
 
+- Explicit end-to-end PR-readiness workflows use `b-orchestrate`; single-phase asks stay with the phase owner.
 - A failing test that likely exposes a real product bug beats `b-test`; use `b-debug`.
 - A named behavior-preserving rename/extract/move beats `b-implement`; use `b-refactor`.
 - Unclear user goal, end state, or acceptance criteria beats `b-plan`; use `b-spec`.

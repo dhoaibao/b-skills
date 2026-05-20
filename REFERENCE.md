@@ -1,6 +1,6 @@
 # b-skills — Skill Reference
 
-Reference guide for each skill in the maintained 9-skill suite. For install and high-level repo overview, see [README.md](README.md). For maintainer guidance, see [AGENTS.md](AGENTS.md).
+Reference guide for each skill in the maintained 10-skill suite. For install and high-level repo overview, see [README.md](README.md). For maintainer guidance, see [AGENTS.md](AGENTS.md).
 
 When this document cites `global/AGENTS.md`, that is the source-repo runtime kernel path. Installed skill prose should reference the runtime path `AGENTS.md`; detailed runtime behavior lives at `references/runtime-contract.md` in this repo and `references/b-skills/runtime-contract.md` after install. Runtime references are required read gates when a skill needs their schemas, checklists, or protocols.
 
@@ -11,6 +11,23 @@ Browser, DOM-rendered, visual, and e2e tests are unsupported by this suite. Do n
 ---
 
 ## Skill reference
+
+### b-orchestrate
+
+Coordinates a complete PR-readiness workflow across phase skills.
+
+**Core behavior**
+- Starts from a workflow goal and defines success as a `b-review` readiness verdict with required verification complete.
+- Reads runtime contract gates before routing across phase skills, treating plans as approved, applying review-fix loops, or emitting non-trivial status output.
+- Uses `b-spec` only when the target outcome is unclear, then `b-plan` for non-trivial sequencing or a short execution outline for small direct workflows.
+- Hands actual build work to `b-implement`, runtime failures to `b-debug`, behavior-preserving transforms to `b-refactor`, and non-browser test work to `b-test`.
+- Runs `b-review` against the current diff with the spec or approved plan as baseline, then routes findings back to the responsible phase skill.
+- Re-reviews after each coherent fix set until `READY FOR PR`, user-accepted `READY WITH FOLLOW-UPS`, or a blocker.
+
+**Output**
+- Workflow goal, phase state, changes/verification, review verdict, blockers/follow-ups, and next action.
+
+---
 
 ### b-spec
 

@@ -1092,7 +1092,7 @@ is_b_skills_skill_dir() {
 
 is_legacy_b_skills_command_name() {
   case "$1" in
-    b-plan|b-spec|b-research|b-implement|b-refactor|b-debug|b-test|b-e2e|b-review)
+    b-orchestrate|b-plan|b-spec|b-research|b-implement|b-refactor|b-debug|b-test|b-e2e|b-review)
       return 0
       ;;
     *)
@@ -1360,6 +1360,7 @@ uninstall_b_skills() {
   section "Uninstall b-skills"
 
   remove_skill_if_managed b-spec
+  remove_skill_if_managed b-orchestrate
   remove_skill_if_managed b-plan
   remove_skill_if_managed b-research
   remove_skill_if_managed b-implement
@@ -1371,6 +1372,7 @@ uninstall_b_skills() {
   remove_skill_if_managed b-audit
 
   remove_command_if_managed b-spec
+  remove_command_if_managed b-orchestrate
   remove_command_if_managed b-plan
   remove_command_if_managed b-research
   remove_command_if_managed b-implement
