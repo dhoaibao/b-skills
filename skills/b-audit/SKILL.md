@@ -41,7 +41,7 @@ Flags: `--baseline=<path|url>`, `--surface=<area>`, `--skip-checks`, `--self`, `
 - `context7-docs` *(optional, for suspicious third-party API usage)*
 - `brave-discovery` + `firecrawl-extraction` *(optional, for focused public CVE, advisory, or release-drift lookup)*
 
-Fallbacks: `AGENTS.md` section 4. Graceful degradation: possible with native tools, focused reads, and targeted commands; graph-shaped impact confidence may be lower without optional radar.
+If required tools are unavailable, read `references/b-skills/runtime-contract.md` §4 before applying fallbacks. Graceful degradation: possible with native tools, focused reads, and targeted commands; graph-shaped impact confidence may be lower without optional radar.
 
 ## Steps
 
@@ -49,11 +49,11 @@ Fallbacks: `AGENTS.md` section 4. Graceful degradation: possible with native too
 
 Lock the requested surface from arguments or `--surface`. If the surface is absent or too broad, ask for the smallest clarification that names the target area. Do not default to a whole-repository audit.
 
-State mode: self-audit or external audit. Use arguments, `--baseline`, approved plan, checkpoint handoff, or short clarification to identify intended behavior, applying the global baseline source taxonomy. Without a sufficient baseline, label the run `baseline-missing` and do not claim requirements coverage.
+State mode: self-audit or external audit. Use arguments, `--baseline`, approved plan, checkpoint handoff, or short clarification to identify intended behavior. Read `references/b-skills/runtime-contract.md` §5 before applying the baseline source taxonomy. Without a sufficient baseline, label the run `baseline-missing` and do not claim requirements coverage.
 
 ### Step 2 - Pick the checklist
 
-Choose the smallest surface-specific checklist from `reference.md`: installer/update path, runtime contract, validator, route/tool boundary, dependency/lockfile, generated artifact, or security-sensitive rule.
+Read `reference.md` before choosing the smallest surface-specific checklist: installer/update path, runtime contract, validator, route/tool boundary, dependency/lockfile, generated artifact, or security-sensitive rule.
 
 For b-skills suite audits, check routing boundaries, skill-to-command wrapper alignment, runtime-contract consistency, README/REFERENCE sync, validator coverage, artifact paths, and safety-gate drift.
 
@@ -71,7 +71,7 @@ Assess observability, cleanup, installation/update behavior, and rollback expect
 
 ### Step 5 - Report verdict
 
-Report findings first, ordered by global severity. Include checked-and-clean sampled areas and skipped surfaces. If no findings, say so and name residual risk or skipped checks. Save `report.md` only when the user asks for a saved audit, the audit is a durable handoff/checkpoint, or output is too large for chat; otherwise keep the audit in chat.
+Read `references/b-skills/runtime-contract.md` §3 and §9 before reporting severity-ordered findings, checked-and-clean caps, saved reports, or status output. If no findings, say so and name residual risk or skipped checks.
 
 Verdicts: **AUDIT PASS**, **AUDIT PASS WITH FOLLOW-UPS**, or **NEEDS FIXES**. Do not use **AUDIT PASS** when the audit has no baseline, required verification was skipped, or sampled coverage leaves material unreviewed risk; use **AUDIT PASS WITH FOLLOW-UPS** or **NEEDS FIXES** instead.
 
@@ -83,7 +83,7 @@ If external knowledge is required, resolve one narrow docs lookup inline or hand
 Scope/Mode/Baseline -> Findings -> Checked and clean -> Coverage/Verification/Operability -> Verdict
 ```
 
-Close non-trivial audits with the skill-exit status block from `AGENTS.md`.
+Read `references/b-skills/runtime-contract.md` §9 before closing a non-trivial audit with a status block.
 
 ## Rules
 
@@ -97,4 +97,4 @@ Close non-trivial audits with the skill-exit status block from `AGENTS.md`.
 
 ## Reference pointers
 
-- `reference.md` - concrete audit criteria for installer/update paths, runtime contracts, validators, route/tool boundaries, dependencies, generated artifacts, security-sensitive rules, and b-skills suite audits.
+- Read `reference.md` before applying concrete audit criteria for installer/update paths, runtime contracts, validators, route/tool boundaries, dependencies, generated artifacts, security-sensitive rules, or b-skills suite audits.

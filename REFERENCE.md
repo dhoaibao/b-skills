@@ -4,6 +4,8 @@ Reference guide for each skill in the maintained 9-skill suite. For install and 
 
 When this document cites `global/AGENTS.md`, that is the source-repo runtime kernel path. Installed skill prose should reference the runtime path `AGENTS.md`; detailed runtime behavior lives at `references/runtime-contract.md` in this repo and `references/b-skills/runtime-contract.md` after install. Runtime references are required read gates when a skill needs their schemas, checklists, or protocols.
 
+Runtime enforcement is intentionally mechanical: `global/AGENTS.md` owns the runtime gate checklist, each skill step uses explicit read gates for shared schemas/protocols/checklists, slash commands remind agents to follow the active kernel, and `scripts/validate-skills.sh` rejects passive pointers that would rely on memory.
+
 Browser, DOM-rendered, visual, and e2e tests are unsupported by this suite. Do not route jsdom, Playwright, Cypress, Puppeteer, WebDriver, or equivalent browser/DOM work to `b-test`; narrow the task to repo-local code review, non-browser tests, or static analysis that does not render through a DOM or drive a browser.
 
 ---
@@ -16,6 +18,7 @@ Clarifies rough or underspecified asks before planning.
 
 **Core behavior**
 - Stays active only while the target outcome is underdetermined.
+- Reads runtime contract gates before applying clarification budgets, handoff envelopes, or non-trivial status output.
 - Locks goal, constraints, acceptance criteria, non-goals, and assumptions with the smallest useful question loop.
 - Uses repo evidence and optional `CONTEXT.md` / `CONTEXT-MAP.md` terminology before asking the user what the repo already answers.
 - Enforces the global clarification budget; after two unresolved rounds, offers concrete interpretations with named assumptions.
@@ -30,6 +33,7 @@ Turns a clear goal into an execution-ready plan without implementing.
 
 **Core behavior**
 - Defaults to quick mode for low-risk, chat-sized scoped work and uses full mode only for durable, multi-session, dependency-heavy, or risky coordination.
+- Reads runtime contract and `skills/b-plan/reference.md` gates before saved-plan metadata, artifact paths, templates, staleness, or status output.
 - Avoids promoting routine multi-step work to a saved plan solely because it has several obvious substeps.
 - Saves full plans under `.opencode/b-skills/b-plan/<plan-file-slug>.md` with durable frontmatter and `contract_version` from `global/AGENTS.md`; the filename stays English while frontmatter `slug` remains the canonical task slug.
 - Promotes quick plans to saved plans when risk, breadth, or coordination grows.
@@ -53,6 +57,7 @@ Answers external-knowledge questions from fetched evidence.
 
 **Core behavior**
 - Chooses lookup for one fact/signature/config/capability and research for synthesis, comparison, recency, or conflicts.
+- Reads runtime contract gates before tool fallback, external extraction/privacy decisions, freshness/citation claims, deep extraction, or non-trivial status output.
 - Pins library versions when APIs, configs, migrations, signatures, or examples depend on version.
 - Treats user-provided URLs/files/documents as direct-source lookup when one source is likely sufficient.
 - Prefers structured extraction or query for specific fields, parameters, prices, tables, or lists, and keeps full markdown for full-page understanding, summaries, or quoted context.
@@ -76,6 +81,7 @@ Executes approved or clearly scoped work in coherent verified steps.
 
 **Core behavior**
 - Resolves source of truth from saved plan, plan slug, approved chat plan, or small direct request.
+- Reads runtime contract gates before plan staleness, worktree safety, manual patching, verification, high-risk completion, or status/handoff output.
 - Requires executable plan approval state or current-chat approval before editing.
 - Applies plan staleness before source edits and updates saved-plan progress/frontmatter without stripping metadata.
 - States a one-line pre-edit checkpoint covering source of truth, expected touch points, behavior that must not change, verification, and approval/review needs.
@@ -99,6 +105,7 @@ Owns runtime and behavior failures.
 
 **Core behavior**
 - Starts from concrete symptoms, stack traces, repro notes, determinism, and perf baseline when relevant.
+- Reads runtime contract gates before baseline taxonomy, containment/safety decisions, cannot-reproduce handling, manual patching, verification, or non-trivial status output.
 - Uses the shared baseline source taxonomy when expected behavior is disputed or weak.
 - Checks the regression window when available: recent commits, dependency/lockfile changes, config drift, feature flags, data shape changes, and environment differences.
 - Keeps a repro record for non-trivial or blocked bugs: command or interaction, target/workspace, versions/config flags, data mode, expected/actual behavior, determinism, and evidence without secret values.
@@ -125,6 +132,7 @@ Reviews diffs, ranges, or checkpoints.
 
 **Core behavior**
 - Runs `git status --short` before scoping, includes staged, unstaged, and in-scope untracked files for current-worktree review, and supports `--range` for changed-code review.
+- Reads runtime contract and `skills/b-review/reference.md` gates before baseline taxonomy, security checklist use, severity/status output, or saved reports.
 - Reviews cumulative WIP diffs from the best available base when appropriate.
 - Uses fast path only for low-risk single-area changes; contract/auth/security/migration/dependency changes force standard review.
 - Establishes a sufficient baseline from arguments, plan, checkpoint, clarification, or the shared baseline source taxonomy; otherwise labels the review diff-only.
@@ -153,6 +161,7 @@ Audits named repository or suite surfaces outside diff-first review.
 
 **Core behavior**
 - Locks a named surface from arguments or `--surface` and refuses to default to a whole-repository audit.
+- Reads runtime contract and `skills/b-audit/reference.md` gates before baseline taxonomy, surface checklist selection, severity/status output, or saved reports.
 - Establishes a sufficient baseline from arguments, `--baseline`, approved plan, checkpoint, clarification, or the shared baseline source taxonomy; otherwise labels the audit `baseline-missing`.
 - Chooses a surface-specific checklist: installer/update path, runtime contract, validator, route/tool boundary, dependency/lockfile, generated artifact, or security-sensitive rule.
 - For b-skills suite audits, checks routing boundaries, skill-command wrapper alignment, runtime-contract consistency, docs sync, validator coverage, artifact paths, and safety-gate drift.
@@ -176,6 +185,7 @@ Owns non-browser code-level testing work.
 
 **Core behavior**
 - Discovers framework and narrowest runnable command from manifests/CI.
+- Reads runtime contract gates before test-vs-bug routing, baseline taxonomy, flake handling, test data lifecycle handling, skipped-check labels, manual patching, or non-trivial status output.
 - Routes red tests through the global test-vs-bug decision.
 - Uses the shared baseline source taxonomy before changing assertions, snapshots, or behavior-defining tests.
 - Confirms intended behavior from user-confirmed intent, an approved spec/plan, product contract, existing passing tests, intentional source changes, or fetched framework docs before changing assertions or snapshots.
@@ -201,6 +211,7 @@ Handles concrete behavior-preserving transforms.
 
 **Core behavior**
 - Locks exact target before editing.
+- Reads runtime contract gates before risk classification, manual patching, rollback/cascade/iteration handling, or non-trivial status output.
 - Uses Serena references as the primary static map and augments with exact text search for exported names, config keys, CLI flags, route strings, filenames, docs, generated consumers, and other dynamic/config/prose references.
 - Uses a low-friction local fast path only for one-file, non-exported, LSP-supported, behavior-preserving refactors with direct semantic or narrow-test evidence and no generated consumers.
 - Promotes risk for weak behavior evidence, non-LSP languages, generated consumers, exports/shared APIs, moves, and broad reference maps.

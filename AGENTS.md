@@ -9,6 +9,7 @@ Guidelines for creating, editing, and maintaining the install-only OpenCode skil
 - Runtime suite behavior lives in `global/AGENTS.md` (kernel), `references/runtime-contract.md` (detailed contract), and `skills/*/SKILL.md` (per-skill).
 - `install.sh` deploys runtime files to `~/.config/opencode/`, always writes `b-skills/AGENTS.md`, and replaces `AGENTS.md` only when missing or approved.
 - When authoring runtime-facing skill prose, reference `AGENTS.md`. Long-form schemas, rubrics, and edge-case protocols live in `references/runtime-contract.md`; when a skill depends on one of them, phrase the instruction as a required read gate rather than a passive pointer.
+- Runtime conformance depends on explicit read gates plus the runtime gate checklist, not passive reminders. Keep those gates local to the step that uses the shared schema, checklist, or protocol.
 
 ## Quick links
 
@@ -130,8 +131,7 @@ the skill; the bundle definition in `AGENTS.md` is the source of
 truth, including session-init steps, fallback ladder, and cost/approval
 caveats.
 
-Fallbacks: reference `AGENTS.md` MCP fallback ladder. Skills add
-only skill-specific stop/degrade behavior.
+Fallbacks: if required tools are unavailable, read `references/b-skills/runtime-contract.md` §4 before applying fallbacks. Skills add only skill-specific stop/degrade behavior.
 
 Graceful degradation: [✅ Possible / ⚠️ Partial / ❌ Not possible] — [brief explanation]
 
@@ -170,7 +170,7 @@ Every skill in this repo must have a matching `commands/<name>.md` wrapper:
 description: Run the b-example skill for [short purpose]
 ---
 
-Load the `b-example` skill and follow it exactly for this request.
+Load the `b-example` skill and follow it exactly for this request. Follow the active `AGENTS.md` runtime kernel and the skill's required read gates.
 
 $ARGUMENTS
 ```
@@ -252,3 +252,4 @@ Before merging any skill file change, verify:
 8. **Token hygiene preserved** — skill edits should keep MCP bundles lazy, use body-last Serena guidance, prefer structured extraction for specific data, and shape large command output at the source instead of adding broad full-context reads.
 9. **No duplicated global concepts** — slug algorithm, status block, handoff envelope, manifest schema, saved-report defaults, approval ask, fallback labeling, tool-use heuristics, empty-state defaults, plan staleness gates, workspace isolation preference, review checkpoint cadence, completion closure protocol, and the unsupported browser/DOM test boundary all live in `global/AGENTS.md` or `references/runtime-contract.md`. Skills reference them; they do not restate them.
 10. **Reference gates preserved** — if a skill step requires a shared schema, checklist, protocol, or output shape, it must tell the agent to read the named section/file before applying it, without copying the full global rule into the skill.
+11. **Runtime enforcement preserved** — `global/AGENTS.md` keeps the runtime gate checklist, skill steps keep explicit read gates at the point of use, command wrappers mention the active runtime kernel, and `scripts/validate-skills.sh` rejects stale passive pointers.

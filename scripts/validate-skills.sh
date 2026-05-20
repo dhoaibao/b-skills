@@ -87,6 +87,11 @@ for path in skill_paths:
     command_path = root / 'commands' / f'{name}.md'
     if not command_path.exists():
         errors.append(f'{path}: missing matching command wrapper {command_path}')
+    else:
+        command_text = command_path.read_text()
+        for required in ['active `AGENTS.md` runtime kernel', 'required read gates']:
+            if required not in command_text:
+                errors.append(f'{command_path}: missing runtime salience phrase {required!r}')
 
     forbidden_patterns = [
         r'`write`',
@@ -103,6 +108,45 @@ for path in skill_paths:
     for pattern in forbidden_patterns:
         if re.search(pattern, text):
             errors.append(f'{path}: forbidden stale runtime pattern {pattern!r}')
+
+    stale_passive_patterns = [
+        r'from `AGENTS\.md`',
+        r'Close non-trivial .*`AGENTS\.md`',
+        r'Use `reference\.md`',
+        r'applying the global baseline source taxonomy',
+        r'Apply the global plan staleness gate',
+        r'Use the global test-vs-bug decision',
+        r'follow the global cannot-reproduce protocol',
+        r'Use global transform rollback',
+    ]
+    for pattern in stale_passive_patterns:
+        if re.search(pattern, text, re.IGNORECASE):
+            errors.append(f'{path}: passive runtime reference must become an explicit read gate: {pattern!r}')
+
+    if re.search(r'Read §\d+', text):
+        errors.append(f'{path}: read gates must name the reference file, not only a section number')
+
+    if 'Graceful degradation:' in text and '`references/b-skills/runtime-contract.md` §4' not in text:
+        errors.append(f'{path}: tool fallback must explicitly read runtime contract §4')
+
+    if re.search(r'status block|handoff envelope|status/handoff', text, re.IGNORECASE) and '`references/b-skills/runtime-contract.md` §9' not in text:
+        errors.append(f'{path}: status/handoff usage must explicitly read runtime contract §9')
+
+    skill_reference = path.parent / 'reference.md'
+    if skill_reference.exists() and 'reference.md' in text and 'Read `reference.md` before' not in text:
+        errors.append(f'{path}: local reference.md usage must be an explicit read gate')
+
+    if 'performance-checklist.md' in text and 'Read `references/b-skills/performance-checklist.md` before' not in text:
+        errors.append(f'{path}: performance checklist usage must be an explicit read gate')
+
+    line_gate_requirements = [
+        (r'global patch discipline', '§6', 'global patch discipline'),
+        (r'global flake procedure', '§10', 'global flake procedure'),
+    ]
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        for pattern, section, label in line_gate_requirements:
+            if re.search(pattern, line, re.IGNORECASE) and f'`references/b-skills/runtime-contract.md` {section}' not in line:
+                errors.append(f'{path}:{line_number}: {label} usage must explicitly read runtime contract {section}')
 
     if 'global/AGENTS.md' in text:
         errors.append(f'{path}: runtime skill files must reference `AGENTS.md`, not `global/AGENTS.md`')
@@ -149,6 +193,8 @@ for section, markers in kernel_detail_sections.items():
 
 runtime_boundary_sections = [
     '### Kernel/detail split for the shared sections',
+    '### Runtime gate taxonomy',
+    '### Runtime gate checklist',
     '`§2 Source of truth`',
     '`§3 Definitions and rubrics`',
     '`§5 Evidence standards`',
@@ -171,6 +217,7 @@ for required in runtime_boundary_sections:
 runtime_boundary_markers = [
     'Requires sequencing.',
     'No remaining design decision',
+    'Read references/b-skills/runtime-contract.md §N before <action>',
     'Required fields are `skill`, `state`, `artifacts`, `next`, `blockers`.',
     'Required fields are `source`, `goal`, `decisions`, `assumptions`, `files`, `verification`, `blockers`, `next-skill`.',
 ]
@@ -179,6 +226,7 @@ for required in runtime_boundary_markers:
         errors.append(f'references/runtime-contract.md: missing canonical boundary marker {required!r}')
 
 kernel_summary_markers = [
+    'Runtime gate checklist:',
     'Use the shared §3 glossary in `references/b-skills/runtime-contract.md`',
     'Use the shared slug, run-id, and artifact conventions from `references/b-skills/runtime-contract.md` §8.',
     'shared `[status]` and `[handoff]` schemas',
@@ -336,6 +384,16 @@ for required in ['failing test path', 'verification target']:
 for required in ['Daily-use fast path examples', 'trivial happy-path runs']:
     if required not in runtime_contract:
         errors.append(f'references/runtime-contract.md: missing happy-path convention {required!r}')
+
+runtime_enforcement_doc_markers = [
+    'explicit read gates',
+    'runtime gate checklist',
+]
+for doc_path, doc_text in [('README.md', readme), ('REFERENCE.md', reference), ('AGENTS.md', root_agents)]:
+    doc_lower = doc_text.lower()
+    for required in runtime_enforcement_doc_markers:
+        if required not in doc_lower:
+            errors.append(f'{doc_path}: missing runtime enforcement doc marker {required!r}')
 
 stale_reindex_prefix = 'If any GitNexus tool warns the index is stale, run `'
 if stale_reindex_prefix in root_agents and '--skip-agents-md' not in root_agents:

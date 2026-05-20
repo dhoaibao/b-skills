@@ -41,7 +41,7 @@ Flags: `--skip-tests`, `--baseline=<path|url>`, `--range=<ref>..<ref>`, `--self`
 - `context7-docs` *(optional, for suspicious third-party API usage)*
 - `brave-discovery` + `firecrawl-extraction` *(optional, for focused public CVE, advisory, or release-drift lookup)*
 
-Fallbacks: `AGENTS.md` section 4. Graceful degradation: possible with git diff, native tools, and focused reads.
+If required tools are unavailable, read `references/b-skills/runtime-contract.md` §4 before applying fallbacks. Graceful degradation: possible with git diff, native tools, and focused reads.
 
 ## Steps
 
@@ -57,11 +57,11 @@ Fast path is allowed only for a single non-sensitive area with no public contrac
 
 ### Step 3 - Establish baseline and inspect risk
 
-Use arguments, `--baseline`, approved plan, checkpoint handoff, or short clarification to identify intended behavior, applying the global baseline source taxonomy. Without a sufficient baseline, run a `baseline-missing` diff-only risk review and do not claim requirements coverage.
+Use arguments, `--baseline`, approved plan, checkpoint handoff, or short clarification to identify intended behavior. Read `references/b-skills/runtime-contract.md` §5 before applying the baseline source taxonomy. Without a sufficient baseline, run a `baseline-missing` diff-only risk review and do not claim requirements coverage.
 
 Inspect highest-risk changed symbols and boundaries first. Name sampled files/symbols, skipped changed surfaces, and residual risk so a no-findings review is not mistaken for exhaustive proof.
 
-Run the security checklist on changed entry points and shared boundaries even on fast path, and name the relevant checklist sections when they affect findings or confidence. Treat lockfile, generated, snapshot, golden, vendored, and minified changes as derived unless source or approved generation is clear.
+Read `reference.md` before applying the security checklist to changed entry points or shared boundaries. Name the relevant checklist sections when they affect findings or confidence. Treat lockfile, generated, snapshot, golden, vendored, and minified changes as derived unless source or approved generation is clear.
 
 ### Step 4 - Assess tests and operability
 
@@ -71,7 +71,7 @@ Use diagnostics or narrow commands only when review confidence depends on runtim
 
 ### Step 5 - Report verdict
 
-Report findings first, ordered by global severity. Include checked-and-clean areas for standard reviews, capped by global verbosity rules; fast reviews may omit them only when the report says why. If no findings, say so and name residual risk or skipped checks. Save `report.md` only when the user asks for a saved review, a checkpoint handoff needs durable evidence, or output is too large for chat; otherwise keep the review in chat.
+Read `references/b-skills/runtime-contract.md` §3 and §9 before reporting severity-ordered findings, checked-and-clean caps, saved reports, or status output. If no findings, say so and name residual risk or skipped checks.
 
 Verdicts: **READY FOR PR**, **READY WITH FOLLOW-UPS**, or **NEEDS FIXES**. Do not use **READY FOR PR** when the review has no baseline or required verification was skipped; use **READY WITH FOLLOW-UPS** or **NEEDS FIXES** instead.
 
@@ -83,7 +83,7 @@ If external knowledge is required, resolve one narrow docs lookup inline or hand
 Scope/Mode/Path/Baseline -> Findings -> Checked and clean -> Coverage/Tests/Observability -> Verdict
 ```
 
-Close non-trivial reviews with the skill-exit status block from `AGENTS.md`.
+Read `references/b-skills/runtime-contract.md` §9 before closing a non-trivial review with a status block.
 
 ## Rules
 
@@ -97,5 +97,5 @@ Close non-trivial reviews with the skill-exit status block from `AGENTS.md`.
 
 ## Reference pointers
 
-- `reference.md` - use for auth, untrusted input, sensitive data, uploads, webhooks, or integrations.
-- `references/b-skills/performance-checklist.md` - use for hot paths, query volume, rendering loops, list endpoints, or retry behavior.
+- Read `reference.md` before reviewing auth, untrusted input, sensitive data, uploads, webhooks, or integrations.
+- Read `references/b-skills/performance-checklist.md` before reviewing hot paths, query volume, rendering loops, list endpoints, or retry behavior.

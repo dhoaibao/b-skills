@@ -29,7 +29,16 @@ The installer deploys this source repo into OpenCode's global config:
 - `global/AGENTS.md` -> `~/.config/opencode/b-skills/AGENTS.md`
 - `global/AGENTS.md` -> `~/.config/opencode/AGENTS.md` only when missing or approved
 
+If an existing `~/.config/opencode/AGENTS.md` is preserved, the installer exits with `activationState: pending`. In that state the files are present, but the runtime gate checklist, explicit read gates, and status/handoff rules may not be active until you rerun with `--replace-agents` or merge the snapshot manually.
+
 This repository is an install-only source layout. OpenCode does not load the checked-in `skills/`, `commands/`, or `references/` directories directly from this repo root.
+
+## Runtime Enforcement
+
+- The always-on kernel in `global/AGENTS.md` keeps the compact runtime gate checklist for non-trivial work: source-of-truth at start, approval/safety before edits or external actions, and verification/status before completion or handoff.
+- Skill steps use explicit read gates such as `Read references/b-skills/runtime-contract.md §9 before ...` so shared schemas and protocols are read at the point of use instead of remembered from distant prose.
+- Slash-command wrappers reinforce the active runtime kernel and the loaded skill's required read gates without duplicating policy.
+- `scripts/validate-skills.sh` enforces this model by failing stale passive pointers, missing point-of-use read gates, wrapper drift, and docs/runtime drift.
 
 ## Token-Saving Defaults
 

@@ -173,7 +173,14 @@ main() {
 
   mkdir -p "$sandbox_preserve/home/.config/opencode"
   printf 'user-global-rules\n' > "$sandbox_preserve/home/.config/opencode/AGENTS.md"
-  expect_install_status 2 "$sandbox_preserve" "$snapshot_repo" N
+  local preserve_output_file="$sandbox_preserve/install-output.txt"
+  set +e
+  run_install_output "$sandbox_preserve" "$snapshot_repo" N > "$preserve_output_file" 2>&1
+  rc=$?
+  set -e
+  [ "$rc" -eq 2 ] || fail "expected install exit 2, got $rc"
+  assert_contains "$preserve_output_file" 'RUNTIME KERNEL NOT ACTIVE'
+  assert_contains "$preserve_output_file" 'runtime gates, required read gates, and status/handoff rules may not be enforced'
   assert_text_equals "$sandbox_preserve/home/.config/opencode/AGENTS.md" $'user-global-rules\n'
   assert_file "$sandbox_preserve/home/.config/opencode/b-skills/AGENTS.md"
   assert_no_file "$sandbox_preserve/home/.config/opencode/AGENTS.b-skills.md"

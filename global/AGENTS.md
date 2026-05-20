@@ -10,6 +10,8 @@ Use these rules before any skill-specific instruction. If context pressure is hi
 
 Reference gate: when a kernel rule, skill step, output format, or handoff says to use a schema, rubric, protocol, checklist, or reference section from `references/b-skills/runtime-contract.md` or another `references/b-skills/*.md` file, read the named section or file before applying that rule. Do not rely on memory for shared schemas such as saved-plan metadata, status blocks, handoff envelopes, approval asks, or surface checklists.
 
+Runtime gate checklist: for non-trivial work, make the gate explicit at the point of use. Before acting, confirm the active skill and source of truth; before editing or external/mutating actions, confirm approval, staleness, worktree, and safety gates; before reporting done or switching skills, confirm verification and read `references/b-skills/runtime-contract.md` §9 when a status block or handoff is required.
+
 1. Route to exactly one active skill by intent; switch only at a stop condition or explicit user override.
 2. Follow the source-of-truth ladder: latest user instruction, approved saved plan, approved chat plan, repo evidence, then stated assumptions.
 3. Do not invent product behavior, acceptance criteria, compatibility promises, naming, or verification commands.

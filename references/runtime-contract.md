@@ -12,6 +12,31 @@ The authoritative active runtime kernel lives in `global/AGENTS.md` in this sour
 
 References to this contract and to other `references/b-skills/*.md` files are mandatory gates when the referenced schema, rubric, protocol, checklist, or output shape affects the current task. Read the smallest named section or file before using it; do not reconstruct shared details from memory. This applies especially to saved-plan metadata, plan staleness, MCP bundle rules, approval asks, privacy gates, artifact manifests, status blocks, handoff envelopes, review/audit checklists, and performance guidance.
 
+### Runtime gate taxonomy
+
+Runtime-critical gates are the points where missed instructions most often create incorrect behavior. Skill files must expose these as explicit read-before-use actions at the step that needs them, not as passive pointers at the end of the file.
+
+- **Routing gate (§1, §10):** before acting on overlapping intents, switching skills, test-vs-bug decisions, or unsupported browser/DOM boundaries.
+- **Source-of-truth gate (§2):** before executing saved or chat plans, checking plan metadata, applying staleness rules, or revising approved plans.
+- **Risk/readiness gate (§3):** before classifying non-trivial work, risk, readiness, severity, or confidence.
+- **Tool/evidence gate (§4, §5):** before using MCP bundles, web extraction, citations, freshness labels, or degraded evidence.
+- **Safety/approval gate (§6):** before dependency writes, external sends, destructive commands, shared-environment mutation, privacy-sensitive extraction, or repo-local artifact writes.
+- **Execution/verification gate (§7):** before scope expansion, iteration loops, rollback, cascading-failure handling, verification, or completion claims.
+- **Artifact gate (§8):** before writing saved plans, reports, manifests, run logs, sensitive artifacts, or non-plan run directories.
+- **Output/handoff gate (§9):** before emitting non-trivial final output, status blocks, saved reports, error envelopes, or handoff envelopes.
+
+Use this wording pattern in skills when a gate is required: `Read references/b-skills/runtime-contract.md §N before <action>`. For a per-skill `reference.md`, use: `Read reference.md before <action>`. Keep schemas in this contract; the skill owns only the local trigger for reading them.
+
+### Runtime gate checklist
+
+For non-trivial runs, apply the gates as checkpoints rather than as ceremony on every message:
+
+1. **Start:** choose one active skill, identify the source of truth, and read any immediately needed routing/source sections.
+2. **Pre-edit or pre-external:** confirm approval, staleness, worktree state, safety/privacy gates, and planned verification.
+3. **Pre-final or pre-switch:** confirm required verification, artifact state, unresolved blockers, and read §9 before status or handoff output.
+
+Trivial happy paths keep the compact path in §7 and §9; do not add status blocks or saved artifacts solely to prove that the checklist was considered.
+
 ### Kernel/detail split for the shared sections
 
 - `§2 Source of truth` — keep the conflict ladder, non-invention rule, and glossary-doc reminder in the kernel; plan metadata, executable-state checks, staleness, and revision protocol live here.

@@ -1941,7 +1941,7 @@ case "$AGENTS_INSTALL_ACTION" in
     RUNTIME_ACTIVATION_STATE="active"
     ;;
   preserve)
-    log "⏭ Preserved existing OpenCode AGENTS.md"
+    log "⏭ Preserved existing OpenCode AGENTS.md; b-skills runtime kernel is pending"
     log "   b-skills runtime kernel snapshot: $RULES_SNAPSHOT_DST"
     RUNTIME_ACTIVATION_STATE="pending"
     ;;
@@ -1994,7 +1994,9 @@ fi
 
 section "Done"
 if [ "$RUNTIME_ACTIVATION_STATE" = "pending" ]; then
-  log "⚠️  b-skills files were installed, but the runtime kernel is not active yet."
+  log "⚠️  RUNTIME KERNEL NOT ACTIVE"
+  log "   Skills, commands, and references were installed, but the active OpenCode AGENTS.md was preserved."
+  log "   b-skills runtime gates, required read gates, and status/handoff rules may not be enforced until activation."
 elif dry_run_enabled; then
   log "✅ b-skills install preview completed."
 else
@@ -2020,6 +2022,7 @@ fi
 
 if [ "$RUNTIME_ACTIVATION_STATE" = "pending" ]; then
   log "   Next step:    rerun with --replace-agents, or manually merge $RULES_SNAPSHOT_DST into $RULES_DST"
+  log "   Verify:       rerun install and confirm activationState is active in $INSTALL_MANIFEST"
   trap - EXIT
   exit 2
 fi
