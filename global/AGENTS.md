@@ -41,7 +41,7 @@ Match the user's intent to one active skill. If a request spans phases, sequence
 | Decide how to build, decompose work | `/b-plan` |
 | External docs, API facts, comparisons | `/b-research` |
 | Execute approved or clearly scoped work | `/b-implement` |
-| Mechanical rename, extract, move, inline, delete | `/b-refactor` |
+| Mechanical rename, extract, move, inline, simplify, delete | `/b-refactor` |
 | Runtime bug, error, broken behavior | `/b-debug` |
 | Unit/integration tests, coverage, failing tests | `/b-test` |
 | Pre-PR changed-code review | `/b-review` |
@@ -51,11 +51,11 @@ Match the user's intent to one active skill. If a request spans phases, sequence
 
 - Explicit end-to-end PR-readiness workflows use `b-orchestrate`; single-phase asks stay with the phase owner.
 - A failing test that likely exposes a real product bug beats `b-test`; use `b-debug`.
-- A named behavior-preserving rename/extract/move beats `b-implement`; use `b-refactor`.
+- A named behavior-preserving rename/extract/move/inline/simplify/delete beats `b-implement`; use `b-refactor`.
 - Unclear user goal, end state, or acceptance criteria beats `b-plan`; use `b-spec`.
 - Unclear implementation approach or sequencing with a clear goal beats `b-implement`; use `b-plan`.
 - `b-research` is for genuine external-knowledge blockers, not questions the codebase or repo docs can answer locally.
-- Browser, DOM-rendered, visual, and e2e tests are unsupported by this suite and should not be handled by adding browser or DOM tooling as a side effect.
+- Browser, DOM-rendered, visual, and e2e tests are unsupported by this suite and should not be handled by adding browser or DOM tooling as a side effect; UI/browser readiness requires external evidence or an accepted follow-up.
 - Explicit repository or suite-slice audits use `b-audit`; changed-code diff/range reviews stay in `b-review`.
 
 Keep one active skill until its stop condition is hit. Required subtasks are handoffs, not parallel skill runs. If a new request arrives mid-flow, state the conflict and ask whether to pause, queue, or abandon unless the current transform must first reach a coherent checkpoint.
@@ -87,7 +87,7 @@ A short kernel rule is enough here: treat public, sensitive, multi-file, depende
 
 Use the shared §3 glossary in `references/b-nexus/runtime-contract.md` for the canonical definitions of `non-trivial`, `small direct request`, readiness terms, risk bands, severity, and confidence.
 
-Do not use `READY FOR PR`, `complete`, or high confidence when the required baseline, verification, or evidence is missing. Use `READY WITH FOLLOW-UPS`, `partial`, or lower confidence.
+Do not use `READY FOR PR`, `complete`, or high confidence when the required baseline, verification, or evidence is missing. For UI/browser-relevant work, do not treat unsupported browser/DOM/e2e checks as covered unless external evidence is provided; otherwise use `READY WITH FOLLOW-UPS`, `partial`, or lower confidence.
 
 Detailed rubrics and confidence signal: `references/b-nexus/runtime-contract.md` §3.
 
@@ -139,7 +139,7 @@ Detailed scope expansion, verification ladder, command budget, rollback, cascadi
 
 ## 8. Artifacts
 
-Use the shared slug, run-id, and artifact conventions from `references/b-nexus/runtime-contract.md` §8. Saved plans remain repo-local source-of-truth files; create artifacts only when coordination, evidence, or auditability needs them.
+Use the shared slug, run-id, and artifact conventions from `references/b-nexus/runtime-contract.md` §8. Saved plans remain repo-local source-of-truth files; create artifacts only when coordination, evidence, or auditability needs them. Non-trivial orchestrated workflows mint and carry a run-id across phase handoffs, and checkpoint when they pause or need durable resume state.
 
 Detailed slug algorithm, paths, manifest schema, retention, and run-id continuity: `references/b-nexus/runtime-contract.md` §8.
 

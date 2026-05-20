@@ -6,7 +6,7 @@
 
 Think of it as the coordination layer between user intent, agent skills, repo evidence, MCP tools, verification, and handoffs.
 
-Browser, DOM-rendered, visual, and e2e tests are intentionally unsupported. The suite handles non-browser unit, integration, and contract tests, but it does not add or drive jsdom, Playwright, Cypress, Puppeteer, WebDriver, or equivalent browser/DOM tooling.
+Browser, DOM-rendered, visual, and e2e tests are intentionally unsupported. The suite handles non-browser unit, integration, and contract tests, but it does not add or drive jsdom, Playwright, Cypress, Puppeteer, WebDriver, or equivalent browser/DOM tooling. For UI/browser-relevant work, readiness claims require external evidence for those checks or an accepted follow-up.
 
 ## Install & Update
 
@@ -56,7 +56,7 @@ This repository is an install-only source layout. OpenCode does not load the che
 
 | Skill | Phase | When to use |
 |---|---|---|
-| `/b-orchestrate` | End-to-end | Coordinate spec, plan, implementation, optional tests, review, and review-fix loops until PR-ready or blocked |
+| `/b-orchestrate` | End-to-end | Coordinate spec, plan, implementation, optional suite-supported tests, review, and review-fix loops until PR-ready, ready with accepted follow-ups, or blocked |
 | `/b-spec` | Clarify | Clarify unclear end states, constraints, acceptance criteria, non-goals, and assumptions before planning or coding |
 | `/b-plan` | Decide | Turn a clear goal into a short chat plan or saved execution plan |
 | `/b-research` | Decide | Fetch external docs, API facts, config keys, method signatures, comparisons, recency-sensitive evidence, or approved local document evidence with structured extraction when specific fields are enough |

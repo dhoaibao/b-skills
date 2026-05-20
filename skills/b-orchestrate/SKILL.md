@@ -46,7 +46,9 @@ If required tools are unavailable, read `references/b-nexus/runtime-contract.md`
 
 ### Step 1 - Start the workflow
 
-Run `git status --short`, name the source of truth, and define success as a **b-review** verdict of **READY FOR PR** with required verification complete. If the user explicitly accepts skipped checks or follow-ups, success may be **READY WITH FOLLOW-UPS** instead.
+Run `git status --short`, name the source of truth, and define success as a **b-review** verdict of **READY FOR PR** with required verification complete for suite-supported scope. If UI/browser-relevant work needs browser, DOM, visual, or e2e evidence, require external evidence before **READY FOR PR**; if the user explicitly accepts skipped checks or follow-ups, success may be **READY WITH FOLLOW-UPS** instead.
+
+For non-trivial workflows, read `references/b-nexus/runtime-contract.md` §8, mint a run-id, and checkpoint phase state when the workflow pauses or needs durable resume state.
 
 Read `references/b-nexus/runtime-contract.md` §1 before routing across phase skills. Keep exactly one phase owner active at a time; every phase transition is a stop condition plus handoff, not parallel execution.
 
@@ -64,13 +66,13 @@ Read `references/b-nexus/runtime-contract.md` §2 before treating a saved or cha
 
 ### Step 4 - Implement and verify the plan
 
-Hand off approved build steps to **b-implement**. If a step becomes a runtime root-cause problem, route that phase to **b-debug**. If the needed change is a concrete behavior-preserving rename, extract, move, inline, or delete, route that phase to **b-refactor**.
+Hand off approved build steps to **b-implement**. If a step becomes a runtime root-cause problem, route that phase to **b-debug**. If the needed change is a concrete behavior-preserving rename, extract, move, inline, simplify, or delete, route that phase to **b-refactor**.
 
 After each build phase, require the phase skill's verification result before continuing. If verification fails because the plan is wrong, return to **b-plan** instead of widening implementation scope silently.
 
 ### Step 5 - Add or assess tests
 
-Use **b-test** when changed behavior needs non-browser unit, integration, or contract coverage, when the user requested tests, or when review confidence depends on tests. Skip this phase when the change is docs-only, tests are explicitly skipped, or only browser/DOM/e2e tooling would satisfy the request.
+Use **b-test** when changed behavior needs non-browser unit, integration, or contract coverage, when the user requested tests, or when review confidence depends on tests. Skip this phase when the change is docs-only, tests are explicitly skipped, or only browser/DOM/e2e tooling would satisfy the request; in that case, record the unsupported verification gap instead of treating it as covered.
 
 If **b-test** finds likely product behavior failure, route to **b-debug** before changing assertions, snapshots, or fixtures.
 
@@ -81,14 +83,14 @@ Run **b-review** against the current diff with the spec or approved plan as base
 - Implementation gap -> **b-implement**.
 - Runtime behavior failure -> **b-debug**.
 - Test-only gap or harness failure -> **b-test**.
-- Concrete behavior-preserving transform -> **b-refactor**.
+- Concrete behavior-preserving transform, including simplify -> **b-refactor**.
 - New product decision or broad redesign -> **b-spec** or **b-plan**.
 
 Read `references/b-nexus/runtime-contract.md` §7 before applying the review-fix loop or stopping on repeated failures. Re-review after each coherent fix set until **b-review** returns **READY FOR PR**, returns **READY WITH FOLLOW-UPS** accepted by the user, or reports a blocker.
 
 ### Step 7 - Close the workflow
 
-Read `references/b-nexus/runtime-contract.md` §9 before reporting non-trivial workflow status or handing off unresolved work. Report the final review verdict, verification run, skipped checks, blockers, and remaining follow-ups. Do not claim **READY FOR PR** when the review had no baseline or required verification was skipped.
+Read `references/b-nexus/runtime-contract.md` §9 before reporting non-trivial workflow status or handing off unresolved work. Report the final review verdict, verification run, skipped checks, blockers, and remaining follow-ups. Do not claim **READY FOR PR** when the review had no baseline, required verification was skipped, or unsupported browser/DOM/e2e evidence remains relevant but absent.
 
 ## Output format
 
@@ -105,4 +107,5 @@ Read `references/b-nexus/runtime-contract.md` §9 before closing a non-trivial o
 - Preserve unrelated worktree changes and stop on direct conflicts.
 - Keep review fixes scoped to findings or approved follow-up decisions.
 - Do not add browser, DOM-rendered, visual, or e2e test tooling as part of the optional test phase.
+- Do not treat unsupported browser, DOM, visual, or e2e checks as covered by this suite.
 - Do not commit unless explicitly asked.

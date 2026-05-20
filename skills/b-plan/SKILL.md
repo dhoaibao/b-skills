@@ -31,7 +31,7 @@ If `$ARGUMENTS` is present, treat it as the task description and proceed.
 
 - The end state is unclear -> use **b-spec**.
 - The request is small, obvious, and scoped -> use **b-implement**.
-- A concrete rename, extract, move, inline, or delete is requested -> use **b-refactor**.
+- A concrete rename, extract, move, inline, simplify, or delete is requested -> use **b-refactor**.
 - External feasibility blocks the decision -> use **b-research**.
 - Something is broken -> use **b-debug**.
 

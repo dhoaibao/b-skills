@@ -65,7 +65,7 @@ Match the user's intent to one active skill before acting. If a request spans ph
 | Decide how to build, decompose work | `/b-plan` |
 | External docs, API facts, comparisons | `/b-research` |
 | Execute approved or clearly scoped work | `/b-implement` |
-| Mechanical rename, extract, move, inline, delete | `/b-refactor` |
+| Mechanical rename, extract, move, inline, simplify, delete | `/b-refactor` |
 | Runtime bug, error, "not working" | `/b-debug` |
 | Unit/integration tests, coverage, failing tests | `/b-test` |
 | Pre-PR changed-code review | `/b-review` |
@@ -75,11 +75,11 @@ Match the user's intent to one active skill before acting. If a request spans ph
 
 - Explicit end-to-end PR-readiness workflows use `b-orchestrate`; single-phase asks stay with the phase owner.
 - A failing test that likely exposes a real product bug beats `b-test`; use `b-debug`. See §10.
-- A named behavior-preserving rename/extract/move beats `b-implement`; use `b-refactor`.
+- A named behavior-preserving rename/extract/move/inline/simplify/delete beats `b-implement`; use `b-refactor`.
 - Unclear user goal, end state, or acceptance criteria beats `b-plan`; use `b-spec`.
 - Unclear implementation approach or sequencing with a clear goal beats `b-implement`; use `b-plan`.
 - `b-research` is for genuine external-knowledge blockers, not for questions the codebase or repo docs can answer locally.
-- Browser, DOM-rendered, visual, and e2e tests are unsupported by this suite and must not trigger adding jsdom, Playwright, Cypress, Puppeteer, WebDriver, or equivalent tooling as a side effect.
+- Browser, DOM-rendered, visual, and e2e tests are unsupported by this suite and must not trigger adding jsdom, Playwright, Cypress, Puppeteer, WebDriver, or equivalent tooling as a side effect. UI/browser readiness requires external evidence or an accepted follow-up.
 - Explicit repository or suite-slice audits use `b-audit`; changed-code diff/range reviews stay in `b-review`.
 
 ### One active skill
@@ -108,7 +108,7 @@ Match intent regardless of language. The phrases below are routing aids only; do
 | `/b-plan` | plan, design, decompose, approach, "how should I" | lập kế hoạch, thiết kế, hướng tiếp cận, chia nhỏ |
 | `/b-research` | docs, library, API, compare, look up, "what is" | tra cứu, tài liệu, so sánh, tìm hiểu |
 | `/b-implement` | implement, add, build, execute, finish, ship | triển khai, thực hiện, viết code, hoàn thành |
-| `/b-refactor` | rename, extract, move, inline, delete, cleanup | đổi tên, tách, di chuyển, xoá, dọn dẹp |
+| `/b-refactor` | rename, extract, move, inline, simplify, delete, cleanup | đổi tên, tách, di chuyển, đơn giản hóa, xoá, dọn dẹp |
 | `/b-debug` | bug, broken, error, stack trace, "not working", regression | lỗi, hỏng, không chạy, sai, truy vết |
 | `/b-test` | tests, coverage, failing test, snapshot, mock | kiểm thử, viết test, độ bao phủ, mock |
 | `/b-review` | review, PR, lint, pre-PR, "what would a reviewer" | rà soát, review, kiểm tra trước PR |
@@ -221,7 +221,7 @@ Use these terms consistently across skills:
 - **Partial** means useful progress or artifacts exist, but completion criteria are not satisfied.
 - **Ready** means no known blockers remain within the reviewed or implemented scope; it does not imply unreviewed surfaces are safe.
 
-Do not use `READY FOR PR`, `complete`, or high confidence when the required baseline, verification, or evidence is missing. Use `READY WITH FOLLOW-UPS`, `partial`, or a lower confidence label instead.
+Do not use `READY FOR PR`, `complete`, or high confidence when the required baseline, verification, or evidence is missing. For UI/browser-relevant work, unsupported browser/DOM/e2e checks are not covered by this suite; use external evidence or report `READY WITH FOLLOW-UPS`, `partial`, or a lower confidence label instead.
 
 ### Severity rubric (`/b-review`, `/b-debug`, any finding)
 
@@ -297,7 +297,7 @@ Skills reference MCP bundles by name instead of repeating per-tool MCP lists. Na
 #### `serena-symbol-toolkit`
 
 - **Server:** `serena`
-- **Session init:** once per session, only when symbol-aware work first becomes necessary: `check_onboarding_performed`, then `onboarding` if needed.
+- **Session init:** once per session, only when symbol-aware work first becomes necessary: `check_onboarding_performed`, then `onboarding` if needed. If onboarding would require persistent memory writes during a review-only/no-mutation run, skip Serena unless symbol evidence is necessary; when it is necessary, ask before writing persistent memories and keep summaries free of secrets or private data.
 - **Discovery:** `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `find_declaration`, `find_implementations`, `search_for_pattern`.
 - **Verification:** `get_diagnostics_for_file`.
 - **Edits:** `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol`, `rename_symbol`, `safe_delete_symbol`.
@@ -716,7 +716,8 @@ The frontmatter field `slug: <task-slug>` remains the canonical deterministic id
 When one skill hands off to another for the same logical task, the receiving skill **reuses** the source skill's `<run-id>` and writes its own artifacts under `.opencode/b-nexus/<receiving-skill>/<run-id>/`. Continuity rules:
 
 - A new `<run-id>` is minted only on a fresh user task, not on a handoff.
-- The handoff envelope (§9) must carry the `run-id` **whenever one exists** — i.e., whenever the source skill wrote artifacts or itself inherited a `run-id` from an earlier handoff. Pure chat-only handoffs that have produced no artifacts (e.g., a quick-mode `b-plan` handing off to `b-implement` with the plan kept in chat) may omit the `run-id` field; the receiving skill mints one if and when it first writes an artifact.
+- Non-trivial `b-orchestrate` workflows mint a `<run-id>` at workflow start, even before artifacts exist, so every phase handoff can be tied to the same logical task.
+- The handoff envelope (§9) must carry the `run-id` **whenever one exists** — i.e., whenever the source skill wrote artifacts, itself inherited a `run-id` from an earlier handoff, or `b-orchestrate` minted one for a non-trivial workflow. Pure chat-only handoffs that have produced no artifacts and are not part of a non-trivial orchestration may omit the `run-id` field; the receiving skill mints one if and when it first writes an artifact.
 - If the receiving skill creates artifacts, it cross-links the source run directory in its own `manifest.json` `source_run` field (e.g., `".opencode/b-nexus/b-plan/<run-id>/"`).
 - When a chain of skills (e.g., `b-plan -> b-implement -> b-review`) all act on the same task and any one of them has written artifacts, every subsequent run directory shares the same `<run-id>` even though each lives under a different `<skill>` subdirectory.
 
@@ -745,6 +746,10 @@ Do not invent new b-nexus artifact paths. Project-native verification outputs su
 - Do not create run artifacts for routine chat answers, tiny edits, or successful low-risk checks.
 - Create b-nexus artifacts only when needed for saved plans, explicit saved reports, screenshot evidence, large/truncated logs, auth/session state, generated evidence, partial failures, or user-requested auditability.
 - If an artifact is optional, prefer the chat/status summary over writing files.
+
+### Workflow checkpoints
+
+For non-trivial `b-orchestrate` workflows, checkpoint the phase state whenever the workflow pauses for approval, a blocker, a review-fix loop, or a session handoff. Use the existing `b-orchestrate` run-id. If the workflow cannot continue in the same turn or needs durable resume evidence, write `report.md`; otherwise carry the checkpoint in the required status/handoff blocks.
 
 ### Retention and cleanup
 
@@ -813,7 +818,7 @@ State values:
 ```text
 [status]
 skill: <b-skill-name>
-run-id: <YYYYMMDD-HHMMSS>-<task-slug>   (include on any run that wrote artifacts or is part of a handoff chain; omit on pure-chat runs with no artifacts)
+run-id: <YYYYMMDD-HHMMSS>-<task-slug>   (include on any run that wrote artifacts, is part of a handoff chain, or minted a non-trivial orchestration run-id; omit on pure-chat runs with no run-id)
 state: complete | blocked | needs-input | handed-off
 artifacts: <comma-separated paths or 'none'>
 next: <skill name or 'none'>
@@ -859,7 +864,7 @@ When a skill hands off to another skill, emit this fenced block in chat **before
 ```text
 [handoff]
 source: <current skill>
-run-id: <YYYYMMDD-HHMMSS>-<task-slug>   (include when the source skill wrote artifacts; omit on chat-only handoffs)
+run-id: <YYYYMMDD-HHMMSS>-<task-slug>   (include when the source skill wrote artifacts, inherited a run-id, or minted one for non-trivial orchestration; omit on chat-only handoffs without a run-id)
 goal: <one-line goal for the next skill>
 decisions: <confirmed decisions or 'none'>
 assumptions: <open assumptions or 'none'>
@@ -942,6 +947,7 @@ Rerun the suspected test up to 2 times in isolation. If it passes some runs and 
 - jsdom, happy-dom, React Testing Library, Vue Test Utils, Svelte testing-library, Playwright, Cypress, WebdriverIO, Puppeteer, and any test that renders UI through a DOM or drives a real browser → unsupported by this suite.
 - Visual, screenshot, browser-cookie, browser-session, real-network UI, and e2e flows are unsupported by this suite.
 - Stop with `cause: unsupported` when this is the requested work, unless the user narrows the task to repo-local code review, non-browser tests, or static analysis that does not render through a DOM or drive a browser.
+- If browser, DOM, visual, or e2e evidence is relevant to PR readiness, do not report `READY FOR PR` until that evidence is supplied externally. If the user accepts the gap as a follow-up or skipped check, report `READY WITH FOLLOW-UPS` instead.
 
 ### Agent-cannot-reproduce protocol (shared across `b-debug` and `b-test`)
 

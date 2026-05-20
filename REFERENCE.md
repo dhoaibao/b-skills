@@ -6,7 +6,7 @@ When this document cites `global/AGENTS.md`, that is the source-repo runtime ker
 
 Runtime enforcement is intentionally mechanical: `global/AGENTS.md` owns the runtime gate checklist, each skill step uses explicit read gates for shared schemas/protocols/checklists, slash commands remind agents to follow the active kernel, and `scripts/validate-skills.sh` rejects passive pointers that would rely on memory.
 
-Browser, DOM-rendered, visual, and e2e tests are unsupported by this suite. Do not route jsdom, Playwright, Cypress, Puppeteer, WebDriver, or equivalent browser/DOM work to `b-test`; narrow the task to repo-local code review, non-browser tests, or static analysis that does not render through a DOM or drive a browser.
+Browser, DOM-rendered, visual, and e2e tests are unsupported by this suite. Do not route jsdom, Playwright, Cypress, Puppeteer, WebDriver, or equivalent browser/DOM work to `b-test`; narrow the task to repo-local code review, non-browser tests, or static analysis that does not render through a DOM or drive a browser. For UI/browser-relevant work, readiness claims require external evidence for those checks or an accepted follow-up.
 
 ---
 
@@ -17,7 +17,9 @@ Browser, DOM-rendered, visual, and e2e tests are unsupported by this suite. Do n
 Coordinates a complete PR-readiness workflow across phase skills.
 
 **Core behavior**
-- Starts from a workflow goal and defines success as a `b-review` readiness verdict with required verification complete.
+- Starts from a workflow goal and defines success as a `b-review` readiness verdict with required suite-supported verification complete.
+- Requires external evidence before `READY FOR PR` when browser, DOM, visual, or e2e verification is relevant; otherwise the workflow can only be ready with accepted follow-ups.
+- Mints and carries a run-id for non-trivial workflows, and checkpoints phase state when the workflow pauses, enters a review-fix loop, or needs durable resume state.
 - Reads runtime contract gates before routing across phase skills, treating plans as approved, applying review-fix loops, or emitting non-trivial status output.
 - Uses `b-spec` only when the target outcome is unclear, then `b-plan` for non-trivial sequencing or a short execution outline for small direct workflows.
 - Hands actual build work to `b-implement`, runtime failures to `b-debug`, behavior-preserving transforms to `b-refactor`, and non-browser test work to `b-test`.
@@ -158,7 +160,7 @@ Reviews diffs, ranges, or checkpoints.
 - Names relevant security checklist sections when they affect findings or confidence.
 - Checks tests/operability unless `--skip-tests` is present.
 - Reports findings first, includes checked-and-clean areas for standard reviews, and emits READY FOR PR, READY WITH FOLLOW-UPS, or NEEDS FIXES.
-- Blocks READY FOR PR when there is no baseline or required verification was skipped.
+- Blocks READY FOR PR when there is no baseline, required verification was skipped, or unsupported browser/DOM/e2e evidence remains relevant but absent.
 - Saves `report.md` only when requested, needed for a durable checkpoint/handoff, or too large for chat.
 
 **Output**
