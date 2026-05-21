@@ -388,14 +388,16 @@ def migrate_managed_values(data):
     servers = data.get('mcpServers')
     if not isinstance(servers, dict):
         return
+
     context7 = servers.get('context7')
-    if not isinstance(context7, dict):
-        return
-    headers = context7.get('headers')
-    if not isinstance(headers, dict):
-        return
-    if headers.get('CONTEXT7_API_KEY') == '${CONTEXT7_API_KEY}':
+    headers = context7.get('headers') if isinstance(context7, dict) else None
+    if isinstance(headers, dict) and headers.get('CONTEXT7_API_KEY') == '${CONTEXT7_API_KEY}':
         headers['CONTEXT7_API_KEY'] = '${CONTEXT7_API_KEY:-}'
+
+    gitnexus = servers.get('gitnexus')
+    if isinstance(gitnexus, dict) and gitnexus.get('command') == 'npx' and gitnexus.get('args') == ['-y', 'gitnexus@latest', 'mcp']:
+        gitnexus['command'] = 'gitnexus'
+        gitnexus['args'] = ['mcp']
 
 if not isinstance(current, dict):
     raise SystemExit(f'{label} merge requires existing target to be a JSON object')
@@ -750,6 +752,10 @@ def managed_mcp_server(current_server, incoming_server, server_name):
         incoming_env = incoming_server.get('env', {})
         if isinstance(env, dict) and isinstance(incoming_env, dict) and 'FIRECRAWL_API_KEY' in env:
             env['FIRECRAWL_API_KEY'] = incoming_env.get('FIRECRAWL_API_KEY')
+    elif server_name == 'gitnexus':
+        if normalized.get('command') == 'npx' and normalized.get('args') == ['-y', 'gitnexus@latest', 'mcp']:
+            normalized['command'] = 'gitnexus'
+            normalized['args'] = ['mcp']
     return normalized == incoming_server
 
 if not isinstance(current, dict) or not isinstance(incoming, dict) or not isinstance(original, dict):

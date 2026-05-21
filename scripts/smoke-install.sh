@@ -165,6 +165,8 @@ main() {
   assert_json_value "$sandbox_fresh/home/.claude.json" "set(data['mcpServers']) == {'serena', 'context7', 'brave-search', 'firecrawl', 'playwright', 'gitnexus'}"
   assert_json_value "$sandbox_fresh/home/.claude.json" "data['mcpServers']['context7']['headers']['CONTEXT7_API_KEY'] == '\${CONTEXT7_API_KEY:-}'"
   assert_json_value "$sandbox_fresh/home/.claude.json" "data['mcpServers']['playwright']['args'][-1] == '--isolated'"
+  assert_json_value "$sandbox_fresh/home/.claude.json" "data['mcpServers']['gitnexus']['command'] == 'gitnexus'"
+  assert_json_value "$sandbox_fresh/home/.claude.json" "data['mcpServers']['gitnexus']['args'] == ['mcp']"
   assert_contains "$sandbox_fresh/home/.claude/b-agentic/install.json" '"settingsAction": "write"'
   assert_contains "$sandbox_fresh/home/.claude/b-agentic/install.json" '"mcpAction": "write"'
   assert_contains "$sandbox_fresh/home/.claude/b-agentic/install.json" '"skills"'
@@ -188,9 +190,11 @@ main() {
   assert_no_path "$sandbox_prompt_reinstall/home/.claude.json"
 
   mkdir -p "$sandbox_mcp_migration/home"
-  printf '{"mcpServers":{"context7":{"type":"http","url":"https://mcp.context7.com/mcp","headers":{"CONTEXT7_API_KEY":"${CONTEXT7_API_KEY}"}}}}\n' > "$sandbox_mcp_migration/home/.claude.json"
+  printf '{"mcpServers":{"context7":{"type":"http","url":"https://mcp.context7.com/mcp","headers":{"CONTEXT7_API_KEY":"${CONTEXT7_API_KEY}"}},"gitnexus":{"type":"stdio","command":"npx","args":["-y","gitnexus@latest","mcp"],"env":{}}}}\n' > "$sandbox_mcp_migration/home/.claude.json"
   expect_install_status 0 "$sandbox_mcp_migration" "$snapshot_repo"
   assert_json_value "$sandbox_mcp_migration/home/.claude.json" "data['mcpServers']['context7']['headers']['CONTEXT7_API_KEY'] == '\${CONTEXT7_API_KEY:-}'"
+  assert_json_value "$sandbox_mcp_migration/home/.claude.json" "data['mcpServers']['gitnexus']['command'] == 'gitnexus'"
+  assert_json_value "$sandbox_mcp_migration/home/.claude.json" "data['mcpServers']['gitnexus']['args'] == ['mcp']"
 
   mkdir -p "$sandbox_preserve/home/.claude"
   printf '# User Claude Memory\n' > "$sandbox_preserve/home/.claude/CLAUDE.md"
