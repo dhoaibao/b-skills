@@ -1,10 +1,10 @@
 # b-agentic
 
-**An agent workflow kernel for AI coding agents, with OpenCode as the reference runtime.**
+**An 11-skill agent workflow kernel for Claude Code.**
 
-`b-agentic` is a lean 11-skill agent workflow suite that turns rough developer intent into disciplined loops: clarify, plan, build, validate, debug, review, and audit. It is optimized around scoped execution, repo evidence, MCP tools, verification, and clean handoffs.
+`b-agentic` turns rough developer intent into disciplined loops: clarify, plan, build, validate, debug, review, and audit. It is optimized around scoped execution, repo evidence, MCP tools, verification, and clean handoffs.
 
-Think of it as the coordination layer between user intent, agent skills, repo evidence, MCP tools, verification, and handoffs.
+Claude Code is the reference runtime. Skills install as native Claude skills and appear as `/b-*` slash commands.
 
 ## Install & Update
 
@@ -12,10 +12,16 @@ Think of it as the coordination layer between user intent, agent skills, repo ev
 curl -fsSL https://raw.githubusercontent.com/dhoaibao/b-agentic/main/install.sh | bash
 ```
 
-Preview without writing into `~/.config/opencode/`:
+Preview without writing into `~/.claude/`:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/dhoaibao/b-agentic/main/install.sh | bash -s -- --dry-run
+```
+
+Replace an existing `~/.claude/CLAUDE.md` after reviewing the managed snapshot:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/dhoaibao/b-agentic/main/install.sh | bash -s -- --replace-memory
 ```
 
 Uninstall managed files:
@@ -24,23 +30,30 @@ Uninstall managed files:
 curl -fsSL https://raw.githubusercontent.com/dhoaibao/b-agentic/main/install.sh | bash -s -- --uninstall
 ```
 
-The installer deploys this repo into OpenCode's global config:
-- `skills/` -> `~/.config/opencode/skills/`
-- `commands/` -> `~/.config/opencode/commands/`
-- `references/` -> `~/.config/opencode/references/b-agentic/`
-- `global/AGENTS.md` -> `~/.config/opencode/b-agentic/AGENTS.md`
-- `global/AGENTS.md` -> `~/.config/opencode/AGENTS.md` only when missing or approved
+The installer deploys this repo into Claude Code's personal config:
+- `global/CLAUDE.md` -> `~/.claude/CLAUDE.md` when missing or approved
+- `skills/<name>/` -> `~/.claude/skills/<name>/`
+- `references/*.md` -> `~/.claude/b-agentic/references/`
+- `references/*.md` -> `~/.claude/skills/<name>/references/b-agentic/` for each skill
+- `claude/*.json` -> `~/.claude/b-agentic/templates/`
+- install metadata and backups -> `~/.claude/b-agentic/`
 
-Optional MCP config:
-- `B_AGENTIC_INSTALL_MCP=Y` merges core MCP defaults: Serena, Context7, Brave Search, and Firecrawl.
-- `B_AGENTIC_INSTALL_GITNEXUS=Y` adds optional GitNexus graph radar when core MCP defaults are enabled.
-- `B_AGENTIC_INSTALL_PLAYWRIGHT_MCP=Y` adds optional Playwright MCP for `/b-browser` live UI automation when core MCP defaults are enabled.
+If an existing `~/.claude/CLAUDE.md` is preserved, the installer exits with `activationState: pending`. Review `~/.claude/b-agentic/CLAUDE.md`, then rerun with `--replace-memory` or merge the kernel manually.
 
-If an existing `~/.config/opencode/AGENTS.md` is preserved, the installer exits with `activationState: pending`. Rerun with `--replace-agents` or merge the snapshot manually to activate the runtime kernel.
+Settings and MCP configuration are installed as templates only in this release:
+- `claude/settings.recommended.json` contains suggested `permissions`, `skillOverrides`, and `disableSkillShellExecution` settings.
+- `claude/mcp.project.template.json` contains a project `.mcp.json` template for Serena, Context7, Brave Search, Firecrawl, and Playwright MCP.
 
-The runtime kernel provides the runtime gate checklist and explicit read gates; details live in `global/AGENTS.md` and `references/runtime-contract.md`.
+To apply those templates instead of only installing copies under `~/.claude/b-agentic/templates/`, use explicit flags after review:
 
-This repository is an install-only source layout. OpenCode does not load the checked-in `skills/`, `commands/`, or `references/` directories directly from this repo root.
+```bash
+install.sh --install-settings        # writes ~/.claude/settings.json only when missing
+install.sh --replace-settings        # backs up and replaces ~/.claude/settings.json
+install.sh --install-project-mcp     # writes .mcp.json in the current project only when missing
+install.sh --replace-project-mcp     # backs up and replaces the current project's .mcp.json
+```
+
+The first Claude-native release supports personal-global install only. Project-local `.claude/` installs, plugin packaging, hooks, and dynamic context injection are deferred until validator and smoke coverage prove global parity.
 
 ## Skills
 
@@ -70,26 +83,29 @@ Typical flow:
 /b-audit [surface]      # repository, maintainer, or suite-slice audit
 ```
 
+Mutating or coordinating skills are manual-only in Claude Code with `disable-model-invocation: true`: `b-orchestrate`, `b-plan`, `b-implement`, `b-refactor`, `b-debug`, `b-test`, and `b-browser`. Read-only clarification, research, review, and audit skills may be model-invocable when their descriptions match the request.
+
 ## Repository Map
 
 ```text
 b-agentic/
-├── AGENTS.md              # maintainer guidance for this source repo
-├── global/AGENTS.md       # runtime kernel source installed into OpenCode config
-├── references/            # shared runtime references installed under references/b-agentic/
-├── skills/<name>/         # skill instructions and optional per-skill reference.md files
-├── commands/<name>.md     # thin slash-command wrappers
-├── install.sh             # installer, updater, and uninstaller
+├── CLAUDE.md              # Claude Code maintainer guidance for this source repo
+├── global/CLAUDE.md       # Claude Code runtime kernel source
+├── claude/                # settings and MCP templates
+├── references/            # shared runtime references copied into skill support dirs
+├── skills/<name>/         # Claude skill instructions and optional reference.md files
+├── install.sh             # Claude Code installer, updater, and uninstaller
 └── scripts/               # validation and smoke-test helpers
 ```
 
 ## Docs
 
 - `README.md` is the brief repo overview.
-- `AGENTS.md` is the maintainer guide for editing this source repo.
+- `CLAUDE.md` is the Claude Code maintainer guide for editing this source repo.
 - `REFERENCE.md` is the skill-by-skill reference guide.
-- `global/AGENTS.md` is the runtime kernel source.
+- `global/CLAUDE.md` is the runtime kernel source.
 - `references/runtime-contract.md` is the detailed runtime contract; referenced sections are required read gates when a skill needs their schemas, checklists, or protocols.
 - `references/performance-checklist.md` is a reusable cross-skill reference.
+- `claude/README.md` documents the Claude Code runtime layout and first-release non-goals.
 
-Run `scripts/validate-skills.sh` before installing or committing suite changes.
+Run `scripts/validate-skills.sh` and `scripts/smoke-install.sh` before installing or committing suite changes.

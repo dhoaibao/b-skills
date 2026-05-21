@@ -6,9 +6,7 @@ description: >
   Do NOT invoke for repo/suite audits, UI/design review, plan review, or
   research synthesis review. Unlike b-audit, b-review is diff/range-first and
   judges changed code adequacy, risk, and missing tests.
-compatibility: opencode
-metadata:
-  suite: b-agentic
+argument-hint: "[--range=<ref>..<ref>] [--baseline=<path|url>] [--skip-tests]"
 ---
 
 # b-review
@@ -41,7 +39,7 @@ Flags: `--skip-tests`, `--baseline=<path|url>`, `--range=<ref>..<ref>`, `--self`
 - `context7-docs` *(optional, for suspicious third-party API usage)*
 - `brave-discovery` + `firecrawl-extraction` *(optional, for focused public CVE, advisory, or release-drift lookup)*
 
-If required tools are unavailable, read `references/b-agentic/runtime-contract.md` §4 before applying fallbacks. Graceful degradation: possible with git diff, native tools, and focused reads.
+If required tools are unavailable, read `${CLAUDE_SKILL_DIR}/references/b-agentic/runtime-contract.md` §4 before applying fallbacks. Graceful degradation: possible with git diff, native tools, and focused reads.
 
 ## Steps
 
@@ -57,11 +55,11 @@ Fast path is allowed only for a single non-sensitive area with no public contrac
 
 ### Step 3 - Establish baseline and inspect risk
 
-Use arguments, `--baseline`, approved plan, checkpoint handoff, or short clarification to identify intended behavior. Read `references/b-agentic/runtime-contract.md` §5 before applying the baseline source taxonomy. Without a sufficient baseline, run a `baseline-missing` diff-only risk review and do not claim requirements coverage.
+Use arguments, `--baseline`, approved plan, checkpoint handoff, or short clarification to identify intended behavior. Read `${CLAUDE_SKILL_DIR}/references/b-agentic/runtime-contract.md` §5 before applying the baseline source taxonomy. Without a sufficient baseline, run a `baseline-missing` diff-only risk review and do not claim requirements coverage.
 
 Inspect highest-risk changed symbols and boundaries first. Name sampled files/symbols, skipped changed surfaces, and residual risk so a no-findings review is not mistaken for exhaustive proof.
 
-Read `reference.md` before applying the security checklist to changed entry points or shared boundaries. Name the relevant checklist sections when they affect findings or confidence. Treat lockfile, generated, snapshot, golden, vendored, and minified changes as derived unless source or approved generation is clear.
+Read `${CLAUDE_SKILL_DIR}/reference.md` before applying the security checklist to changed entry points or shared boundaries. Name the relevant checklist sections when they affect findings or confidence. Treat lockfile, generated, snapshot, golden, vendored, and minified changes as derived unless source or approved generation is clear.
 
 ### Step 4 - Assess tests and operability
 
@@ -71,7 +69,7 @@ Use diagnostics or narrow commands only when review confidence depends on runtim
 
 ### Step 5 - Report verdict
 
-Read `references/b-agentic/runtime-contract.md` §3 and §9 before reporting severity-ordered findings, checked-and-clean caps, saved reports, or status output. If no findings, say so and name residual risk or skipped checks.
+Read `${CLAUDE_SKILL_DIR}/references/b-agentic/runtime-contract.md` §3 and §9 before reporting severity-ordered findings, checked-and-clean caps, saved reports, or status output. If no findings, say so and name residual risk or skipped checks.
 
 Verdicts: **READY FOR PR**, **READY WITH FOLLOW-UPS**, or **NEEDS FIXES**. Do not use **READY FOR PR** when the review has no baseline, required verification was skipped, or browser/DOM/e2e evidence remains relevant but absent; **b-browser**-verified supplied/CI evidence, existing-tool evidence, or approved live-browser evidence can satisfy that browser evidence requirement.
 
@@ -83,7 +81,7 @@ If external knowledge is required, resolve one narrow docs lookup inline or hand
 Scope/Mode/Path/Baseline -> Findings -> Checked and clean -> Coverage/Tests/Observability -> Verdict
 ```
 
-Read `references/b-agentic/runtime-contract.md` §9 before closing a non-trivial review with a status block.
+Read `${CLAUDE_SKILL_DIR}/references/b-agentic/runtime-contract.md` §9 before closing a non-trivial review with a status block.
 
 ## Rules
 
@@ -97,5 +95,5 @@ Read `references/b-agentic/runtime-contract.md` §9 before closing a non-trivial
 
 ## Reference pointers
 
-- Read `reference.md` before reviewing auth, untrusted input, sensitive data, uploads, webhooks, or integrations.
-- Read `references/b-agentic/performance-checklist.md` before reviewing hot paths, query volume, rendering loops, list endpoints, or retry behavior.
+- Read `${CLAUDE_SKILL_DIR}/reference.md` before reviewing auth, untrusted input, sensitive data, uploads, webhooks, or integrations.
+- Read `${CLAUDE_SKILL_DIR}/references/b-agentic/performance-checklist.md` before reviewing hot paths, query volume, rendering loops, list endpoints, or retry behavior.

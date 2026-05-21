@@ -6,6 +6,7 @@ cd "$ROOT_DIR"
 
 python3 - <<'PY'
 from pathlib import Path
+import json
 import re
 import sys
 
@@ -14,27 +15,32 @@ errors = []
 
 skill_paths = sorted(root.glob('skills/*/SKILL.md'))
 skill_names = [path.parent.name for path in skill_paths]
-command_paths = sorted(root.glob('commands/*.md'))
-command_names = [path.stem for path in command_paths]
-reference_paths = sorted(root.glob('references/*.md'))
-reference_names = [path.name for path in reference_paths]
-
-if not skill_paths:
-    errors.append('No skills/*/SKILL.md files found')
-
-if not command_paths:
-    errors.append('No commands/*.md files found')
-
-if len(command_paths) != len(skill_paths):
-    errors.append(f'commands/: expected {len(skill_paths)} wrappers, found {len(command_paths)}')
-
-extra_command_names = sorted(set(command_names) - set(skill_names))
-if extra_command_names:
-    errors.append(f'commands/: wrappers without matching skill directories: {", ".join(extra_command_names)}')
-
-if not reference_paths:
-    errors.append('No references/*.md files found')
-
+expected_manual_only = {
+    'b-orchestrate',
+    'b-plan',
+    'b-implement',
+    'b-refactor',
+    'b-debug',
+    'b-test',
+    'b-browser',
+}
+allowed_frontmatter = {
+    'name',
+    'description',
+    'when_to_use',
+    'argument-hint',
+    'arguments',
+    'disable-model-invocation',
+    'user-invocable',
+    'allowed-tools',
+    'model',
+    'effort',
+    'context',
+    'agent',
+    'hooks',
+    'paths',
+    'shell',
+}
 required_sections = [
     '## When to use',
     '## When NOT to use',
@@ -43,21 +49,34 @@ required_sections = [
     '## Rules',
 ]
 
-for path in skill_paths:
-    text = path.read_text()
-    name = path.parent.name
+if len(skill_paths) != 11:
+    errors.append(f'skills/: expected 11 SKILL.md files, found {len(skill_paths)}')
 
+if (root / 'commands').exists() and any((root / 'commands').glob('*.md')):
+    errors.append('commands/: Claude-native runtime should not ship command wrappers; skills create /b-* commands')
+
+def frontmatter_parts(path: Path):
+    text = path.read_text()
     if not text.startswith('---\n'):
         errors.append(f'{path}: missing YAML frontmatter start')
-        continue
-
+        return '', text
     parts = text.split('---', 2)
     if len(parts) < 3:
         errors.append(f'{path}: missing YAML frontmatter close')
-        continue
+        return '', text
+    return parts[1], parts[2]
 
-    frontmatter = parts[1]
-    body = parts[2]
+def top_level_keys(frontmatter: str):
+    return re.findall(r'^([A-Za-z0-9_-]+):', frontmatter, re.MULTILINE)
+
+for path in skill_paths:
+    name = path.parent.name
+    text = path.read_text()
+    frontmatter, body = frontmatter_parts(path)
+
+    for key in top_level_keys(frontmatter):
+        if key not in allowed_frontmatter:
+            errors.append(f'{path}: unsupported Claude skill frontmatter key {key!r}')
 
     name_match = re.search(r'^name:\s*(\S+)\s*$', frontmatter, re.MULTILINE)
     if not name_match:
@@ -65,13 +84,11 @@ for path in skill_paths:
     elif name_match.group(1) != name:
         errors.append(f'{path}: frontmatter name {name_match.group(1)!r} does not match directory {name!r}')
 
-    if not re.search(r'^compatibility:\s*opencode\s*$', frontmatter, re.MULTILINE):
-        errors.append(f'{path}: compatibility must be opencode')
-
-    if not re.search(r'^\s*suite:\s*b-agentic\s*$', frontmatter, re.MULTILINE):
-        errors.append(f'{path}: metadata.suite must be b-agentic')
-
-    desc_match = re.search(r'^description:\s*>\s*\n(?P<desc>(?:\s+.*\n)+?)(?=^[A-Za-z_-]+:|^metadata:|^---)', frontmatter + '---', re.MULTILINE)
+    desc_match = re.search(
+        r'^description:\s*>\s*\n(?P<desc>(?:\s+.*\n)+?)(?=^[A-Za-z0-9_-]+:|^---)',
+        frontmatter + '---',
+        re.MULTILINE,
+    )
     if not desc_match:
         errors.append(f'{path}: missing block description')
     else:
@@ -80,330 +97,130 @@ for path in skill_paths:
         if word_count > 80:
             errors.append(f'{path}: description has {word_count} words, expected <=80')
 
+    has_disable = bool(re.search(r'^disable-model-invocation:\s*true\s*$', frontmatter, re.MULTILINE))
+    if name in expected_manual_only and not has_disable:
+        errors.append(f'{path}: mutating/coordinating skill must be manual-only with disable-model-invocation: true')
+    if name not in expected_manual_only and has_disable:
+        errors.append(f'{path}: read-only/clarification skill should not be manual-only without documented reason')
+
+    if 'allowed-tools:' in frontmatter:
+        errors.append(f'{path}: allowed-tools grants permissions and requires explicit maintainer review before use')
+
     for section in required_sections:
         if section not in body:
             errors.append(f'{path}: missing required section {section!r}')
 
-    command_path = root / 'commands' / f'{name}.md'
-    if not command_path.exists():
-        errors.append(f'{path}: missing matching command wrapper {command_path}')
-    else:
-        command_text = command_path.read_text()
-        for required in ['active `AGENTS.md` runtime kernel', 'required read gates']:
-            if required not in command_text:
-                errors.append(f'{command_path}: missing runtime salience phrase {required!r}')
-
-    forbidden_patterns = [
-        r'`write`',
-        r'`edit`',
-        r'native `edit`',
-        r'manual `edit`',
-        r'## Boundary examples',
-        r'MCP fallback ladder',
-        r'\.opencode/b-e2e/',
-        r'git diff HEAD~1 HEAD',
-        r'Never trigger destructive git commands',
-        r'Note: "⚠️ GitNexus unavailable',
+    forbidden = [
+        'compatibility: opencode',
+        'metadata:',
+        'suite: b-agentic',
+        'active `AGENTS.md` runtime kernel',
+        'global/AGENTS.md',
+        '~/.config/opencode',
+        '/tmp/opencode',
     ]
-    for pattern in forbidden_patterns:
-        if re.search(pattern, text):
-            errors.append(f'{path}: forbidden stale runtime pattern {pattern!r}')
+    for needle in forbidden:
+        if needle in text:
+            errors.append(f'{path}: stale OpenCode/runtime pattern {needle!r}')
 
-    stale_passive_patterns = [
-        r'from `AGENTS\.md`',
-        r'Close non-trivial .*`AGENTS\.md`',
-        r'Use `reference\.md`',
-        r'applying the global baseline source taxonomy',
-        r'Apply the global plan staleness gate',
-        r'Use the global test-vs-bug decision',
-        r'follow the global cannot-reproduce protocol',
-        r'Use global transform rollback',
-    ]
-    for pattern in stale_passive_patterns:
-        if re.search(pattern, text, re.IGNORECASE):
-            errors.append(f'{path}: passive runtime reference must become an explicit read gate: {pattern!r}')
+    if 'references/b-agentic/runtime-contract.md' in text and '${CLAUDE_SKILL_DIR}/references/b-agentic/runtime-contract.md' not in text:
+        errors.append(f'{path}: runtime contract read gates must use ${{CLAUDE_SKILL_DIR}} support path')
+
+    if 'performance-checklist.md' in text and '${CLAUDE_SKILL_DIR}/references/b-agentic/performance-checklist.md' not in text:
+        errors.append(f'{path}: performance checklist read gates must use ${{CLAUDE_SKILL_DIR}} support path')
+
+    if 'Read `reference.md` before' in text or re.search(r'Read\s+`?reference\.md`?', text):
+        errors.append(f'{path}: local reference.md read gates must use ${{CLAUDE_SKILL_DIR}}/reference.md')
 
     if re.search(r'Read §\d+', text):
         errors.append(f'{path}: read gates must name the reference file, not only a section number')
 
-    if 'Graceful degradation:' in text and '`references/b-agentic/runtime-contract.md` §4' not in text:
-        errors.append(f'{path}: tool fallback must explicitly read runtime contract §4')
-
-    if re.search(r'status block|handoff envelope|status/handoff', text, re.IGNORECASE) and '`references/b-agentic/runtime-contract.md` §9' not in text:
-        errors.append(f'{path}: status/handoff usage must explicitly read runtime contract §9')
+    if 'Graceful degradation:' in text and '${CLAUDE_SKILL_DIR}/references/b-agentic/runtime-contract.md` §4' not in text:
+        errors.append(f'{path}: tool fallback must explicitly read runtime contract §4 from skill support files')
 
     skill_reference = path.parent / 'reference.md'
-    if skill_reference.exists() and 'reference.md' in text and 'Read `reference.md` before' not in text:
-        errors.append(f'{path}: local reference.md usage must be an explicit read gate')
+    if skill_reference.exists() and 'reference.md' not in text:
+        errors.append(f'{path}: existing reference.md is not discoverable from SKILL.md')
 
-    if 'performance-checklist.md' in text and 'Read `references/b-agentic/performance-checklist.md` before' not in text:
-        errors.append(f'{path}: performance checklist usage must be an explicit read gate')
-
-    line_gate_requirements = [
-        (r'global patch discipline', '§6', 'global patch discipline'),
-        (r'global flake procedure', '§10', 'global flake procedure'),
-    ]
-    for line_number, line in enumerate(text.splitlines(), start=1):
-        for pattern, section, label in line_gate_requirements:
-            if re.search(pattern, line, re.IGNORECASE) and f'`references/b-agentic/runtime-contract.md` {section}' not in line:
-                errors.append(f'{path}:{line_number}: {label} usage must explicitly read runtime contract {section}')
-
-    if 'global/AGENTS.md' in text:
-        errors.append(f'{path}: runtime skill files must reference `AGENTS.md`, not `global/AGENTS.md`')
-
-    if name in {'b-research', 'b-test'} and re.search(r'gitnexus', text, re.IGNORECASE):
-        errors.append(f'{path}: GitNexus should stay out of this skill workflow')
-
-readme = (root / 'README.md').read_text()
-reference = (root / 'REFERENCE.md').read_text()
-global_rules = (root / 'global' / 'AGENTS.md').read_text()
+readme = (root / 'README.md').read_text() if (root / 'README.md').exists() else ''
+reference = (root / 'REFERENCE.md').read_text() if (root / 'REFERENCE.md').exists() else ''
+maintainer_path = root / 'CLAUDE.md'
+maintainer = maintainer_path.read_text() if maintainer_path.exists() else ''
+kernel_path = root / 'global' / 'CLAUDE.md'
+kernel = kernel_path.read_text() if kernel_path.exists() else ''
 runtime_contract_path = root / 'references' / 'runtime-contract.md'
-if not runtime_contract_path.exists():
-    errors.append('references/runtime-contract.md: missing detailed runtime contract')
-    runtime_contract = ''
-else:
-    runtime_contract = runtime_contract_path.read_text()
-root_agents = (root / 'AGENTS.md').read_text()
-install_sh = (root / 'install.sh').read_text()
+runtime_contract = runtime_contract_path.read_text() if runtime_contract_path.exists() else ''
+install_sh = (root / 'install.sh').read_text() if (root / 'install.sh').exists() else ''
 
-expected_skill_count = len(skill_paths)
+if not kernel_path.exists():
+    errors.append('global/CLAUDE.md: missing Claude Code kernel source')
+if (root / 'global' / 'AGENTS.md').exists():
+    errors.append('global/AGENTS.md: stale OpenCode kernel source should be removed or renamed')
+if (root / 'AGENTS.md').exists():
+    errors.append('AGENTS.md: stale root maintainer guide should be renamed to CLAUDE.md')
+if '<!-- b-agentic-managed -->' not in kernel:
+    errors.append('global/CLAUDE.md: missing b-agentic managed marker')
+for marker in ['Runtime gate checklist:', 'CLAUDE.md', 'Detailed routing', 'runtime contract §9']:
+    if marker not in kernel:
+        errors.append(f'global/CLAUDE.md: missing kernel marker {marker!r}')
+
 for doc_path, doc_text in [('README.md', readme), ('REFERENCE.md', reference)]:
-    doc_lower = doc_text.lower()
-    count_matches = {int(value) for value in re.findall(r'\b(\d+)\s*[- ]skill\b', doc_lower)}
-    count_matches.update(int(value) for value in re.findall(r'\bsuite of\s+(\d+)\s+skills\b', doc_lower))
-    if not count_matches:
-        errors.append(f'{doc_path}: missing explicit numeric skill-count claim')
-    elif expected_skill_count not in count_matches:
-        found = ', '.join(str(value) for value in sorted(count_matches))
-        errors.append(f'{doc_path}: skill-count claim {found} does not match repo count {expected_skill_count}')
+    if not doc_text:
+        errors.append(f'{doc_path}: missing or empty')
+        continue
+    if '11-skill' not in doc_text and '11 skills' not in doc_text:
+        errors.append(f'{doc_path}: missing explicit 11-skill claim')
+    for name in skill_names:
+        if name not in doc_text:
+            errors.append(f'{doc_path}: missing skill name {name}')
+    stale_doc_patterns = [
+        'OpenCode as the reference runtime',
+        '~/.config/opencode',
+        'global/AGENTS.md',
+        'commands/<name>.md',
+        'commands/*.md',
+        'compatibility: opencode',
+    ]
+    for needle in stale_doc_patterns:
+        if needle in doc_text:
+            errors.append(f'{doc_path}: stale OpenCode/source-layout phrase {needle!r}')
 
-kernel_detail_sections = {
-    '§2': ['Detailed plan metadata', 'references/b-agentic/runtime-contract.md` §2'],
-    '§3': ['Detailed rubrics', 'references/b-agentic/runtime-contract.md` §3'],
-    '§5': ['Detailed evidence hierarchy', 'references/b-agentic/runtime-contract.md` §5'],
-    '§6': ['Detailed command risk classes', 'references/b-agentic/runtime-contract.md` §6'],
-    '§7': ['Detailed scope expansion', 'references/b-agentic/runtime-contract.md` §7'],
-    '§8': ['Detailed slug algorithm', 'references/b-agentic/runtime-contract.md` §8'],
-    '§9': ['Detailed status schema', 'references/b-agentic/runtime-contract.md` §9'],
-    '§10': ['Detailed high-risk gate', 'references/b-agentic/runtime-contract.md` §10'],
-}
-for section, markers in kernel_detail_sections.items():
-    if not all(marker in global_rules for marker in markers):
-        errors.append(f'global/AGENTS.md: missing kernel-to-contract boundary reference for {section}')
+if 'Claude Code is the reference runtime' not in maintainer:
+    errors.append('CLAUDE.md: must state Claude Code is the reference runtime')
+for needle in ['compatibility: opencode', 'global/AGENTS.md', 'commands/<name>.md']:
+    if needle in maintainer:
+        errors.append(f'CLAUDE.md: stale maintainer phrase {needle!r}')
 
-runtime_boundary_sections = [
-    '### Kernel/detail split for the shared sections',
-    '### Runtime gate taxonomy',
-    '### Runtime gate checklist',
-    '`§2 Source of truth`',
-    '`§3 Definitions and rubrics`',
-    '`§5 Evidence standards`',
-    '`§6 Safety gates`',
-    '`§7 Execution discipline`',
-    '`§8 Artifacts`',
-    '`§9 Output contract`',
-    '`§10 Cross-cutting decisions`',
-    '### Non-trivial work',
-    '### Small direct request',
-    '### Approval-required actions',
-    '### Verification ladder',
+for required in [
+    'The active runtime kernel lives in `CLAUDE.md`',
+    '${CLAUDE_SKILL_DIR}/references/b-agentic/runtime-contract.md',
+    '~/.claude/b-agentic',
+    '/tmp/claude-code/b-agentic',
     '### Skill-exit status block',
     '### Handoff envelope',
-]
-for required in runtime_boundary_sections:
+]:
     if required not in runtime_contract:
-        errors.append(f'references/runtime-contract.md: missing canonical boundary section {required!r}')
+        errors.append(f'references/runtime-contract.md: missing Claude-native marker {required!r}')
 
-runtime_boundary_markers = [
-    'Requires sequencing.',
-    'No remaining design decision',
-    'Read references/b-agentic/runtime-contract.md §N before <action>',
-    'Required fields are `skill`, `state`, `artifacts`, `next`, `blockers`.',
-    'Required fields are `source`, `goal`, `decisions`, `assumptions`, `files`, `verification`, `blockers`, `next-skill`.',
-]
-for required in runtime_boundary_markers:
-    if required not in runtime_contract:
-        errors.append(f'references/runtime-contract.md: missing canonical boundary marker {required!r}')
+if 'global/AGENTS.md' in runtime_contract or '~/.config/opencode' in runtime_contract or '/tmp/opencode' in runtime_contract:
+    errors.append('references/runtime-contract.md: contains stale active OpenCode path')
 
-kernel_summary_markers = [
-    'Runtime gate checklist:',
-    'Use the shared §3 glossary in `references/b-agentic/runtime-contract.md`',
-    'Use the shared slug, run-id, and artifact conventions from `references/b-agentic/runtime-contract.md` §8.',
-    'shared `[status]` and `[handoff]` schemas',
-]
-for required in kernel_summary_markers:
-    if required not in global_rules:
-        errors.append(f'global/AGENTS.md: missing kernel summary marker {required!r}')
+for required in ['$HOME/.claude', 'global/CLAUDE.md', 'skills', 'references/b-agentic', 'activationState']:
+    if required not in install_sh:
+        errors.append(f'install.sh: missing Claude installer marker {required!r}')
+if '~/.config/opencode' in install_sh or 'opencode.json' in install_sh:
+    errors.append('install.sh: contains stale OpenCode install target')
 
-for name in skill_names:
-    for doc_path, doc_text in [('README.md', readme), ('REFERENCE.md', reference)]:
-        if name not in doc_text:
-            errors.append(f'{doc_path}: missing skill mention {name}')
-    if f'remove_skill_if_managed {name}' not in install_sh:
-        errors.append(f'install.sh: uninstall missing skill removal for {name}')
-    if f'remove_command_if_managed {name}' not in install_sh:
-        errors.append(f'install.sh: uninstall missing command removal for {name}')
-
-for name in reference_names:
-    for doc_path, doc_text in [('README.md', readme), ('REFERENCE.md', reference)]:
-        if name not in doc_text:
-            errors.append(f'{doc_path}: missing reference mention {name}')
-
-for ref_path in reference_paths:
-    ref_name = ref_path.name
-    if ref_name == 'runtime-contract.md':
-        continue
-    if not any(ref_name in path.read_text() for path in skill_paths):
-        errors.append(f'{ref_path}: not referenced by any skill file')
-
-if 'references/b-agentic' not in install_sh:
-    errors.append('install.sh: missing managed references install path')
-
-if 'sync_directory "$REFERENCES_SRC" "$REFERENCES_DST"' not in install_sh:
-    errors.append('install.sh: missing references sync step')
-
-if 'RUNTIME_CONTRACT_DST' not in install_sh:
-    errors.append('install.sh: missing runtime contract managed path')
-
-for doc_path, doc_text in [('README.md', readme), ('REFERENCE.md', reference), ('global/AGENTS.md', global_rules), ('references/runtime-contract.md', runtime_contract)]:
-    if '.opencode/b-e2e/' in doc_text:
-        errors.append(f'{doc_path}: old E2E artifact path still present')
-
-for doc_path, doc_text in [('README.md', readme), ('global/AGENTS.md', global_rules), ('references/runtime-contract.md', runtime_contract)]:
-    if 'Opus 4.7' in doc_text:
-        errors.append(f'{doc_path}: model-specific reasoning wording should not be present')
-
-if '@modelcontextprotocol/server-sequential-thinking' in install_sh:
-    errors.append('install.sh: sequential-thinking should not be bundled in the MCP defaults')
-
-for doc_path, doc_text in [('README.md', readme), ('REFERENCE.md', reference), ('AGENTS.md', root_agents), ('references/runtime-contract.md', runtime_contract)]:
-    if 'sequential-thinking' in doc_text:
-        errors.append(f'{doc_path}: sequential-thinking should be fully removed from suite docs and maintainer guidance')
-
-for required in ['Radar/hands boundary', 'Evidence standards', 'GitNexus freshness gate', 'Patch discipline', 'Token budget']:
-    if required not in runtime_contract:
-        errors.append(f'references/runtime-contract.md: missing detailed convention {required!r}')
-
-token_saving_contract_markers = [
-    'MCP bundles are available capabilities, not default context sources',
-    'Body-last symbol workflow',
-    'Shape large command outputs at the source',
-    'prefer structured extraction or query over full markdown',
-    'Search before extract',
-]
-for required in token_saving_contract_markers:
-    if required not in runtime_contract:
-        errors.append(f'references/runtime-contract.md: missing token-saving convention {required!r}')
-
-if 'Treat MCP bundles as lazy capabilities, not default context sources' not in global_rules:
-    errors.append('global/AGENTS.md: missing lazy MCP kernel rule')
-
-if 'Token hygiene preserved' not in root_agents:
-    errors.append('AGENTS.md: missing maintainer token hygiene checklist item')
-
-b_research_text = (root / 'skills' / 'b-research' / 'SKILL.md').read_text()
-for required in ['structured extraction or query for specific fields', 'Search before extracting']:
-    if required not in b_research_text:
-        errors.append(f'skills/b-research/SKILL.md: missing token-saving research phrase {required!r}')
-
-for required in ['missing expected lines', 'stale context', 'one small hunk']:
-    if required not in runtime_contract:
-        errors.append(f'references/runtime-contract.md: patch discipline missing phrase {required!r}')
-
-kernel_required = [
-    'Runtime Kernel',
-    'references/b-agentic/runtime-contract.md',
-    'Source Of Truth',
-    'Tool Priority',
-    'Safety',
-    '[status]',
-    '[handoff]',
-]
-for required in kernel_required:
-    if required not in global_rules:
-        errors.append(f'global/AGENTS.md: runtime kernel missing phrase {required!r}')
-
-for doc_path, doc_text in [('REFERENCE.md', reference)]:
-    if 'Good triggers' in doc_text or 'Boundary examples' in doc_text:
-        errors.append(f'{doc_path}: duplicated trigger examples should stay in README/skills, not reference')
-
-if 'install.sh' in global_rules:
-    errors.append('global/AGENTS.md: runtime global rules should not mention install.sh')
-
-root_required = [
-    'optional radar',
-    'primary hands',
-    'indexed, fresh, and target-aware',
-    'only when indexing is safe',
-]
-for required in root_required:
-    if required not in root_agents:
-        errors.append(f'AGENTS.md: missing GitNexus/Serena contract phrase {required!r}')
-
-root_forbidden = [
-    'Prefer GitNexus first for graph-shaped code tasks when the repo is indexed:',
-    'when GitNexus is available and indexed',
-    'Note: "⚠️ GitNexus unavailable',
-    'key Vietnamese + English trigger phrases',
-]
-for forbidden in root_forbidden:
-    if forbidden in root_agents:
-        errors.append(f'AGENTS.md: stale maintainer guidance remains: {forbidden!r}')
-
-b_plan = (root / 'skills' / 'b-plan' / 'SKILL.md').read_text()
-b_implement = (root / 'skills' / 'b-implement' / 'SKILL.md').read_text()
-if 'Update saved-plan checkboxes' in b_implement and '- [ ] **<imperative step title>**' not in b_plan:
-    errors.append('skills/b-plan/SKILL.md: saved-plan skeleton must support checkbox-style progress updates used by b-implement')
-
-patch_skill_expectations = {
-    'b-implement': 'global patch discipline',
-    'b-refactor': 'global patch discipline',
-    'b-test': 'global patch discipline',
-    'b-debug': 'global patch discipline',
-}
-for skill_name, required_phrase in patch_skill_expectations.items():
-    skill_text = (root / 'skills' / skill_name / 'SKILL.md').read_text()
-    if required_phrase not in skill_text:
-        errors.append(f'skills/{skill_name}/SKILL.md: missing canonical patch discipline reference {required_phrase!r}')
-    for duplicated_phrase in ['missing expected lines', 'stale context recovery']:
-        if duplicated_phrase in skill_text:
-            errors.append(f'skills/{skill_name}/SKILL.md: duplicated patch protocol phrase {duplicated_phrase!r}')
-
-if 'stable anchors' not in b_plan:
-    errors.append('skills/b-plan/SKILL.md: prose/config plans should mention stable anchors for patchable edits')
-
-for required in ['Do not promote to full mode solely', '2-5 bullets']:
-    if required not in b_plan:
-        errors.append(f'skills/b-plan/SKILL.md: missing low-ceremony planning guard {required!r}')
-
-b_test = (root / 'skills' / 'b-test' / 'SKILL.md').read_text()
-for required in ['failing test path', 'verification target']:
-    if required not in b_test:
-        errors.append(f'skills/b-test/SKILL.md: missing TDD handoff field {required!r}')
-
-for required in ['Daily-use fast path examples', 'trivial happy-path runs']:
-    if required not in runtime_contract:
-        errors.append(f'references/runtime-contract.md: missing happy-path convention {required!r}')
-
-runtime_enforcement_doc_markers = [
-    'explicit read gates',
-    'runtime gate checklist',
-]
-for doc_path, doc_text in [('README.md', readme), ('REFERENCE.md', reference), ('AGENTS.md', root_agents)]:
-    doc_lower = doc_text.lower()
-    for required in runtime_enforcement_doc_markers:
-        if required not in doc_lower:
-            errors.append(f'{doc_path}: missing runtime enforcement doc marker {required!r}')
-
-stale_reindex_prefix = 'If any GitNexus tool warns the index is stale, run `'
-if stale_reindex_prefix in root_agents and '--skip-agents-md' not in root_agents:
-    errors.append('AGENTS.md: stale GitNexus reindex guidance remains: missing `--skip-agents-md`')
+for json_path in sorted((root / 'claude').glob('*.json')):
+    try:
+        json.loads(json_path.read_text())
+    except Exception as exc:
+        errors.append(f'{json_path}: invalid JSON: {exc}')
 
 if errors:
-    print('Skill validation failed:', file=sys.stderr)
     for error in errors:
-        print(f'- {error}', file=sys.stderr)
-    raise SystemExit(1)
+        print(error, file=sys.stderr)
+    sys.exit(1)
 
 print(f'Skill validation passed ({len(skill_paths)} skills).')
 PY

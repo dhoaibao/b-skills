@@ -27,7 +27,7 @@ Use this reference to make audits repeatable without turning `SKILL.md` into a l
 
 - Check that validator rules enforce documented invariants without forcing duplicated runtime policy.
 - Confirm failures are actionable and tied to maintained files.
-- Verify managed command wrappers, skill frontmatter, docs coverage, and reference sync are checked.
+- Verify Claude skill frontmatter, docs coverage, installed support files, and reference sync are checked.
 
 ### Route, Tool, Or Public Contract Boundary
 
@@ -54,7 +54,7 @@ Use this reference to make audits repeatable without turning `SKILL.md` into a l
 ### b-agentic Suite Audit
 
 - Check every `skills/*/SKILL.md` for trigger boundary, stop conditions, task-specific workflow, and global-rule duplication.
-- Check matching `commands/*.md` wrappers for one-to-one skill alignment.
-- Check `global/AGENTS.md` and `references/runtime-contract.md` for conflicting schemas, paths, tool priorities, and safety gates.
+- Check that each `skills/*/SKILL.md` installs as one `/b-*` Claude skill.
+- Check `global/CLAUDE.md` and `references/runtime-contract.md` for conflicting schemas, paths, tool priorities, and safety gates.
 - Cross-check `README.md` and `REFERENCE.md` only for consistency with runtime-facing files.
 - Run `scripts/validate-skills.sh` unless explicitly skipped.
