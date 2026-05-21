@@ -330,7 +330,7 @@ Skills reference MCP bundles by name instead of repeating per-tool MCP lists. Na
 #### `gitnexus-radar`
 
 - **Server:** `gitnexus`
-- **Install source:** default Claude Code user-scope MCP template using `npx -y gitnexus@latest mcp`. Indexing, generated skills, hooks, root guidance writes, and `gitnexus setup` remain user-run steps outside the b-agentic installer.
+- **Install source:** default Claude Code user-scope MCP template using `gitnexus mcp` after the user installs GitNexus. Indexing, generated skills, hooks, root guidance writes, and `gitnexus setup` remain user-run steps outside the b-agentic installer. Avoid cold `npx` for the default MCP entry because GitNexus native dependency startup can exceed Claude Code's MCP timeout.
 - **Role:** optional graph radar for scoping blast radius, route/consumer surfaces, or unfamiliar architecture.
 - **Use only when** indexed, fresh, and the target is represented.
 - **Never use for** symbol editing, exact-body inspection, or anything Serena can answer directly.

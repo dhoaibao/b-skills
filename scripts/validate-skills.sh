@@ -270,6 +270,10 @@ for json_path in sorted((root / 'claude').glob('*.json')):
 
         if 'gitnexus' in servers and json_path.name != 'mcp.user.template.json':
             errors.append(f'{json_path}: gitnexus belongs only in the global user config')
+        if 'gitnexus' in servers:
+            gitnexus = servers['gitnexus']
+            if gitnexus.get('command') != 'gitnexus' or gitnexus.get('args') != ['mcp']:
+                errors.append(f'{json_path}: gitnexus must use installed gitnexus mcp command')
 
         if json_path.name == 'mcp.user.template.json':
             expected_user = {'serena', 'context7', 'brave-search', 'firecrawl', 'playwright', 'gitnexus'}
