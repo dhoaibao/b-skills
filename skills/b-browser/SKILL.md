@@ -6,9 +6,8 @@ description: >
   WebDriver, visual, screenshot, browser-session, or live UI checks. Unlike
   b-test, b-browser owns browser/DOM readiness evidence, not non-browser unit,
   integration, or contract tests.
-compatibility: opencode
-metadata:
-  suite: b-agentic
+argument-hint: "[browser-or-e2e-request]"
+disable-model-invocation: true
 ---
 
 # b-browser
@@ -39,7 +38,7 @@ Operate browser, DOM-rendered, visual, and e2e verification using the lightest s
 - `firecrawl-extraction` *(optional, for known remote pages where extraction can answer the browser evidence question without live control)*
 - `serena-symbol-toolkit` *(optional, for mapping a browser failure to source ownership before handing off)*
 
-If required tools are unavailable, read `references/b-agentic/runtime-contract.md` §4 before applying fallbacks. Graceful degradation: possible with supplied evidence, existing repo scripts, known-URL extraction, or an explicit follow-up; live-browser verification is partial without `playwright-browser-operator`.
+If required tools are unavailable, read `${CLAUDE_SKILL_DIR}/references/b-agentic/runtime-contract.md` §4 before applying fallbacks. Graceful degradation: possible with supplied evidence, existing repo scripts, known-URL extraction, or an explicit follow-up; live-browser verification is partial without `playwright-browser-operator`.
 
 ## Steps
 
@@ -47,7 +46,7 @@ If required tools are unavailable, read `references/b-agentic/runtime-contract.m
 
 Identify whether the request is a direct browser/DOM/visual/e2e run, live UI exploration, review of supplied evidence, or a readiness gap from another phase. If the check is actually non-browser unit, integration, contract, or coverage work, hand off to **b-test**.
 
-Read `references/b-agentic/runtime-contract.md` §10 before applying the browser and DOM verification boundary or making readiness claims.
+Read `${CLAUDE_SKILL_DIR}/references/b-agentic/runtime-contract.md` §10 before applying the browser and DOM verification boundary or making readiness claims.
 
 ### Step 2 - Choose the evidence ladder
 
@@ -63,7 +62,7 @@ Do not invent verification commands. Do not create a browser test strategy or ad
 
 ### Step 3 - Apply safety gates before running tools
 
-Read `references/b-agentic/runtime-contract.md` §6 before running browser, DOM, visual, or e2e tooling, using `playwright-browser-operator`, starting dev servers, using persisted browser/session state, writing screenshots/videos/traces, installing dependencies, or mutating shared environments.
+Read `${CLAUDE_SKILL_DIR}/references/b-agentic/runtime-contract.md` §6 before running browser, DOM, visual, or e2e tooling, using `playwright-browser-operator`, starting dev servers, using persisted browser/session state, writing screenshots/videos/traces, installing dependencies, or mutating shared environments.
 
 Ask for approval before dependency writes, dev servers, persisted browser state, external services, long-running commands, generated evidence outside normal repo output paths, or unsafe arbitrary-code browser tools.
 
@@ -89,7 +88,7 @@ Clean up or report generated screenshots, videos, traces, logs, browser state, t
 
 State whether browser/DOM/visual/e2e evidence is verified, missing, failed, or accepted as a follow-up. Do not claim **READY FOR PR** when relevant browser evidence is absent or failed.
 
-Read `references/b-agentic/runtime-contract.md` §9 before closing a non-trivial browser verification run with a status block or handoff.
+Read `${CLAUDE_SKILL_DIR}/references/b-agentic/runtime-contract.md` §9 before closing a non-trivial browser verification run with a status block or handoff.
 
 ## Output format
 
